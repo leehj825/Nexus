@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Nexus</title>
+<meta name="theme-color" content="#070b14">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="game" aria-label="Neon District at night"></canvas>
+
+<div id="hud">
+  <div class="status">
+    <div class="bar hp"><i id="hpFill"></i><span id="hpTxt">100 / 100</span></div>
+    <div class="bar st"><i id="stFill"></i></div>
+    <div class="lv">Lv 1</div>
+    <div class="quest">&#9670; Speak with the crew</div>
+    <div class="tally"><span>&#9670; 0</span><span>&#9679; 1</span></div>
+  </div>
+
+  <div class="zone"><span>Neon District &middot; Night</span></div>
+
+  <div class="corner">
+    <button id="btnMap" type="button" aria-label="Map" title="Map">&#9638;</button>
+    <button id="btnPause" type="button" aria-label="Pause" title="Pause (P)">&#10074;&#10074;</button>
+    <button id="btnSound" type="button" aria-label="Sound" title="Sound">&#9834;</button>
+  </div>
+
+  <div class="minimap">
+    <canvas id="map" width="220" height="220"></canvas>
+    <div class="sector">Sector 9</div>
+  </div>
+
+  <div class="hints">Mouse look &middot; WASD move &middot; Shift run &middot; P pause &middot; Esc release mouse</div>
+  <div id="pauseTag" class="tag" hidden>Paused</div>
+  <div class="prompt">Click the scene to look around</div>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="js/textures.js"></script>
+<script src="js/characters.js"></script>
+<script src="js/city.js"></script>
+<script src="js/camp.js"></script>
+<script src="js/player.js"></script>
+<script src="js/hud.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

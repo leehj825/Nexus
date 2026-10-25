@@ -1,0 +1,77 @@
+/* Nexus - the page and HUD. Colours: health red, stamina green, quest gold, minimap amber on black. */
+:root {
+  --hp: #e0413a;
+  --st: #9bd13b;
+  --gold: #e8b15a;
+  --ink: #f2ece0;
+  --dim: rgba(242, 236, 224, 0.6);
+  --panel: rgba(8, 8, 14, 0.55);
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ink: #f2ece0; } }
+:root[data-theme="dark"] { --ink: #f2ece0; }
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; height: 100%; overflow: hidden;
+  background: #070b14; color: var(--ink);
+  font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  -webkit-user-select: none; user-select: none;
+}
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
+body.locked #game { cursor: none; }
+
+#hud { position: fixed; inset: 0; pointer-events: none; }
+#hud button { pointer-events: auto; }
+
+/* Status: top left */
+.status { position: absolute; left: 22px; top: 18px; width: 260px; }
+.bar { position: relative; height: 14px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 2px; overflow: hidden; }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; }
+.bar.hp i { background: linear-gradient(#f0554c, var(--hp)); }
+.bar.st { height: 9px; margin-top: 6px; }
+.bar.st i { background: linear-gradient(#b8e35a, var(--st)); }
+.bar span { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; font-weight: 600; text-shadow: 0 1px 2px #000; }
+.lv { margin-top: 8px; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-shadow: 0 1px 3px #000; }
+.quest { margin-top: 18px; color: var(--gold); font-size: 15px; font-weight: 600; text-shadow: 0 1px 3px #000; }
+.tally { margin-top: 6px; display: flex; gap: 14px; color: var(--ink); font-size: 14px; text-shadow: 0 1px 3px #000; }
+
+/* Zone title: top centre */
+.zone { position: absolute; top: 14px; left: 0; right: 0; text-align: center; font-size: 19px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; text-shadow: 0 2px 6px #000; }
+.zone span { color: #ead9b2; }
+
+/* Corner buttons: top right */
+.corner { position: absolute; top: 14px; right: 216px; display: flex; gap: 10px; }
+.corner button {
+  width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(8, 8, 14, 0.7); color: var(--ink); font-size: 14px; cursor: pointer; padding: 0;
+}
+.corner button:hover { border-color: rgba(255, 200, 110, 0.6); }
+.corner button.on { border-color: var(--gold); color: var(--gold); }
+.corner button#btnSound.muted { opacity: 0.4; }
+
+/* Minimap: top right, round, with its sector name underneath */
+.minimap { position: absolute; top: 16px; right: 22px; width: 180px; text-align: center; }
+.minimap canvas { width: 180px; height: 180px; border-radius: 50%; background: #0c0b06; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6); display: block; }
+.sector { margin-top: 6px; color: var(--gold); font-size: 15px; font-weight: 600; text-shadow: 0 1px 3px #000; }
+
+/* Control hints: bottom centre */
+.hints { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; font-size: 13px; color: var(--dim); text-shadow: 0 1px 3px #000; letter-spacing: 0.02em; padding: 0 16px; }
+
+.tag { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 10px 22px; background: var(--panel); border-radius: 4px; font-size: 18px; letter-spacing: 0.2em; text-transform: uppercase; }
+.tag[hidden] { display: none; }
+
+.prompt { position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); font-size: 12px; color: var(--dim); background: var(--panel); padding: 4px 10px; border-radius: 3px; transition: opacity 0.4s; }
+body.locked .prompt { opacity: 0; }
+
+/* Phones: keep the status and minimap clear of each other */
+@media (max-width: 720px) {
+  .status { width: 200px; left: 14px; top: 12px; }
+  .zone { top: auto; bottom: 74px; font-size: 13px; }
+  .minimap { width: 120px; top: 10px; right: 12px; }
+  .minimap canvas { width: 120px; height: 120px; }
+  .sector { font-size: 12px; }
+  .corner { right: 150px; top: 10px; gap: 6px; }
+  .corner button { width: 34px; height: 34px; }
+  .hints { display: none; }
+  .prompt { bottom: 40px; }
+}
