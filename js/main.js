@@ -14,7 +14,7 @@
 
   City.build(scene);
   Camp.build(scene);
-  Player.init(scene, canvas);
+  Player.init(scene, canvas, camera);
   HUD.init();
 
   function resize() {

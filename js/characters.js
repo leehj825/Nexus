@@ -16,6 +16,7 @@ const Chars = (() => {
     const torso = joint(hips, 0, 0.1, 0);
     const head = joint(torso, 0, p.torsoH, 0);
     const c = { root, hips, torso, head, j: {} };
+    head.scale.setScalar(p.headS || 1.2);                                   // the reference crew has big, readable heads
     for (const side of [-1, 1]) {
       const k = side > 0 ? 'L' : 'R';
       c.j['hip' + k] = joint(hips, side * 0.13, 0, 0);
@@ -71,7 +72,7 @@ const Chars = (() => {
 
   // ---------------- Ruen: the Intuitive Hacker. Slender, bob cut, a long coat, a floating data-orb ----------------
   function ruen() {
-    const p = { thigh: 0.46, shin: 0.46, shoulderW: 0.19, torsoH: 0.6, armR: 0.065, legR: 0.07 };
+    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.22, torsoH: 0.6, armR: 0.075, legR: 0.085, headS: 1.25 };
     const m = {
       skin: std(0xd9a88a, { roughness: 0.6 }), hair: std(0x1b1420, { roughness: 0.5 }), shirt: std(0x1d2a33),
       coat: std(0x2d3b4a), trim: lit(0x37e0ff, 0.9), pants: std(0x1a1f2a), shoes: std(0x101216), sleeve: std(0x2d3b4a),
@@ -99,7 +100,7 @@ const Chars = (() => {
 
   // ---------------- Kyle: the Steadfast Protector. Heavy, bulky, bearded, steel gauntlets with cyan light ----------------
   function kyle() {
-    const p = { thigh: 0.46, shin: 0.46, shoulderW: 0.4, torsoH: 0.62, armR: 0.12, legR: 0.14 };
+    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.44, torsoH: 0.62, armR: 0.14, legR: 0.16, headS: 1.3 };
     const m = {
       skin: std(0xc89570, { roughness: 0.7 }), hair: std(0x3a2a20), armor: std(0x6b6247, { roughness: 0.6, metalness: 0.2 }),
       plate: std(0x4a4436, { roughness: 0.5, metalness: 0.3 }), under: std(0x2a2e33), pants: std(0x2b2f38), shoes: std(0x14171c),
@@ -107,16 +108,17 @@ const Chars = (() => {
     };
     const c = skeleton(p); limbs(c, p, m);
     c.seatH = 0.72; c.kind = 'seated'; c.seed = 2.1;
-    add(c.torso, new THREE.BoxGeometry(0.7, 0.66, 0.44), m.armor, 0, 0.33, 0);                          // chest
-    add(c.torso, new THREE.BoxGeometry(0.5, 0.36, 0.06), m.plate, 0, 0.28, 0.24);                       // chest plate
-    add(c.torso, new THREE.BoxGeometry(0.3, 0.24, 0.5), m.under, 0, -0.06, 0);                           // waist
-    for (const x of [-0.4, 0.4]) add(c.torso, new THREE.BoxGeometry(0.3, 0.22, 0.46), m.plate, x, 0.6, 0); // pauldrons
+    add(c.torso, new THREE.BoxGeometry(0.84, 0.68, 0.48), m.armor, 0, 0.33, 0);                          // chest
+    add(c.torso, new THREE.BoxGeometry(0.56, 0.4, 0.06), m.plate, 0, 0.28, 0.27);                       // chest plate
+    add(c.torso, new THREE.BoxGeometry(0.1, 0.3, 0.07), m.cyan, 0, 0.3, 0.3);                           // a light down the plate
+    add(c.torso, new THREE.BoxGeometry(0.34, 0.24, 0.5), m.under, 0, -0.06, 0);                          // waist
+    for (const x of [-0.47, 0.47]) add(c.torso, new THREE.BoxGeometry(0.36, 0.26, 0.5), m.plate, x, 0.6, 0); // pauldrons
     add(c.head, new THREE.SphereGeometry(0.17, 9, 7), m.skin, 0, 0.14, 0);
     add(c.head, new THREE.BoxGeometry(0.34, 0.1, 0.3), m.hair, 0, 0.28, -0.02);                        // short hair
     add(c.head, new THREE.BoxGeometry(0.26, 0.17, 0.14), m.hair, 0, 0.0, 0.07);                        // beard
     for (const x of [-0.06, 0.06]) add(c.head, new THREE.BoxGeometry(0.035, 0.03, 0.02), std(0x111111), x, 0.16, 0.16);
     for (const k of ['L', 'R']) {                                                                         // gauntlets on both forearms
-      add(c.j['el' + k], new THREE.BoxGeometry(0.27, 0.34, 0.27), m.steel, 0, -0.2, 0);
+      add(c.j['el' + k], new THREE.BoxGeometry(0.31, 0.36, 0.31), m.steel, 0, -0.2, 0);
       add(c.j['el' + k], new THREE.BoxGeometry(0.035, 0.26, 0.28), m.cyan, 0.1, -0.2, 0);
       add(c.j['el' + k], new THREE.BoxGeometry(0.035, 0.26, 0.28), m.cyan, -0.1, -0.2, 0);
     }
@@ -126,7 +128,7 @@ const Chars = (() => {
 
   // ---------------- Yuna: the Independent Ranger. Agile, ponytail, stealth tech-suit, dual plasma blasters ----------------
   function yuna() {
-    const p = { thigh: 0.46, shin: 0.46, shoulderW: 0.18, torsoH: 0.6, armR: 0.06, legR: 0.065 };
+    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.18, torsoH: 0.6, armR: 0.065, legR: 0.07, headS: 1.2 };
     const m = {
       skin: std(0xd9a88a, { roughness: 0.6 }), hair: std(0x2a1f2e), suit: std(0x1e2a33, { roughness: 0.6 }),
       accent: lit(0x3ff0ff, 1.1), pants: std(0x1e2a33), shoes: std(0x101216), sleeve: std(0x1e2a33),
@@ -157,10 +159,11 @@ const Chars = (() => {
 
   // ---------------- The player: a dark-coated drifter, standing, walks with WASD ----------------
   function player() {
-    const p = { thigh: 0.46, shin: 0.46, shoulderW: 0.22, torsoH: 0.62, armR: 0.075, legR: 0.08 };
+    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.24, torsoH: 0.62, armR: 0.08, legR: 0.09, headS: 1.25 };
     const m = {
       skin: std(0xc9a080, { roughness: 0.6 }), hair: std(0x2b2220), coat: std(0x262a33, { roughness: 0.7 }),
       trim: lit(0xff9a3a, 0.9), pants: std(0x1c1f27), shoes: std(0x0e1014), sleeve: std(0x262a33), scarf: std(0xd0643a),
+      plate: std(0xb9c2cc, { roughness: 0.5, metalness: 0.3 }),
     };
     const c = skeleton(p); limbs(c, p, m);
     c.kind = 'stand'; c.seed = 0.6;
@@ -168,15 +171,17 @@ const Chars = (() => {
     add(c.torso, new THREE.CylinderGeometry(0.26, 0.3, 0.7, 6).scale(1, 1, 0.7), m.coat, 0, -0.3, 0);
     add(c.torso, new THREE.BoxGeometry(0.46, 0.04, 0.27), m.trim, 0, 0.02, 0);
     add(c.torso, new THREE.BoxGeometry(0.16, 0.12, 0.05), m.scarf, 0, 0.6, 0.12);
+    for (const x of [-0.26, 0.26]) add(c.torso, new THREE.BoxGeometry(0.16, 0.12, 0.28), m.plate, x, 0.56, 0);   // shoulder plates
     add(c.head, new THREE.SphereGeometry(0.17, 9, 7), m.skin, 0, 0.14, 0);
-    add(c.head, new THREE.SphereGeometry(0.18, 9, 7), m.hair, 0, 0.2, -0.02).scale.set(1, 0.6, 1.05);
+    add(c.head, new THREE.SphereGeometry(0.19, 9, 7), m.coat, 0, 0.2, -0.03).scale.set(1.05, 0.78, 1.12);   // hood
+    add(c.head, new THREE.BoxGeometry(0.2, 0.08, 0.12), m.hair, 0, 0.1, 0.1);                                 // hair under it
     for (const x of [-0.06, 0.06]) add(c.head, new THREE.BoxGeometry(0.035, 0.03, 0.02), std(0x111111), x, 0.14, 0.16);
     return c;
   }
 
   // ---------------- A crew member on the street: pale, slender, with glowing seams (the image's standing figure) ----------------
   function stranger() {
-    const p = { thigh: 0.46, shin: 0.46, shoulderW: 0.19, torsoH: 0.6, armR: 0.06, legR: 0.065 };
+    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.19, torsoH: 0.6, armR: 0.06, legR: 0.065 };
     const m = {
       skin: std(0x9fd3c8, { roughness: 0.4, metalness: 0.2 }), hair: std(0x6aa39a), coat: std(0x7fbdb2, { roughness: 0.5, metalness: 0.2 }),
       seam: lit(0x3ff0ff, 1.3), pants: std(0x4f7d78), shoes: std(0x2b3b3a), sleeve: std(0x7fbdb2),

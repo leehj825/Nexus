@@ -61,7 +61,7 @@ body.locked #game { cursor: none; }
 .tag[hidden] { display: none; }
 
 .prompt { position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); font-size: 12px; color: var(--dim); background: var(--panel); padding: 4px 10px; border-radius: 3px; transition: opacity 0.4s; }
-body.locked .prompt { opacity: 0; }
+body.played .prompt { opacity: 0; }
 
 /* Phones: keep the status and minimap clear of each other */
 @media (max-width: 720px) {
