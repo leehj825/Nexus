@@ -16,6 +16,7 @@
   Camp.build(scene);
   Player.init(scene, canvas, camera);
   HUD.init();
+  window.nexus = { state: () => Player.state() };          // read-only hook for debugging and automated checks
 
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
