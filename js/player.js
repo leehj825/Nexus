@@ -1,17 +1,19 @@
 // Nexus - the player's avatar, its movement, and the camera.
-// Walking: WASD (relative to the view), or a click / tap on the ground to walk there. Looking: right-drag with the mouse, or
-// drag with one finger. A quick tap is a move; a drag is a look. The camera starts on the reference framing and follows the
-// avatar gently so the framing holds as it walks.
+// Walking: WASD (relative to the view); a drag with one finger or the left mouse button walks the way it is dragged (a virtual
+// stick, shown on screen); a tap walks to the tapped spot. Looking: right-drag with the mouse, or drag with two fingers.
+// The camera starts on the reference framing and follows the avatar gently so the framing holds as it walks.
 const Player = (() => {
   const START = { x: -2.4, z: 2.4 };
   const CAM = { x: 1.0, y: 4.2, z: 9.0 }, LOOK = { x: 0.0, y: 1.3, z: -3.5 };   // reference framing
   const WALK = 2.3, RUN = 4.2, FOLLOW = 0.35, ARRIVE = 0.12;
   const TAP_MOVE = 10, TAP_TIME = 450;                                        // px and ms: how still and how quick a tap is
+  const STICK_R = 70;                                                         // px of drag that counts as a full stick push
   const keys = {};
   const pos = { x: START.x, z: START.z };
   let heading = Math.PI, speed = 0, yaw = 0, pitch = 0, avatar = null, camera = null, view = null;
-  let goal = null, marker = null;
-  let drag = null;                                                            // the pointer currently on the canvas
+  let goal = null, marker = null, stickEl = null, stickKnob = null;
+  const pointers = new Map();                                                 // every pointer on the canvas, by id
+  let stickId = null;                                                         // the pointer driving the virtual stick
   const camPos = new THREE.Vector3(), look = new THREE.Vector3();
   const ray = new THREE.Raycaster(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), ndc = new THREE.Vector2(), hit = new THREE.Vector3();
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -26,6 +28,7 @@ const Player = (() => {
     // The walk target: a flat cyan ring on the ground that pulses until the avatar arrives
     marker = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.3, 24), new THREE.MeshBasicMaterial({ color: 0x3ff0ff, transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false }));
     marker.rotation.x = -Math.PI / 2; marker.position.y = 0.03; marker.visible = false; scene.add(marker);
+    stickEl = document.getElementById('stick'); stickKnob = stickEl.querySelector('i');
 
     window.addEventListener('keydown', e => {
       if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.shift = true;
@@ -37,32 +40,38 @@ const Player = (() => {
     });
     window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
-    // The pointer: mouse buttons and touch share one path. Right button or a touch drag looks; left click or a tap walks.
     canvas.addEventListener('contextmenu', e => e.preventDefault());
     canvas.addEventListener('pointerdown', e => {
       if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
       canvas.setPointerCapture(e.pointerId);
-      drag = { id: e.pointerId, type: e.pointerType, button: e.button, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0, look: e.pointerType === 'mouse' && e.button === 2 };
+      pointers.set(e.pointerId, {
+        id: e.pointerId, type: e.pointerType, look: e.pointerType === 'mouse' && e.button === 2,
+        sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY, t: performance.now(), moved: 0,
+      });
+      if (pointers.size >= 2) { stickId = null; for (const p of pointers.values()) p.look = true; }   // a second finger means look
       document.body.classList.add('played');
     });
     canvas.addEventListener('pointermove', e => {
-      if (!drag || e.pointerId !== drag.id) return;
-      const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-      drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.hypot(dx, dy);
-      if (!drag.look && drag.type === 'touch' && drag.moved > TAP_MOVE) drag.look = true;
-      if (drag.look) {
-        yaw = clamp(yaw - dx * 0.006, -1.1, 1.1);
-        pitch = clamp(pitch + dy * 0.004, -0.6, 0.8);
+      const p = pointers.get(e.pointerId); if (!p) return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y;
+      p.x = e.clientX; p.y = e.clientY; p.moved += Math.hypot(dx, dy);
+      if (p.look) {
+        const k = pointers.size > 1 ? 0.5 : 1;                                // two fingers share one look
+        yaw = clamp(yaw - dx * 0.006 * k, -1.1, 1.1);
+        pitch = clamp(pitch + dy * 0.004 * k, -0.6, 0.8);
+      } else if (stickId === null && p.moved > TAP_MOVE && pointers.size === 1) {
+        stickId = p.id; goal = null; marker.visible = false;                  // a drag from here on walks
       }
     });
     const end = e => {
-      if (!drag || e.pointerId !== drag.id) return;
-      const tap = !drag.look && drag.moved < TAP_MOVE && performance.now() - drag.t < TAP_TIME;
-      drag = null;
+      const p = pointers.get(e.pointerId); if (!p) return;
+      pointers.delete(e.pointerId);
+      if (stickId === e.pointerId) stickId = null;
+      const tap = !p.look && p.moved < TAP_MOVE && performance.now() - p.t < TAP_TIME && pointers.size === 0;
       if (tap) walkTo(e.clientX, e.clientY);
     };
     canvas.addEventListener('pointerup', end);
-    canvas.addEventListener('pointercancel', () => { drag = null; });
+    canvas.addEventListener('pointercancel', end);
   }
 
   // Turns a screen point into a point on the ground and sets it as the walk target
@@ -93,29 +102,48 @@ const Player = (() => {
     return { fx: f.x / d, fz: f.z / d, rx: -f.z / d, rz: f.x / d };
   }
 
+  // The on-screen stick: shown from where the drag started, with the knob following the finger
+  function drawStick(p) {
+    if (!p) { stickEl.hidden = true; return; }
+    stickEl.hidden = false;
+    stickEl.style.left = p.sx + 'px'; stickEl.style.top = p.sy + 'px';
+    const dx = p.x - p.sx, dy = p.y - p.sy, d = Math.hypot(dx, dy), k = d > STICK_R ? STICK_R / d : 1;
+    stickKnob.style.transform = `translate(${dx * k}px, ${dy * k}px)`;
+  }
+
   function update(t, dt) {
     // Camera: the reference pose, eased toward the avatar's walk, turned by the look yaw around the look point
     look.set(LOOK.x + (pos.x - START.x) * FOLLOW, LOOK.y, LOOK.z + (pos.z - START.z) * FOLLOW);
     const ox = CAM.x - LOOK.x, oz = CAM.z - LOOK.z;
     camPos.set(look.x + ox * Math.cos(yaw) + oz * Math.sin(yaw), CAM.y - pitch * 2.5, look.z - ox * Math.sin(yaw) + oz * Math.cos(yaw));
 
-    // Direction: keys win over a tap target; a tap target is walked to, then cleared
+    // Direction, in priority: keys, then the drag stick, then a tap target
     const b = basis();
-    let mx = 0, mz = 0;
+    let mx = 0, mz = 0, v = 0, run = !!keys.shift;
     if (keys.w) { mx += b.fx; mz += b.fz; }
     if (keys.s) { mx -= b.fx; mz -= b.fz; }
     if (keys.d) { mx += b.rx; mz += b.rz; }
     if (keys.a) { mx -= b.rx; mz -= b.rz; }
-    let run = !!keys.shift;
-    if (!mx && !mz && goal) {
+    const sp = stickId !== null ? pointers.get(stickId) : null;
+    drawStick(sp);
+    if (mx || mz) {
+      const m = Math.hypot(mx, mz); mx /= m; mz /= m; v = run ? RUN : WALK;
+    } else if (sp) {
+      // Screen drag: up is forward, right is right, and a longer drag walks faster (up to full speed)
+      const sx = sp.x - sp.sx, sy = sp.y - sp.sy, d = Math.hypot(sx, sy);
+      if (d > TAP_MOVE) {
+        const f = Math.min(1, d / STICK_R);
+        mx = b.fx * -sy / d + b.rx * sx / d; mz = b.fz * -sy / d + b.rz * sx / d;
+        const m = Math.hypot(mx, mz) || 1; mx /= m; mz /= m;
+        v = (f > 0.85 ? RUN : WALK) * f;
+        run = f > 0.85;
+      }
+    } else if (goal) {
       const gx = goal.x - pos.x, gz = goal.z - pos.z, dist = Math.hypot(gx, gz);
       if (dist < ARRIVE) { goal = null; marker.visible = false; }
-      else { mx = gx / dist; mz = gz / dist; run = false; }
+      else { mx = gx / dist; mz = gz / dist; v = WALK; }
     }
-    const m = Math.hypot(mx, mz);
-    const v = m > 0 ? (run ? RUN : WALK) : 0;
-    if (m > 0) {
-      mx /= m; mz /= m;
+    if (v > 0) {
       const next = collide(pos.x + mx * v * dt, pos.z + mz * v * dt);
       pos.x = next.x; pos.z = next.z;
       const target = Math.atan2(mx, mz);
