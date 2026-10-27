@@ -41,6 +41,7 @@ const ModelCheck = (() => {
     for (const [kind, label] of KINDS) {
       const rig = Chars.create(kind); scene.add(rig.root);
       const pairs = []; for (const k in rig.j) pairs.push([k, PARENT[k]]);
+      pairs.push(['@top', 'head']);                                    // the head bone runs up to the top of the head
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pairs.length * 6), 3));
       const lines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xffd24a, depthTest: false, transparent: true }));
@@ -57,7 +58,7 @@ const ModelCheck = (() => {
 
   function layout() {
     const shown = rigs.filter(r => who === 'all' || r.kind === who);
-    rigs.forEach(r => { r.rig.root.visible = shown.includes(r); r.lines.visible = r.dots.visible = false; });
+    rigs.forEach(r => { r.rig.root.visible = shown.includes(r); r.lines.visible = r.dots.visible = bones && r.rig.root.visible; });
     shown.forEach((r, i) => { r.rig.root.position.set((i - (shown.length - 1) / 2) * 1.5, 0, 0); r.rig.root.rotation.y = 0; });
     if (fresh) { dist = shown.length > 1 ? 7.5 : 4.2; fresh = false; }
     target.set(0, 0.9, 0);
@@ -93,7 +94,9 @@ const ModelCheck = (() => {
     r.rig.root.updateMatrixWorld(true);
     const a = r.lines.geometry.attributes.position.array; let i = 0;
     for (const [k, p] of r.pairs) {
-      (r.rig.j[k]).getWorldPosition(tmp); a[i++] = tmp.x; a[i++] = tmp.y; a[i++] = tmp.z;
+      if (k === '@top') { const o = r.rig.headTop || [0, 0.4, 0]; tmp.set(o[0], o[1], o[2]); r.rig.head.localToWorld(tmp); }
+      else (r.rig.j[k]).getWorldPosition(tmp);
+      a[i++] = tmp.x; a[i++] = tmp.y; a[i++] = tmp.z;
       (p === 'hips' ? r.rig.hips : r.rig.j[p]).getWorldPosition(tmp); a[i++] = tmp.x; a[i++] = tmp.y; a[i++] = tmp.z;
     }
     r.lines.geometry.attributes.position.needsUpdate = true;

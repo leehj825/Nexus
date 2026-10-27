@@ -447,14 +447,17 @@ const Chars = (() => {
     s.extra(c);
     return c;
   }
-  // The custom models were made in an A-pose (arms swung out), but every pose and clip assumes arms hanging straight down.
-  // Turning the shoulder by the opposite of the swing, and conjugating the elbow and wrist by it, plays them as if the arms hung down.
+  // The custom models were made in an A-pose (arms swung out, bent a little at the elbow), but every pose and clip assumes arms
+  // hanging straight down. armFix holds, per side, how far the upper arm, the forearm and the hand lean out of straight down.
+  // Each bone is turned back by its own lean, and its parent's lean is put back in front: q_sh = q * Rz(-upper),
+  // q_el = Rz(upper) * q * Rz(-fore), q_wr = Rz(fore) * q * Rz(-hand)
   const zq = new THREE.Quaternion(), zn = new THREE.Quaternion(), Z = new THREE.Vector3(0, 0, 1);
   function undoAPose(c) {
     for (const k of ['L', 'R']) {
-      const a = c.armFix[k]; zq.setFromAxisAngle(Z, a); zn.setFromAxisAngle(Z, -a);
-      c.j['sh' + k].quaternion.multiply(zn);
-      for (const n of ['el', 'wr']) c.j[n + k].quaternion.premultiply(zq).multiply(zn);
+      const [up, fore, hand] = c.armFix[k];
+      c.j['sh' + k].quaternion.multiply(zn.setFromAxisAngle(Z, -up));
+      c.j['el' + k].quaternion.premultiply(zq.setFromAxisAngle(Z, up)).multiply(zn.setFromAxisAngle(Z, -fore));
+      c.j['wr' + k].quaternion.premultiply(zq.setFromAxisAngle(Z, fore)).multiply(zn.setFromAxisAngle(Z, -hand));
     }
   }
 
