@@ -1,14 +1,13 @@
 // Nexus - the custom crew models (js/models_data.js) bound to the same joint hierarchy the code-built rigs use, so the
 // motion-capture clips, the seated poses and the combat code drive them without change.
-// The data holds four low-poly characters (quantised vertices, a skin of up to four joints per vertex, one shared texture
-// atlas and an emissive map for the cyan lights) plus the joint positions fitted to each. Units are metres, feet at y = 0,
+// The data holds four low-poly characters (quantised vertices, a skin of up to four joints per vertex, a texture and an emissive map for the cyan lights, per character) plus the joint positions fitted to each. Units are metres, feet at y = 0,
 // facing +Z, the body centred on x = z = 0. Each character was modelled in an A-pose, so `tilt` records how far each arm is
 // swung out; Chars.update undoes it so the clips (which assume arms hanging straight down) play correctly.
 const Models = (() => {
   const D = typeof NX_MODELS !== 'undefined' ? NX_MODELS : null;
   const PARENT = { torso: 'hips', head: 'torso', hipL: 'hips', kneeL: 'hipL', ankL: 'kneeL', hipR: 'hips', kneeR: 'hipR', ankR: 'kneeR',
     shL: 'torso', elL: 'shL', wrL: 'elL', shR: 'torso', elR: 'shR', wrR: 'elR' };
-  let bytes = null, mat = null; const geos = {};
+  let bytes = null; const geos = {}, mats = {};
 
   function bin() {
     if (bytes) return bytes;
@@ -22,9 +21,10 @@ const Models = (() => {
     img.onload = () => { t.needsUpdate = true; };
     img.src = src; return t;
   }
-  function material() {
-    if (!mat) mat = new THREE.MeshStandardMaterial({ map: texture(D.base), emissiveMap: texture(D.emissive), emissive: 0xffffff, emissiveIntensity: 1.6, roughness: 0.85, metalness: 0, skinning: true });   // three r128 needs the flag for skinned meshes
-    return mat;
+  function material(kind) {
+    const m = D.meta[kind];
+    if (!mats[kind]) mats[kind] = new THREE.MeshStandardMaterial({ map: texture(m.base), emissiveMap: texture(m.emissive), emissive: 0xffffff, emissiveIntensity: 1.6, roughness: 0.85, metalness: 0, skinning: true });   // three r128 needs the flag for skinned meshes
+    return mats[kind];
   }
   function geometry(kind) {
     if (geos[kind]) return geos[kind];
@@ -58,7 +58,7 @@ const Models = (() => {
       g.position.set(w[0] - pw[0], w[1] - pw[1], w[2] - pw[2]); g.name = name;
       (p ? joints[p] : root).add(g); joints[name] = g;
     }
-    const mesh = new THREE.SkinnedMesh(geometry(kind), material());
+    const mesh = new THREE.SkinnedMesh(geometry(kind), material(kind));
     mesh.frustumCulled = false;
     root.add(mesh); root.updateMatrixWorld(true);
     mesh.bind(new THREE.Skeleton(D.bones.map(n => joints[n])));
