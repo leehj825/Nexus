@@ -57,6 +57,7 @@ const Chars = (() => {
       add(c.j['el' + k], new THREE.CylinderGeometry(p.armR * 0.88, p.armR * 0.72, 0.32, 6), m.sleeve, 0, -0.16, 0);
       add(c.j['el' + k], new THREE.SphereGeometry(p.armR * 0.9, 6, 4), m.sleeve, 0, 0, 0);                                      // the elbow
       add(c.j['wr' + k], new THREE.CylinderGeometry(p.armR * 0.78, p.armR * 0.82, 0.05, 6), cuff, 0, 0.02, 0);                   // cuff
+      if (m.noHand) continue;                                                                                                     // the rig draws its own hands (Yuna's fists on her blasters)
       add(c.j['wr' + k], box(p.armR * 1.7, 0.1, p.armR * 1.45), hand, 0, -0.06, 0);                                              // the hand
       add(c.j['wr' + k], box(p.armR * 0.55, 0.07, p.armR * 0.7), hand, (k === 'L' ? -1 : 1) * p.armR * 0.95, -0.045, p.armR * 0.35); // thumb
     }
@@ -184,7 +185,7 @@ const Chars = (() => {
       skin: std(0xe0b79a, { roughness: 0.6 }), hair: std(0x3a2b28, { roughness: 0.55 }), suit: std(0x3b3538, { roughness: 0.7 }),
       suitB: std(0x2b2629, { roughness: 0.7 }), accent: lit(0x3ff0ff, 1.0), pants: std(0x2d2a31), shoes: std(0x4a3a32), sole: std(0x1a1416),
       sleeve: std(0x2d2a31), armor: std(0x7f8a98, { roughness: 0.5, metalness: 0.2 }), armorB: std(0x5d6672, { roughness: 0.5, metalness: 0.25 }),
-      hand: std(0x2b2629), cuff: std(0x5d6672, { metalness: 0.25 }), belt: std(0x1a1416),
+      hand: std(0x2b2629), noHand: true, cuff: std(0x5d6672, { metalness: 0.25 }), belt: std(0x1a1416),
       gun: std(0x77808c, { metalness: 0.35, roughness: 0.45 }), gunD: std(0x23282f, { metalness: 0.4, roughness: 0.4 }), gunTop: std(0xb4aaa6, { metalness: 0.3, roughness: 0.45 }), plasma: lit(0x3ff0ff, 1.7),
     };
     const c = skeleton(p); limbs(c, p, m);
@@ -223,8 +224,10 @@ const Chars = (() => {
     // held in the fist with the body sitting forward of the hand and tipped slightly nose-down
     for (const k of ['L', 'R']) {
       const g = c.j['wr' + k], gun = joint(g, 0, 0.0, 0.07); gun.rotation.x = 0.1;   // pushed forward of the wrist so the body clears the forearm
-      tilt(add(gun, box(0.062, 0.15, 0.075), m.gunD, 0, -0.07, -0.06), 0.3, 0, 0);                            // grip, raked back, under the fist
-      add(gun, box(0.12, 0.05, 0.035), m.hand, 0, -0.065, -0.02);                                             // fingers round the front of the grip
+      add(gun, box(0.06, 0.09, 0.07), m.gunD, 0, -0.045, -0.055);                                             // grip, hidden inside the fist
+      add(gun, box(0.1, 0.1, 0.085), m.hand, 0, -0.055, -0.055);                                              // the fist, square to the gun
+      add(gun, box(0.11, 0.045, 0.03), m.hand, 0, -0.065, -0.005);                                            // fingers wrapped round the front of the grip
+      add(gun, box(0.03, 0.05, 0.06), m.hand, (k === 'L' ? -1 : 1) * 0.055, -0.02, -0.04);                   // thumb
       add(gun, box(0.085, 0.11, 0.34), m.gunD, 0, 0.055, 0.12);                                               // dark body
       add(gun, box(0.07, 0.02, 0.34), m.gunTop, 0, 0.12, 0.12);                                               // pale top plate
       add(gun, box(0.05, 0.05, 0.1), m.gunD, 0, 0.07, 0.34);                                                  // short barrel
