@@ -131,3 +131,27 @@ body.battle .hints, body.battle .prompt { display: none; }
   .prompt { bottom: 40px; }
   .toast { bottom: 120px; }
 }
+
+/* Settings and Model Check: the viewer fills the screen with a control column on the left */
+.mcheck { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+.mcheck[hidden] { display: none; }
+.mc-stage { position: absolute; inset: 0; pointer-events: auto; cursor: grab; touch-action: none; }
+.mc-side { position: absolute; left: 12px; top: 12px; bottom: 12px; width: min(330px, calc(100% - 24px)); display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; overflow-y: auto; pointer-events: auto; background: rgba(8, 10, 18, 0.88); border: 1px solid rgba(255, 200, 110, 0.3); border-radius: 8px; font-size: 13px; }
+.mc-side header { display: flex; align-items: center; justify-content: space-between; }
+.mc-side h2 { margin: 0; font-size: 16px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+.mc-x { width: 30px; height: 30px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, 0.2); background: transparent; color: var(--ink); font-size: 18px; cursor: pointer; }
+.mc-h { margin-top: 6px; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+.mc-row { display: flex; flex-wrap: wrap; gap: 5px; }
+.mc-row button, .mc-ctl button { padding: 5px 9px; border-radius: 5px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(255, 255, 255, 0.05); color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; }
+.mc-row button.on, .mc-ctl button.on { border-color: var(--gold); color: var(--gold); background: rgba(232, 177, 90, 0.12); }
+.mc-name { font-size: 16px; font-weight: 600; color: #3ff0ff; }
+.mc-time { font-size: 12px; color: var(--dim); }
+.mc-ctl { display: flex; gap: 6px; flex-wrap: wrap; }
+.mc-opt { display: flex; align-items: center; gap: 8px; }
+.mc-opt input[type=range] { flex: 1; }
+.mc-side input[type=range] { width: 100%; }
+.mc-filter { width: 100%; padding: 6px 8px; border-radius: 5px; border: 1px solid rgba(255, 255, 255, 0.18); background: rgba(0, 0, 0, 0.4); color: var(--ink); font: inherit; }
+.mc-clips { flex: 1; min-height: 120px; overflow-y: auto; }
+.mc-hint { position: absolute; right: 16px; bottom: 12px; font-size: 12px; color: var(--dim); text-shadow: 0 1px 3px #000; }
+body.mcheck #hud, body.mcheck #labels { display: none; }
+@media (max-width: 700px) { .mc-side { top: auto; height: 46%; } }

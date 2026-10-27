@@ -13,7 +13,8 @@
   const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 200);
 
   const composer = new THREE.EffectComposer(renderer);
-  composer.addPass(new THREE.RenderPass(scene, camera));
+  const renderPass = new THREE.RenderPass(scene, camera);
+  composer.addPass(renderPass);
   const bloom = new THREE.UnrealBloomPass(new THREE.Vector2(1, 1), 0.8, 0.4, 0.75);   // strength, radius, threshold
   composer.addPass(bloom);
   composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));
@@ -24,6 +25,7 @@
   HUD.init();
   Combat.init(scene, camera);
   CampUI.init();
+  ModelCheck.init();
   window.nexus = { state: () => Player.state(), scene, camera };          // read-only hook for debugging and automated checks
 
   function resize() {
@@ -49,6 +51,14 @@
   function frame(ms) {
     const now = ms / 1000, dt = Math.min(0.05, now - last);
     last = now;
+    if (ModelCheck.isOpen()) {                                   // the viewer has the screen: the game stands still behind it
+      ModelCheck.update(dt);
+      renderPass.scene = ModelCheck.scene; renderPass.camera = ModelCheck.camera;
+      composer.render();
+      requestAnimationFrame(frame);
+      return;
+    }
+    renderPass.scene = scene; renderPass.camera = camera;
     const step = paused ? 0 : dt;
     t += step;
     City.update(t, step);
