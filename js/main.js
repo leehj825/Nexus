@@ -1,26 +1,37 @@
 // Nexus - entry point: the renderer, the lit alley with the fire and the crew, the player camera and the HUD, in one loop.
+// The frame goes through a small post chain: scene -> bloom (the neon, the fire and the portal glow) -> gamma to sRGB.
 (() => {
   const canvas = document.getElementById('game');
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.outputEncoding = THREE.sRGBEncoding;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.0;
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+  // The composer works in linear light, and the last pass encodes to sRGB, so the renderer itself stays linear
+  renderer.outputEncoding = THREE.LinearEncoding;
+  renderer.toneMapping = THREE.NoToneMapping;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x070b14);
   scene.fog = new THREE.FogExp2(0x070b16, 0.03);
   const camera = new THREE.PerspectiveCamera(46, 1, 0.1, 200);
 
+  const composer = new THREE.EffectComposer(renderer);
+  composer.addPass(new THREE.RenderPass(scene, camera));
+  const bloom = new THREE.UnrealBloomPass(new THREE.Vector2(1, 1), 0.8, 0.4, 0.75);   // strength, radius, threshold
+  composer.addPass(bloom);
+  composer.addPass(new THREE.ShaderPass(THREE.GammaCorrectionShader));
+
   City.build(scene);
   Camp.build(scene);
   Player.init(scene, canvas, camera);
   HUD.init();
-  window.nexus = { state: () => Player.state() };          // read-only hook for debugging and automated checks
+  window.nexus = { state: () => Player.state(), scene };          // read-only hook for debugging and automated checks
 
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
+    // Phones get a lower pixel ratio: the bloom is the costly part, and it reads the same at 1.5x
+    const pr = Math.min(window.devicePixelRatio, h > w ? 1.5 : 2);
+    renderer.setPixelRatio(pr);
     renderer.setSize(w, h);
+    composer.setPixelRatio(pr);
+    composer.setSize(w, h);
     camera.aspect = w / h;
     // Portrait screens (phones) take a wider lens so the fire and the crew still fit
     camera.fov = h > w ? 58 : 46;
@@ -42,7 +53,7 @@
     Camp.update(t, step);
     Player.update(t, step);
     Player.applyCamera(camera);
-    renderer.render(scene, camera);
+    composer.render();
     HUD.update(t, Player.state());
     requestAnimationFrame(frame);
   }

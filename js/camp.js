@@ -33,7 +33,7 @@ const Camp = (() => {
       f.userData.phase = i * 1.7; f.userData.base = f.position.y;
       root.add(f); flames.push(f);
     }
-    fireGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: Tex.glow(), color: 0xff7a2a, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.85, toneMapped: false }));
+    fireGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: Tex.glow(), color: 0xff7a2a, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.35, toneMapped: false }));
     fireGlow.position.set(0, 1.3, 0); fireGlow.scale.set(3.4, 3.4, 1); root.add(fireGlow);
     glowBase = 0.85;
 
