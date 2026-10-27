@@ -175,54 +175,62 @@ const Chars = (() => {
     return c;
   }
 
-  // ---------------- Yuna: the Independent Ranger. Agile, ponytail, stealth tech-suit, dual plasma blasters ----------------
+  // ---------------- Yuna: the Independent Ranger. After the reference: a small plain face, a dark side-swept bob and a tall ponytail,
+  // a fitted dark suit, one big grey armoured arm with vertical cyan light strips, armoured shins, and two long cyan-lit blasters ----------------
   function yuna() {
-    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.18, torsoH: 0.6, armR: 0.065, legR: 0.07, headS: 1.2 };
+    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.19, torsoH: 0.6, armR: 0.065, legR: 0.075, headS: 1.2 };
     const m = {
-      skin: std(0xdba98c, { roughness: 0.6 }), hair: std(0x241b28, { roughness: 0.45 }), suit: std(0x1e2a33, { roughness: 0.6 }),
-      suitB: std(0x2f3d49, { roughness: 0.6 }), accent: lit(0x3ff0ff, 1.1), pants: std(0x1e2a33), shoes: std(0x14171c), sleeve: std(0x1e2a33),
-      armor: std(0x9fb4bd, { roughness: 0.45, metalness: 0.25 }), glove: std(0x14181f), hand: std(0x14181f), cuff: std(0x9fb4bd, { metalness: 0.25 }),
-      gun: std(0x2e3440, { metalness: 0.4, roughness: 0.4 }), gunB: std(0x8793a0, { metalness: 0.5, roughness: 0.35 }), plasma: lit(0x3ff0ff, 2.2),
-      belt: std(0x14181f),
+      skin: std(0xe0b79a, { roughness: 0.6 }), hair: std(0x2f2528, { roughness: 0.5 }), suit: std(0x3b3538, { roughness: 0.7 }),
+      suitB: std(0x2b2629, { roughness: 0.7 }), accent: lit(0x3ff0ff, 1.0), pants: std(0x2d2a31), shoes: std(0x4a3a32), sole: std(0x1a1416),
+      sleeve: std(0x2d2a31), armor: std(0x7f8a98, { roughness: 0.5, metalness: 0.2 }), armorB: std(0x5d6672, { roughness: 0.5, metalness: 0.25 }),
+      hand: std(0x2b2629), cuff: std(0x5d6672, { metalness: 0.25 }), belt: std(0x1a1416),
+      gun: std(0x77808c, { metalness: 0.35, roughness: 0.45 }), gunD: std(0x2a2e36, { metalness: 0.4, roughness: 0.4 }), plasma: lit(0x3ff0ff, 1.7),
     };
     const c = skeleton(p); limbs(c, p, m);
     c.seatH = 0.62; c.kind = 'seated'; c.seed = 4.0;
     const T = c.torso;
-    add(T, tb(0.31, 0.24, 0.56, 0.2, 0.17), m.suit, 0, 0.29, 0);                                            // fitted tech-suit
-    add(T, tb(0.22, 0.2, 0.3, 0.05, 0.05), m.suitB, 0, 0.34, 0.1);                                          // chest panel
-    add(T, box(0.25, 0.018, 0.19), m.accent, 0, 0.17, 0.0);                                                 // accent band
-    add(T, box(0.012, 0.26, 0.012), m.accent, -0.07, 0.36, 0.127);                                          // light lines on the chest panel
-    add(T, box(0.012, 0.26, 0.012), m.accent, 0.07, 0.36, 0.127);
+    add(T, tb(0.3, 0.24, 0.56, 0.2, 0.17), m.suit, 0, 0.29, 0);                                             // fitted suit
+    add(T, tb(0.22, 0.18, 0.3, 0.05, 0.05), m.suitB, 0, 0.33, 0.1);                                         // darker chest panel
     add(T, tb(0.25, 0.28, 0.2, 0.18, 0.2), m.suit, 0, -0.07, 0);
     belt(T, m, 0.27, 0.19, 0.02);
-    for (const s of [-1, 1]) {
-      add(T, tb(0.17, 0.13, 0.1, 0.2, 0.18), m.armor, s * 0.2, 0.52, 0);                                    // shoulder plates
-      add(T, box(0.15, 0.012, 0.19), m.accent, s * 0.2, 0.575, 0);
-      pouch(T, m.gun, s * 0.17, -0.1, 0.06, 0.9);                                                           // hip holsters
+    for (const s of [-1, 1]) pouch(T, m.gunD, s * 0.15, -0.1, 0.07, 0.9);                                   // hip holsters
+    add(T, tb(0.17, 0.2, 0.07, 0.17, 0.19), m.suit, 0, 0.62, 0);
+    // The armoured arm (her left): a tall pauldron, a vertical light strip stack and a heavy forearm guard
+    tilt(add(T, tb(0.17, 0.23, 0.2, 0.22, 0.24), m.armor, 0.22, 0.53, 0), 0, 0, -0.18);
+    for (const dz of [-0.07, 0.0, 0.07]) add(T, box(0.012, 0.15, 0.025), m.accent, 0.318, 0.53, dz);
+    add(c.j.shL, tb(0.17, 0.15, 0.3, 0.17, 0.15), m.armorB, 0.0, -0.2, 0);
+    for (const dz of [-0.04, 0.04]) add(c.j.shL, box(0.012, 0.2, 0.02), m.accent, 0.088, -0.2, dz);
+    add(c.j.elL, tb(0.15, 0.17, 0.3, 0.15, 0.17), m.armorB, 0, -0.16, 0);                                   // forearm guard
+    add(c.j.elR, tb(0.12, 0.13, 0.22, 0.12, 0.13), m.armorB, 0, -0.18, 0);                                  // a lighter bracer on the other arm
+    for (const k of ['L', 'R']) {
+      add(c.j['knee' + k], tb(0.13, 0.12, 0.26, 0.15, 0.13), m.armorB, 0, -0.26, 0.015);                    // shin armour
+      add(c.j['knee' + k], box(0.15, 0.08, 0.11), m.armor, 0, -0.01, 0.06);                                 // knee cap
     }
-    add(T, tb(0.18, 0.2, 0.07, 0.17, 0.19), m.suit, 0, 0.62, 0);
     const H = c.head;
-    face(H, m, { w: 0.265, d: 0.255, eye: std(0x3a2418), angry: 0.8 });
-    add(H, tb(0.3, 0.3, 0.1, 0.3, 0.29), m.hair, 0, 0.3, -0.01);                                            // hair cap
-    add(H, tb(0.29, 0.29, 0.2, 0.06, 0.06), m.hair, 0, 0.19, -0.14);
-    for (const s of [-1, 1]) {
-      add(H, box(0.04, 0.2, 0.22), m.hair, s * 0.15, 0.2, -0.02);                                           // hair swept back over the ears
-      tilt(add(H, box(0.11, 0.14, 0.04), m.hair, s * 0.085, 0.25, 0.135), 0, 0, s * 0.4);                   // parted fringe
-    }
-    add(H, box(0.03, 0.03, 0.03), m.accent, 0.155, 0.12, 0.04);                                              // an earpiece
-    const tail = joint(H, 0, 0.26, -0.15);                                                                    // ponytail, high on the back of the head
-    add(tail, new THREE.SphereGeometry(0.04, 5, 4), m.accent, 0, 0, 0.0);                                    // hair tie
-    add(tail, tb(0.09, 0.03, 0.44, 0.09, 0.03), m.hair, 0, -0.24, 0);
+    face(H, m, { w: 0.255, d: 0.25, eye: std(0x2a1a14), angry: 0.6 });
+    add(H, tb(0.29, 0.29, 0.1, 0.3, 0.29), m.hair, 0, 0.3, -0.01);                                          // crown
+    add(H, tb(0.29, 0.29, 0.2, 0.06, 0.06), m.hair, 0, 0.19, -0.14);                                        // back of the head
+    add(H, box(0.04, 0.2, 0.2), m.hair, -0.15, 0.2, -0.03);                                                 // hair swept back over the ears
+    add(H, box(0.04, 0.2, 0.2), m.hair, 0.15, 0.2, -0.03);
+    tilt(add(H, box(0.2, 0.11, 0.05), m.hair, -0.05, 0.27, 0.14), 0, 0, 0.35);                              // a long side-swept fringe over one brow
+    tilt(add(H, box(0.1, 0.18, 0.04), m.hair, -0.11, 0.2, 0.14), 0, 0, 0.1);
+    const tail = joint(H, 0, 0.3, -0.13);                                                                    // a tall ponytail rising off the crown
+    add(tail, new THREE.SphereGeometry(0.045, 5, 4), m.accent, 0, 0, 0);                                    // glowing hair tie
+    add(tail, tb(0.04, 0.1, 0.3, 0.04, 0.1), m.hair, 0, 0.17, 0);
+    add(tail, tb(0.06, 0.04, 0.2, 0.06, 0.04), m.hair, 0, 0.36, -0.02);
     c.tail = tail;
-    // Blasters, one in each hand, held forward
+    // Long blasters, one in each hand, held forward: a grey body, a dark top rail and cyan strips along the side
     for (const k of ['L', 'R']) {
       const g = c.j['wr' + k];
-      add(g, tb(0.07, 0.09, 0.14, 0.12, 0.16), m.gun, 0, -0.1, 0.0);                                         // grip
-      add(g, box(0.085, 0.1, 0.3), m.gun, 0, -0.02, 0.15);                                                    // body
-      add(g, box(0.05, 0.03, 0.28), m.plasma, 0, 0.038, 0.15);                                                // plasma strip along the top
-      add(g, box(0.035, 0.035, 0.12), m.gunB, 0, -0.02, 0.34);                                                // barrel
-      add(g, box(0.045, 0.045, 0.03), m.plasma, 0, -0.02, 0.41);                                              // muzzle glow
-      add(g, box(0.09, 0.015, 0.1), m.gunB, 0, -0.07, 0.2);
+      add(g, tb(0.07, 0.09, 0.15, 0.12, 0.17), m.gunD, 0, -0.1, -0.01);                                     // grip
+      add(g, box(0.09, 0.1, 0.44), m.gun, 0, -0.03, 0.2);                                                    // body
+      add(g, box(0.05, 0.04, 0.4), m.gunD, 0, 0.035, 0.2);                                                   // top rail
+      for (const s of [-1, 1]) {
+        add(g, box(0.012, 0.025, 0.3), m.plasma, s * 0.05, -0.03, 0.2);                                      // light strips
+        add(g, box(0.012, 0.05, 0.03), m.plasma, s * 0.05, -0.03, 0.04);
+      }
+      add(g, box(0.05, 0.05, 0.14), m.gunD, 0, -0.03, 0.47);                                                 // barrel
+      add(g, box(0.06, 0.06, 0.03), m.plasma, 0, -0.03, 0.55);
     }
     c.armR = 0; c.armL = 0;
     return c;
@@ -362,10 +370,11 @@ const Chars = (() => {
 
 
   const kinds = { ruen, kyle, yuna, player, stranger, husk };
-  // The clips a figure walks, runs and idles with, and the idle it holds in battle. Nobody holds a weapon yet, so the
-  // unarmed set is the default; Ruen casts, so she has the magic set. Swap a set when a character gets a weapon.
-  const UNARMED = { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' };
-  const LOCO = { ruen: { idle: 'mgIdle', walk: 'mgWalk', run: 'mgRun', battle: 'mgIdle' } };
+  // The clips a figure walks, runs and idles with, and the idle it holds in battle. Nobody holds a weapon, so everyone
+  // walks and runs with the plain unarmed locomotion. The crew drop into the magic stance when a fight starts (their
+  // strikes are brawling punches and hooks, their skills are casts); the husks keep a loose unarmed idle.
+  const UNARMED = { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'mgIdle' };
+  const LOCO = { husk: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' } };
 
   // Builds one of the crew by name and returns its rig (the root is what the scene adds)
   function create(kind) {

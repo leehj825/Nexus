@@ -21,10 +21,10 @@ const Combat = (() => {
   const ORDER = ['you', 'ruen', 'kyle', 'yuna'];
   const HUSK = { name: 'Husk', hp: 60, rate: 0.09, color: '#ff5a7a' };
   const COMMANDS = {
-    you: [{ label: 'Strike', run: u => strike(u, 16, 'slash3') }, { label: 'Brace', run: u => brace(u) }],
+    you: [{ label: 'Strike', run: u => strike(u, 16, 'brawlPunch') }, { label: 'Brace', run: u => brace(u) }],
     ruen: [{ label: 'Data Bolt', run: u => strike(u, 22, 'mgBolt') }, { label: 'Data Burst', run: u => startCast(u) }],
-    kyle: [{ label: 'Strike', run: u => strike(u, 18, 'attack1') }, { label: 'Guard', run: u => guard(u) }],
-    yuna: [{ label: 'Blast', run: u => { strike(u, 14, 'shoot'); strike(u, 14, null); } }, { label: 'Stagger', run: u => stagger(u) }],
+    kyle: [{ label: 'Strike', run: u => strike(u, 18, 'brawlSwipe') }, { label: 'Guard', run: u => guard(u) }],
+    yuna: [{ label: 'Blast', run: u => { strike(u, 14, 'mgBolt2'); strike(u, 14, null); } }, { label: 'Stagger', run: u => stagger(u) }],
   };
 
   const ease = x => x * x * (3 - 2 * x);
@@ -133,7 +133,7 @@ const Combat = (() => {
 
   // ---------------- Commands ----------------
   function endTurn(u) { u.atb = 0; u.ready = false; menuFor = null; }
-  function strike(u, dmg, clip = 'attack1') {                     // clip null: the second blow of a combo, the first one's clip plays on
+  function strike(u, dmg, clip = 'brawlPunch') {                     // clip null: the second blow of a combo, the first one's clip plays on
     const t = selected(); if (!t) return;
     if (clip) Chars.play(u.rig, clip);
     shot(u, t, u.color); hitFoe(t, dmg); log(u.name + ' hits the husk for ' + dmg + '.');
@@ -149,7 +149,7 @@ const Combat = (() => {
   }
   function stagger(u) {
     const t = selected(); if (!t) return;
-    Chars.play(u.rig, 'kick');
+    Chars.play(u.rig, 'brawlSwipe');
     t.atb = Math.max(0, t.atb - STAGGER);
     if (t.wind) { t.wind = null; log('Stagger breaks the husk\'s wind-up.'); } else log('Stagger pushes the husk back.');
     shot(u, t, u.color);
@@ -169,7 +169,7 @@ const Combat = (() => {
       log(f.name + ' winds up on ' + t.name + '!');
     } else {
       const t = pick(); if (!t) return;
-      Chars.play(f.rig, 'attack2');
+      Chars.play(f.rig, 'brawlPunch');
       shot(f, t, HUSK.color); hitParty(t, Math.round(rand(11, 15)));
       log(f.name + ' lashes ' + t.name + '.');
     }
@@ -182,7 +182,7 @@ const Combat = (() => {
     w.ring.material.opacity = 0.4 + k * 0.5;
     if (w.t <= 0) {
       const t = w.target.alive ? w.target : pick();
-      if (t) { Chars.play(f.rig, 'attack1'); shot(f, t, HUSK.color); hitParty(t, w.dmg); log(f.name + ' crushes ' + t.name + '!'); }
+      if (t) { Chars.play(f.rig, 'brawlSwipe'); shot(f, t, HUSK.color); hitParty(t, w.dmg); log(f.name + ' crushes ' + t.name + '!'); }
       clearWind(f);
     }
   }
