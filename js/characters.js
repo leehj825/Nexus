@@ -375,8 +375,52 @@ const Chars = (() => {
     c.j.shL.rotation.x = c.j.shR.rotation.x = a.sh;
     c.j.elL.rotation.x = c.j.elR.rotation.x = a.el;
     c.j.wrL.rotation.x = c.j.wrR.rotation.x = a.wr;
+    c.j.shL.rotation.z = a.z || 0; c.j.shR.rotation.z = -(a.z || 0);
   }
 
+
+  // ---------------- The custom models: the rig comes from Models, the extras (seat, data-orb, blasters) are added here ----------------
+  const MODEL_SETUP = {
+    ruen: { kind: 'seated', seatH: 0.62, seed: 1.3, extra: c => { orbFor(c); c.armR = 0; } },
+    kyle: { kind: 'seated', seatH: 0.72, seed: 2.1, extra: c => { c.armL = 0.05; c.seatArm = { sh: -0.2, el: -0.7, wr: 0, z: 0.3 }; } },
+    yuna: { kind: 'seated', seatH: 0.62, seed: 4.0, extra: c => { blasters(c); c.seatArm = { sh: -0.5, el: -0.6, wr: 0 }; } },
+    player: { kind: 'stand', seed: 0.6, extra: () => {} },
+  };
+  // Ruen's data-orb: a glowing sphere that circles her right hand
+  function orbFor(c) {
+    const hand = joint(c.j.wrR, 0, -0.1, 0.12), orbit = joint(hand, 0, 0, 0);
+    c.orb = add(orbit, new THREE.IcosahedronGeometry(0.075, 1), lit(0x37e0ff, 1.6), 0.18, 0, 0);
+    add(orbit, new THREE.TorusGeometry(0.16, 0.008, 4, 18), lit(0x37e0ff, 1.2), 0, 0, 0).rotation.x = Math.PI / 2;
+    c.orbit = orbit;
+  }
+  // Yuna's blasters: short pistols held in each hand with the barrel running along the forearm (the grip sits in the fist,
+  // the body on top of the hand), after the reference
+  function blasters(c) {
+    const m = {
+      gun: std(0x77808c, { metalness: 0.35, roughness: 0.45 }), gunD: std(0x23282f, { metalness: 0.4, roughness: 0.4 }),
+      gunTop: std(0xb4aaa6, { metalness: 0.3, roughness: 0.45 }), plasma: lit(0x3ff0ff, 1.7), glove: std(0x2b2629),
+    };
+    for (const k of ['L', 'R']) {
+      const gun = joint(c.j['wr' + k], 0, -0.11, 0.045); gun.rotation.x = Math.PI / 2 - 0.1;
+      add(gun, box(0.06, 0.09, 0.07), m.gunD, 0, -0.045, -0.055);                                             // grip, in the fist
+      add(gun, box(0.1, 0.1, 0.085), m.glove, 0, -0.055, -0.055);                                             // a glove round the grip (the model's own hand is torn)
+      add(gun, box(0.085, 0.11, 0.34), m.gunD, 0, 0.055, 0.12);                                               // dark body
+      add(gun, box(0.07, 0.02, 0.34), m.gunTop, 0, 0.12, 0.12);                                               // pale top plate
+      add(gun, box(0.05, 0.05, 0.1), m.gunD, 0, 0.07, 0.34);                                                  // short barrel
+      add(gun, box(0.055, 0.04, 0.012), m.plasma, 0, 0.07, 0.395);                                            // muzzle glow
+      add(gun, box(0.05, 0.02, 0.1), m.gunD, 0, 0.0, 0.07);                                                   // trigger guard
+      for (const s of [-1, 1]) {
+        tilt(add(gun, box(0.012, 0.018, 0.22), m.plasma, s * 0.046, 0.085, 0.14), 0.12, 0, 0);
+        tilt(add(gun, box(0.012, 0.018, 0.16), m.plasma, s * 0.046, 0.045, 0.1), 0.12, 0, 0);
+      }
+    }
+  }
+  function modelRig(kind) {
+    const c = Models.rig(kind), s = MODEL_SETUP[kind];
+    c.kind = s.kind; c.seed = s.seed; if (s.seatH) c.seatH = s.seatH;
+    s.extra(c);
+    return c;
+  }
 
   const kinds = { ruen, kyle, yuna, player, stranger, husk };
   // The clips a figure walks, runs and idles with, and the idle it holds in battle. Nobody holds a weapon, so everyone
@@ -385,9 +429,20 @@ const Chars = (() => {
   const UNARMED = { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'mgIdle' };
   const LOCO = { husk: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' } };
 
+  // The custom models were made in an A-pose (arms swung out), but every pose and clip assumes arms hanging straight down.
+  // Turning the shoulder by the opposite of the swing, and conjugating the elbow and wrist by it, plays them as if the arms hung down.
+  const zq = new THREE.Quaternion(), zn = new THREE.Quaternion(), Z = new THREE.Vector3(0, 0, 1);
+  function undoAPose(c) {
+    for (const k of ['L', 'R']) {
+      const a = c.armFix[k]; zq.setFromAxisAngle(Z, a); zn.setFromAxisAngle(Z, -a);
+      c.j['sh' + k].quaternion.multiply(zn);
+      for (const n of ['el', 'wr']) c.j[n + k].quaternion.premultiply(zq).multiply(zn);
+    }
+  }
+
   // Builds one of the crew by name and returns its rig (the root is what the scene adds)
   function create(kind) {
-    const c = kinds[kind](); c.name = kind;
+    const c = Models.has(kind) ? modelRig(kind) : kinds[kind](); c.name = kind;
     c.walk = 0; c.speed = 0;
     c.mocap = true; c.loco = LOCO[kind] || UNARMED; c.idleClip = c.loco.idle;   // standing figures use the clips; idleClip is what they do when still
     return c;
@@ -425,6 +480,7 @@ const Chars = (() => {
         if (c.lean) c.torso.rotation.x = c.lean;
       }
     }
+    if (c.armFix) undoAPose(c);
     if (c.name === 'ruen') { c.orbit.rotation.y = t * 1.6; c.orb.position.y = Math.sin(t * 2.2) * 0.03; }
     if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = 0.12 - Math.min(speed, 4) * 0.05; }
   }
