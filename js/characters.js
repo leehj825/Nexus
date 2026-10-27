@@ -181,7 +181,7 @@ const Chars = (() => {
   function yuna() {
     const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.19, torsoH: 0.6, armR: 0.065, legR: 0.075, headS: 1.12 };
     const m = {
-      skin: std(0xe0b79a, { roughness: 0.6 }), hair: std(0x2f2528, { roughness: 0.5 }), suit: std(0x3b3538, { roughness: 0.7 }),
+      skin: std(0xe0b79a, { roughness: 0.6 }), hair: std(0x3a2b28, { roughness: 0.55 }), suit: std(0x3b3538, { roughness: 0.7 }),
       suitB: std(0x2b2629, { roughness: 0.7 }), accent: lit(0x3ff0ff, 1.0), pants: std(0x2d2a31), shoes: std(0x4a3a32), sole: std(0x1a1416),
       sleeve: std(0x2d2a31), armor: std(0x7f8a98, { roughness: 0.5, metalness: 0.2 }), armorB: std(0x5d6672, { roughness: 0.5, metalness: 0.25 }),
       hand: std(0x2b2629), cuff: std(0x5d6672, { metalness: 0.25 }), belt: std(0x1a1416),
@@ -209,27 +209,32 @@ const Chars = (() => {
     }
     const H = c.head;
     face(H, m, { w: 0.255, d: 0.25, eye: std(0x2a1a14), simple: true });
-    add(H, tb(0.285, 0.285, 0.2, 0.28, 0.28), m.hair, 0, 0.215, -0.045);                                    // hair shell over the crown, sides and back
+    add(H, tb(0.255, 0.29, 0.2, 0.27, 0.28), m.hair, 0, 0.215, -0.045);                                     // hair pulled back over the crown, sides and back
     add(H, box(0.275, 0.05, 0.04), m.hair, 0, 0.292, 0.128);                                                 // hairline
     tilt(add(H, box(0.15, 0.1, 0.035), m.hair, -0.06, 0.245, 0.136), 0, 0, 0.45);                           // the fringe, swept across to one side
     for (const s of [-1, 1]) add(H, box(0.03, 0.2, 0.16), m.hair, s * 0.145, 0.17, -0.05);                  // hair framing the ears
-    const tail = joint(H, 0, 0.3, -0.12);                                                                    // a tall ponytail rising off the back of the crown
-    add(tail, new THREE.SphereGeometry(0.05, 6, 4), m.accent, 0, 0, 0);                                     // glowing hair tie
-    add(tail, new THREE.CylinderGeometry(0.03, 0.075, 0.46, 6), m.hair, 0, 0.23, 0);
+    const tail = joint(H, 0, 0.2, -0.17);                                                                    // the hair is tied at the back and the ponytail hangs down
+    add(tail, box(0.12, 0.04, 0.05), m.accent, 0, 0.0, 0.0);                                                 // hair tie
+    add(tail, tb(0.1, 0.05, 0.42, 0.08, 0.05), m.hair, 0, -0.22, -0.005);
+    tail.rotation.x = 0.12;
     c.tail = tail;
     c.seatArm = { sh: -0.3, el: -0.55, wr: 0.95 };                                                           // arms resting forward, blasters level
-    // Long blasters, one in each hand, held forward: a grey body, a dark top rail and cyan strips along the side
+    // Long blasters held by the hand around a pistol grip: the fist wraps the grip under the body, the barrel runs forward and
+    // the body sits on top of the hand with a trigger guard in front of the fingers. m.hand is the glove
     for (const k of ['L', 'R']) {
-      const g = c.j['wr' + k];
-      add(g, tb(0.07, 0.09, 0.15, 0.12, 0.17), m.gunD, 0, -0.1, -0.01);                                     // grip
-      add(g, box(0.09, 0.1, 0.44), m.gun, 0, -0.03, 0.2);                                                    // body
-      add(g, box(0.05, 0.04, 0.4), m.gunD, 0, 0.035, 0.2);                                                   // top rail
+      const g = c.j['wr' + k], gun = joint(g, 0, 0, 0.0); gun.rotation.x = 0.12;
+      add(gun, box(0.062, 0.14, 0.07), m.gunD, 0, -0.065, 0.0);                                               // the grip inside the fist
+      add(gun, box(0.12, 0.05, 0.035), m.hand, 0, -0.06, 0.05);                                               // fingers wrapped round the front
+      add(gun, box(0.08, 0.09, 0.44), m.gun, 0, 0.05, 0.1);                                                   // body on top of the hand
+      add(gun, box(0.045, 0.035, 0.4), m.gunD, 0, 0.11, 0.1);                                                 // top rail
+      add(gun, box(0.05, 0.015, 0.09), m.gunD, 0, 0.0, 0.1);                                                  // trigger guard
       for (const s of [-1, 1]) {
-        add(g, box(0.012, 0.025, 0.3), m.plasma, s * 0.05, -0.03, 0.2);                                      // light strips
-        add(g, box(0.012, 0.05, 0.03), m.plasma, s * 0.05, -0.03, 0.04);
+        add(gun, box(0.012, 0.025, 0.3), m.plasma, s * 0.045, 0.055, 0.12);                                   // light strips down the sides
+        add(gun, box(0.012, 0.045, 0.03), m.plasma, s * 0.045, 0.055, -0.05);
       }
-      add(g, box(0.05, 0.05, 0.14), m.gunD, 0, -0.03, 0.47);                                                 // barrel
-      add(g, box(0.06, 0.06, 0.03), m.plasma, 0, -0.03, 0.55);
+      add(gun, box(0.045, 0.045, 0.16), m.gunD, 0, 0.055, 0.38);                                              // barrel
+      add(gun, box(0.055, 0.055, 0.03), m.plasma, 0, 0.055, 0.47);
+      add(gun, box(0.07, 0.07, 0.08), m.gunD, 0, 0.05, -0.15);                                                // rear stock
     }
     c.armR = 0; c.armL = 0;
     return c;
@@ -418,7 +423,7 @@ const Chars = (() => {
       }
     }
     if (c.name === 'ruen') { c.orbit.rotation.y = t * 1.6; c.orb.position.y = Math.sin(t * 2.2) * 0.03; }
-    if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = -0.35 + Math.sin(t * 3.2) * 0.12 - speed * 0.2; }
+    if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = 0.12 - Math.min(speed, 4) * 0.05; }
   }
 
   return { create, update, play, clipLength };
