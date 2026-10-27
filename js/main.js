@@ -23,7 +23,7 @@
   Player.init(scene, canvas, camera);
   HUD.init();
   Combat.init(scene, camera);
-  window.nexus = { state: () => Player.state(), scene };          // read-only hook for debugging and automated checks
+  window.nexus = { state: () => Player.state(), scene, camera };          // read-only hook for debugging and automated checks
 
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
