@@ -7,22 +7,24 @@
 //   Kyle: Intercept. While Guard is up, a fatal hit on Ruen or Yuna is taken by Kyle instead if his ATB is at least half full.
 //   Yuna: fast gauge. Her ATB fills at twice the rate, and Stagger pushes an enemy's turn back.
 const Combat = (() => {
-  const TRANS = 1.4, ENCOUNTER_R = 6.5, GUARD_TIME = 8, CAST_RATE = 0.4, STAGGER = 0.35, RESULT_WAIT = 2.2, WIND = 1.6;
+  const TRANS = 1.4, ENCOUNTER_R = 6.5, GUARD_TIME = 8, BRACE_TIME = 6, CAST_RATE = 0.4, STAGGER = 0.35, RESULT_WAIT = 2.2, WIND = 1.6;
   const BATTLE = { pos: new THREE.Vector3(0.2, 3.4, 7.4), look: new THREE.Vector3(0, 1.0, -2.6) };
-  const SPOT = { ruen: [-2.6, -0.7], kyle: [0.6, -1.5], yuna: [2.6, -0.5] };      // the far side of the fire, facing the husks
+  const SPOT = { you: [-0.9, -2.6], ruen: [-2.6, -0.7], kyle: [0.6, -1.5], yuna: [2.6, -0.5] };     // the far side of the fire, facing the husks
   const FOE_SPOT = [[-2.8, -5.8], [0.0, -6.8], [2.8, -5.8]];
   const FOE_HOME = [[-2.6, -13.5], [0.2, -14.5], [2.6, -13.5]];
   const PARTY = {
+    you: { name: 'You', hp: 110, rate: 0.12, color: '#ffffff' },
     ruen: { name: 'Ruen', hp: 90, rate: 0.13, color: '#c9a0ff' },
     kyle: { name: 'Kyle', hp: 150, rate: 0.1, color: '#ffd27a' },
     yuna: { name: 'Yuna', hp: 80, rate: 0.2, color: '#7ff7ff' },
   };
-  const ORDER = ['ruen', 'kyle', 'yuna'];
+  const ORDER = ['you', 'ruen', 'kyle', 'yuna'];
   const HUSK = { name: 'Husk', hp: 60, rate: 0.09, color: '#ff5a7a' };
   const COMMANDS = {
-    ruen: [{ label: 'Data Bolt', run: u => strike(u, 22) }, { label: 'Data Burst', run: u => startCast(u) }],
-    kyle: [{ label: 'Strike', run: u => strike(u, 18) }, { label: 'Guard', run: u => guard(u) }],
-    yuna: [{ label: 'Blast', run: u => { strike(u, 14); strike(u, 14); } }, { label: 'Stagger', run: u => stagger(u) }],
+    you: [{ label: 'Strike', run: u => strike(u, 16, 'slash3') }, { label: 'Brace', run: u => brace(u) }],
+    ruen: [{ label: 'Data Bolt', run: u => strike(u, 22, 'attack2') }, { label: 'Data Burst', run: u => startCast(u) }],
+    kyle: [{ label: 'Strike', run: u => strike(u, 18, 'attack1') }, { label: 'Guard', run: u => guard(u) }],
+    yuna: [{ label: 'Blast', run: u => { strike(u, 14, 'shoot'); strike(u, 14, null); } }, { label: 'Stagger', run: u => stagger(u) }],
   };
 
   const ease = x => x * x * (3 - 2 * x);
@@ -41,13 +43,13 @@ const Combat = (() => {
     scene = s;
     ui = { engage: $('engage'), battle: $('battle'), banner: $('banner'), log: $('log'), actions: $('actions') };
     for (const id of ORDER) {
-      const rig = Camp.crew.find(c => c.name === id).rig;
-      const u = { id, name: PARTY[id].name, color: PARTY[id].color, rig, hp: PARTY[id].hp, hpMax: PARTY[id].hp, rate: PARTY[id].rate, atb: 0, ready: false, alive: true, guard: 0, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
+      const rig = id === 'you' ? Player.rig() : Camp.crew.find(c => c.name === id).rig;
+      const u = { id, name: PARTY[id].name, color: PARTY[id].color, rig, hp: PARTY[id].hp, hpMax: PARTY[id].hp, rate: PARTY[id].rate, atb: 0, ready: false, alive: true, guard: 0, brace: 0, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
       u.label = makeLabel(u.name, u.color, null);
       party.push(u);
     }
     for (let i = 0; i < 3; i++) {
-      const rig = Chars.create('husk'); rig.stance = false; rig.root.position.set(FOE_HOME[i][0], 0, FOE_HOME[i][1]); scene.add(rig.root);
+      const rig = Chars.create('husk'); rig.root.position.set(FOE_HOME[i][0], 0, FOE_HOME[i][1]); scene.add(rig.root);
       const f = { id: 'husk' + i, name: HUSK.name, rig, hp: HUSK.hp, hpMax: HUSK.hp, rate: HUSK.rate, atb: 0, alive: true, foe: true, wind: null, home: { x: FOE_HOME[i][0], z: FOE_HOME[i][1], ry: 0 }, spot: FOE_SPOT[i] };
       f.label = makeLabel(HUSK.name, HUSK.color, f);
       foes.push(f);
@@ -104,13 +106,13 @@ const Combat = (() => {
   // ---------------- Damage ----------------
   function kill(u) {
     u.alive = false; u.ready = false; clearWind(u);
-    u.rig.root.rotation.x = -1.3; u.rig.root.position.y = 0.05;
+    Chars.play(u.rig, 'die', true);
     log(u.name + (u.foe ? ' falls.' : ' is down!'));
   }
   function damage(u, dmg) {
     if (!u.alive) return;
     u.hp = Math.max(0, u.hp - dmg); popup(u, '-' + dmg, u.foe ? '#ffffff' : '#ff8a8a');
-    if (u.hp <= 0) kill(u);
+    if (u.hp <= 0) kill(u); else Chars.play(u.rig, u.hp < u.hpMax * 0.3 ? 'impact2' : 'impact');
   }
   // A husk's attack on a crew member. Kyle may intercept a fatal blow on Ruen or Yuna
   function hitParty(u, dmg) {
@@ -122,6 +124,7 @@ const Combat = (() => {
       damage(kyle, Math.round(dmg * 0.6));
       return;
     }
+    if (u.brace > 0) { dmg = Math.round(dmg * 0.5); log(u.name + ' braces through it.'); }
     damage(u, dmg);
     if (u.id === 'ruen' && cast && u.alive) { cast = null; log('Ruen is hit. The casting breaks.'); }
   }
@@ -130,20 +133,29 @@ const Combat = (() => {
 
   // ---------------- Commands ----------------
   function endTurn(u) { u.atb = 0; u.ready = false; menuFor = null; }
-  function strike(u, dmg) {
+  function strike(u, dmg, clip = 'attack1') {                     // clip null: the second blow of a combo, the first one's clip plays on
     const t = selected(); if (!t) return;
+    if (clip) Chars.play(u.rig, clip);
     shot(u, t, u.color); hitFoe(t, dmg); log(u.name + ' hits the husk for ' + dmg + '.');
     endTurn(u);
   }
-  function guard(u) { u.guard = GUARD_TIME; log('Kyle raises his guard.'); endTurn(u); }
+  function guard(u) {
+    u.guard = GUARD_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block');
+    log('Kyle raises his guard.'); endTurn(u);
+  }
+  function brace(u) {
+    u.brace = BRACE_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block');
+    log('You brace.'); endTurn(u);
+  }
   function stagger(u) {
     const t = selected(); if (!t) return;
+    Chars.play(u.rig, 'kick');
     t.atb = Math.max(0, t.atb - STAGGER);
     if (t.wind) { t.wind = null; log('Stagger breaks the husk\'s wind-up.'); } else log('Stagger pushes the husk back.');
     shot(u, t, u.color);
     endTurn(u);
   }
-  function startCast(u) { cast = { t: 0 }; log('Ruen begins Data Burst.'); endTurn(u); }
+  function startCast(u) { cast = { t: 0 }; Chars.play(u.rig, 'attack3'); log('Ruen begins Data Burst.'); endTurn(u); }
 
   // ---------------- Husk AI ----------------
   function foeAct(f) {
@@ -156,6 +168,7 @@ const Combat = (() => {
       log(f.name + ' winds up on ' + t.name + '!');
     } else {
       const t = pick(); if (!t) return;
+      Chars.play(f.rig, 'attack2');
       shot(f, t, HUSK.color); hitParty(t, Math.round(rand(11, 15)));
       log(f.name + ' lashes ' + t.name + '.');
     }
@@ -168,7 +181,7 @@ const Combat = (() => {
     w.ring.material.opacity = 0.4 + k * 0.5;
     if (w.t <= 0) {
       const t = w.target.alive ? w.target : pick();
-      if (t) { shot(f, t, HUSK.color); hitParty(t, w.dmg); log(f.name + ' crushes ' + t.name + '!'); }
+      if (t) { Chars.play(f.rig, 'attack1'); shot(f, t, HUSK.color); hitParty(t, w.dmg); log(f.name + ' crushes ' + t.name + '!'); }
       clearWind(f);
     }
   }
@@ -180,13 +193,15 @@ const Combat = (() => {
     phase = 'enter'; phaseT = 0;
     Player.setFrozen(true);
     for (const u of party) {
-      u.hp = u.hpMax; u.alive = true; u.ready = false; u.atb = rand(0, 0.3); u.guard = 0;
-      u.rig.combat = true; u.rig.stance = true; u.rig.kind = 'stand';
+      u.hp = u.hpMax; u.alive = true; u.ready = false; u.atb = rand(0, 0.3); u.guard = 0; u.brace = 0;
+      u.home = { x: u.rig.root.position.x, z: u.rig.root.position.z, ry: u.rig.root.rotation.y };   // where the avatar stands now
+      u.rig.combat = true; u.rig.kind = 'stand'; u.rig.clip = null; u.rig.idleClip = 'idleAlert';
       u.from = u.rig.root.position.clone(); u.rig.root.rotation.set(0, Math.PI, 0);
       u.to = new THREE.Vector3(SPOT[u.id][0], 0, SPOT[u.id][1]);
     }
     for (const f of foes) {
-      f.hp = f.hpMax; f.alive = true; f.atb = rand(0, 0.2); f.rig.combat = true; f.rig.stance = true; f.wind = null;
+      f.hp = f.hpMax; f.alive = true; f.atb = rand(0, 0.2); f.rig.combat = true; f.wind = null;
+      f.rig.clip = null; f.rig.idleClip = 'idleAlert';
       f.from = f.rig.root.position.clone(); f.to = new THREE.Vector3(f.spot[0], 0, f.spot[1]);
       f.rig.root.rotation.set(0, 0, 0);
     }
@@ -212,12 +227,13 @@ const Combat = (() => {
   function finishLeave() {
     phase = 'explore'; phaseT = 0;
     for (const u of party) {
-      u.rig.combat = false; u.rig.stance = false; u.rig.kind = 'seated';
+      u.rig.combat = false; u.rig.clip = null; u.rig.idleClip = 'idleEase';
+      if (u.id !== 'you') u.rig.kind = 'seated';
       u.rig.root.rotation.set(0, u.home.ry, 0); u.rig.root.position.y = 0;
       u.rig.root.position.set(u.home.x, 0, u.home.z);
     }
     for (const f of foes) {
-      f.rig.combat = false; f.rig.stance = false; f.alive = true; f.hp = f.hpMax;
+      f.rig.combat = false; f.rig.clip = null; f.alive = true; f.hp = f.hpMax;
       f.rig.root.rotation.set(0, 0, 0); f.rig.root.position.set(f.home.x, 0, f.home.z);
     }
     Player.setFrozen(false);
@@ -250,6 +266,7 @@ const Combat = (() => {
   function update(dt, camera) {
     clock += dt; phaseT += dt;
 
+    const walking = phase === 'enter' || phase === 'leave' ? 1.6 : 0;      // the units walk while they move into place
     if (phase === 'enter' || phase === 'leave') {
       const k = ease(clamp(phaseT / TRANS, 0, 1));
       for (const u of [...party, ...foes]) {
@@ -264,6 +281,8 @@ const Combat = (() => {
       for (const u of party) {
         if (!u.alive) continue;
         u.guard = Math.max(0, u.guard - dt);
+        if (u.brace > 0) { u.brace = Math.max(0, u.brace - dt); if (u.brace === 0) u.rig.idleClip = 'idleAlert'; }
+        if (u.id === 'kyle' && u.guard === 0 && u.rig.idleClip === 'blockIdle') u.rig.idleClip = 'idleAlert';
         u.atb = Math.min(1, u.atb + u.rate * dt);
         if (u.atb >= 1 && !(u.id === 'ruen' && cast)) u.ready = true;
       }
@@ -292,8 +311,8 @@ const Combat = (() => {
     ui.battle.hidden = phase === 'explore';
 
     // Idle motion for everyone not under the crew's own pose
-    for (const f of foes) Chars.update(f.rig, clock, dt, 0);
-    for (const u of party) if (u.rig.combat) Chars.update(u.rig, clock, dt, 0);
+    for (const f of foes) Chars.update(f.rig, clock, dt, walking);
+    for (const u of party) if (u.rig.combat) Chars.update(u.rig, clock, dt, walking);
 
     updateShots(dt);
     updatePops(dt);
@@ -359,7 +378,7 @@ const Combat = (() => {
           ui.actions.appendChild(b);
         }
       }
-      }
+    }
     ui.actions.hidden = !who || phase !== 'battle';
   }
 

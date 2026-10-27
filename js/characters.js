@@ -16,6 +16,7 @@ const Chars = (() => {
     const torso = joint(hips, 0, 0.1, 0);
     const head = joint(torso, 0, p.torsoH, 0);
     const c = { root, hips, torso, head, j: {} };
+    c.j.torso = torso; c.j.head = head; c.hipsRest = p.thigh + p.shin;   // the mocap clips write these joints
     head.scale.setScalar(p.headS || 1.2);                                   // the reference crew has big, readable heads
     for (const side of [-1, 1]) {
       const k = side > 0 ? 'L' : 'R';
@@ -45,7 +46,7 @@ const Chars = (() => {
   // A person in a pose. kind: 'seated' (hips on a seat at c.seatH) or 'stand' (walks with `speed`)
   function rest(c) {
     for (const k in c.j) c.j[k].rotation.set(0, 0, 0);
-    c.torso.rotation.set(0, 0, 0); c.head.rotation.set(0, 0, 0);
+    c.hips.rotation.set(0, 0, 0); c.hips.position.set(0, c.hipsRest, 0);
   }
   function standPose(c, t, speed) {
     const ph = c.walk || 0;
@@ -157,25 +158,35 @@ const Chars = (() => {
     return c;
   }
 
-  // ---------------- The player: a dark-coated drifter, standing, walks with WASD ----------------
+  // ---------------- The player: an armoured figure after the reference shot. Boxy dark helmet with a light visor, light
+  // grey pauldrons and back plate with a cyan gem, a dark under-layer, light forearm guards, dark trousers, brown boots ----------------
   function player() {
-    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.24, torsoH: 0.62, armR: 0.08, legR: 0.09, headS: 1.25 };
+    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.26, torsoH: 0.6, armR: 0.085, legR: 0.09, headS: 1.2 };
     const m = {
-      skin: std(0xc9a080, { roughness: 0.6 }), hair: std(0x2b2220), coat: std(0x262a33, { roughness: 0.7 }),
-      trim: lit(0xff9a3a, 0.9), pants: std(0x1c1f27), shoes: std(0x0e1014), sleeve: std(0x262a33), scarf: std(0xd0643a),
-      plate: std(0xb9c2cc, { roughness: 0.5, metalness: 0.3 }),
+      skin: std(0xc9a080, { roughness: 0.6 }), hair: std(0x3a2a22, { roughness: 0.7 }), under: std(0x1d2430),
+      armor: std(0x9fb4bd, { roughness: 0.45, metalness: 0.25 }), armorDark: std(0x6f8590, { roughness: 0.5, metalness: 0.25 }),
+      gem: lit(0x3ff0ff, 1.6), pants: std(0x1a1f2a), shoes: std(0x4a3426, { roughness: 0.8 }), sleeve: std(0x1d2430), glove: std(0x14181f),
     };
     const c = skeleton(p); limbs(c, p, m);
     c.kind = 'stand'; c.seed = 0.6;
-    add(c.torso, new THREE.BoxGeometry(0.44, 0.6, 0.26), m.coat, 0, 0.3, 0);
-    add(c.torso, new THREE.CylinderGeometry(0.26, 0.3, 0.7, 6).scale(1, 1, 0.7), m.coat, 0, -0.3, 0);
-    add(c.torso, new THREE.BoxGeometry(0.46, 0.04, 0.27), m.trim, 0, 0.02, 0);
-    add(c.torso, new THREE.BoxGeometry(0.16, 0.12, 0.05), m.scarf, 0, 0.6, 0.12);
-    for (const x of [-0.26, 0.26]) add(c.torso, new THREE.BoxGeometry(0.16, 0.12, 0.28), m.plate, x, 0.56, 0);   // shoulder plates
-    add(c.head, new THREE.SphereGeometry(0.17, 9, 7), m.skin, 0, 0.14, 0);
-    add(c.head, new THREE.SphereGeometry(0.19, 9, 7), m.coat, 0, 0.2, -0.03).scale.set(1.05, 0.78, 1.12);   // hood
-    add(c.head, new THREE.BoxGeometry(0.2, 0.08, 0.12), m.hair, 0, 0.1, 0.1);                                 // hair under it
-    for (const x of [-0.06, 0.06]) add(c.head, new THREE.BoxGeometry(0.035, 0.03, 0.02), std(0x111111), x, 0.14, 0.16);
+    // Torso: a dark under-layer, a light back plate with the gem, a chest plate, and a dark belt
+    add(c.torso, new THREE.BoxGeometry(0.4, 0.44, 0.26), m.under, 0, 0.26, 0);
+    add(c.torso, new THREE.BoxGeometry(0.42, 0.36, 0.06), m.armor, 0, 0.3, -0.15);
+    add(c.torso, new THREE.OctahedronGeometry(0.06, 0).scale(1, 1.3, 0.5), m.gem, 0, 0.33, -0.19);
+    add(c.torso, new THREE.BoxGeometry(0.36, 0.3, 0.05), m.armorDark, 0, 0.3, 0.155);
+    add(c.torso, new THREE.BoxGeometry(0.42, 0.06, 0.28), m.under, 0, 0.0, 0);
+    // Pauldrons: angled light plates over each shoulder
+    for (const side of [-1, 1]) {
+      const pl = add(c.torso, new THREE.BoxGeometry(0.22, 0.12, 0.3), m.armor, side * 0.3, 0.52, 0);
+      pl.rotation.z = -side * 0.2;
+    }
+    // Forearm guards on each arm (the joints are the elbows)
+    for (const k of ['L', 'R']) add(c.j['el' + k], new THREE.BoxGeometry(0.16, 0.24, 0.18), m.armor, 0, -0.2, 0);
+    // Head: a boxy dark helmet and hair, with a light visor on the side and a face under it
+    add(c.head, new THREE.BoxGeometry(0.24, 0.2, 0.24), m.skin, 0, 0.1, 0.02);
+    add(c.head, new THREE.BoxGeometry(0.28, 0.12, 0.28), m.hair, 0, 0.23, 0);
+    add(c.head, new THREE.BoxGeometry(0.06, 0.12, 0.08), m.armor, 0.15, 0.1, -0.02);
+    for (const x of [-0.06, 0.06]) add(c.head, new THREE.BoxGeometry(0.035, 0.03, 0.02), std(0x111111), x, 0.12, 0.13);
     return c;
   }
 
@@ -221,22 +232,45 @@ const Chars = (() => {
   function create(kind) {
     const c = kinds[kind](); c.name = kind;
     c.walk = 0; c.speed = 0;
+    c.mocap = true; c.idleClip = 'idleEase';          // standing figures use the clips; idleClip is what they do when still
     return c;
   }
 
+  // Plays a one-shot clip on a rig: it runs once and hands back to the idle. hold keeps its last frame (a death, say)
+  function play(c, name, hold = false) { c.clip = { name, t: 0, hold }; }
+  function clipLength(name) { return Mocap.clips[name] ? Mocap.clips[name].d : 0; }
+
   // Poses one character for time t. speed (m/s) drives the walk cycle of standing figures
+  // Poses one character at time t. Standing figures use motion capture: a clip played on purpose (play) first, then the
+  // idle or locomotion clip by speed. A rig without mocap falls back to the procedural pose. Seated figures are posed by hand.
   function update(c, t, dt, speed = 0) {
+    c.speed = speed;
     if (c.kind === 'seated') { rest(c); seatPose(c, t); }
     else {
-      c.speed = speed;
-      c.walk += dt * (2 + speed * 2.4) * (speed > 0.05 ? 1 : 0);
-      rest(c); standPose(c, t, speed);
-      if (c.stance) { c.j.shL.rotation.x = c.j.shR.rotation.x = -0.9; c.j.elL.rotation.x = c.j.elR.rotation.x = -0.8; }
+      rest(c);
+      let played = false;
+      if (c.clip) {
+        const clip = Mocap.clips[c.clip.name];
+        c.clip.t += dt;
+        if (clip.loop || c.clip.hold || c.clip.t < clip.d) { Mocap.sample(c, c.clip.name, c.clip.t); played = true; }
+        else c.clip = null;
+      }
+      if (!played && c.mocap) {
+        const moving = speed > 0.15, run = speed > 3.2;
+        if (moving) c.walkT = (c.walkT || 0) + dt * (run ? speed / 3.6 : speed / 1.6);
+        Mocap.sample(c, !moving ? c.idleClip : run ? 'run' : 'walk', moving ? c.walkT : t);
+        played = true;
+      }
+      if (!played) {
+        c.walk += dt * (2 + speed * 2.4) * (speed > 0.05 ? 1 : 0);
+        standPose(c, t, speed);
+        if (c.stance) { c.j.shL.rotation.x = c.j.shR.rotation.x = -0.9; c.j.elL.rotation.x = c.j.elR.rotation.x = -0.8; }
+        if (c.lean) c.torso.rotation.x = c.lean;
+      }
     }
-    if (c.lean) c.torso.rotation.x = c.lean;
     if (c.name === 'ruen') { c.orbit.rotation.y = t * 1.6; c.orb.position.y = Math.sin(t * 2.2) * 0.03; }
     if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = -0.35 + Math.sin(t * 3.2) * 0.12 - speed * 0.2; }
   }
 
-  return { create, update };
+  return { create, update, play, clipLength };
 })();

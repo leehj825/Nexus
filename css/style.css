@@ -77,7 +77,7 @@ body.battle .hints, body.battle .prompt { display: none; }
 .actions[hidden] { display: none; }
 .actions button { padding: 11px 16px; background: rgba(8, 8, 14, 0.88); border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 6px; color: var(--ink); font: inherit; font-size: 14px; cursor: pointer; }
 .actions button:active { border-color: var(--gold); }
-.party { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; gap: 8px; justify-content: center; pointer-events: none; }
+.party { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; pointer-events: none; }
 .card { width: 124px; padding: 7px 9px; background: var(--panel); border-radius: 6px; font-size: 12px; text-shadow: 0 1px 2px #000; }
 .card b { display: block; margin-bottom: 4px; }
 .card .bar { height: 7px; margin-top: 4px; }
