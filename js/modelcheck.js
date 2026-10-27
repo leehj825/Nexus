@@ -40,7 +40,9 @@ const ModelCheck = (() => {
     rigs = [];
     for (const [kind, label] of KINDS) {
       const rig = Chars.create(kind); scene.add(rig.root);
-      const pairs = []; for (const k in rig.j) pairs.push([k, PARENT[k]]);
+      // Drawn as a person's skeleton: the collar bones run from the neck joint out to each shoulder, the spine from the pelvis
+      // up through the waist to the neck (in the rig the shoulders hang off the waist joint, which is only how they are driven)
+      const pairs = []; for (const k in rig.j) pairs.push([k, k === 'shL' || k === 'shR' ? 'head' : PARENT[k]]);
       pairs.push(['@top', 'head']);                                    // the head bone runs up to the top of the head
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pairs.length * 6), 3));
