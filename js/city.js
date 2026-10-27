@@ -42,14 +42,14 @@ const City = (() => {
     const dummy = new THREE.Object3D(), col = new THREE.Color();
     wins.forEach((w, i) => {
       dummy.position.set(w.x, w.y, w.z); dummy.updateMatrix();
-      inst.setMatrixAt(i, dummy.matrix); inst.setColorAt(i, col.setHex(w.col));
+      inst.setMatrixAt(i, dummy.matrix); inst.setColorAt(i, col.setHex(w.col).multiplyScalar(0.5));
     });
     root.add(inst);
   }
 
   // A neon sign on a wall: a plane facing into the alley, a soft halo, and a coloured light that spills onto the street
   function sign(root, s, tex, w, h, y, z, color, lightK = 1.2) {
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, color: new THREE.Color(1.8, 1.8, 1.8) }));
     plane.position.set(s * (HALF - 0.08), y, z); plane.rotation.y = -s * Math.PI / 2; root.add(plane);
     const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: Tex.glow(), color, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0.6, transparent: true }));
     halo.position.set(s * (HALF - 0.4), y, z); halo.scale.set(w * 2.2, h * 2.2, 1); root.add(halo);
@@ -83,9 +83,9 @@ const City = (() => {
 
   // Ground, dumpsters, vending machines, a striped stall, a container, crates, rubble and pipes
   function props(root) {
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2, 60), mat(0x10131e, { roughness: 0.55, metalness: 0.25 }));
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(HALF * 2, 60), mat(0x10131e, { roughness: 0.85, metalness: 0.05 }));
     ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, -8); root.add(ground);
-    const path = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 60), mat(0x1f2436, { roughness: 0.5, metalness: 0.2 }));
+    const path = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 60), mat(0x1f2436, { roughness: 0.85, metalness: 0.05 }));
     path.rotation.x = -Math.PI / 2; path.position.set(0, 0.01, -8); root.add(path);
 
     // Dumpsters: a big grey one in the foreground left, a rust-brown one further back
@@ -150,7 +150,7 @@ const City = (() => {
     box(root, 11.2, 1.8, 2.4, stone, 0, 9.6, FAR + 1);
     box(root, 6.6, 1.4, 2.0, mat(0x1a1f2e), 0, 0.7, FAR + 1.5);            // a dais in front of the portal
     for (const x of [-3.5, 3.5]) box(root, 0.5, 4.8, 0.5, emis(0x2a7bff, 0.9), x, 2.4, FAR + 2.4);
-    const face = new THREE.Mesh(new THREE.PlaneGeometry(6.0, 6.0), new THREE.MeshBasicMaterial({ map: Tex.portal(), toneMapped: false }));
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(6.0, 6.0), new THREE.MeshBasicMaterial({ map: Tex.portal(), toneMapped: false, color: new THREE.Color(1.6, 1.6, 1.6) }));
     face.position.set(0, 4.4, FAR + 0.3); root.add(face);
     portalGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: Tex.glow(), color: 0x2a7bff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.7 }));
     portalGlow.position.set(0, 4.4, FAR + 0.6); portalGlow.scale.set(13, 13, 1); root.add(portalGlow);
@@ -181,7 +181,7 @@ const City = (() => {
       // Mostly steady, with the odd stutter as a failing tube does
       const stutter = Math.sin(t * 23 + b.phase * 5) > 0.9995 || Math.sin(t * 7.3 + b.phase) < -0.9985;
       const k = stutter ? 0.35 : 1;
-      b.mesh.material.color.setScalar(k);
+      b.mesh.material.color.setScalar(k * 1.8);   // above 1 so the neon blooms
       b.halo.material.opacity = 0.6 * k;
       b.light.intensity = b.base * (0.9 + 0.1 * Math.sin(t * 2 + b.phase)) * k;
     }

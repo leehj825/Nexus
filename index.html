@@ -35,15 +35,34 @@
   <div class="hints">Tap or click a spot to walk &middot; Drag to look &middot; Right-drag to look &middot; WASD move &middot; Shift run &middot; P pause</div>
   <div id="pauseTag" class="tag" hidden>Paused</div>
   <div class="prompt">Tap a spot to walk &middot; drag to look</div>
+  <button id="engage" class="engage" type="button" hidden>Engage</button>
+  <div id="battle" class="battle" hidden>
+    <div id="log" class="log"></div>
+    <div id="banner" class="banner" hidden></div>
+    <div id="actions" class="actions" hidden></div>
+    <div id="party" class="party"></div>
+  </div>
 </div>
+<div id="labels" class="labels"></div>
 
 <script src="vendor/three.min.js"></script>
+<script src="vendor/shaders/CopyShader.js"></script>
+<script src="vendor/shaders/LuminosityHighPassShader.js"></script>
+<script src="vendor/shaders/ConvolutionShader.js"></script>
+<script src="vendor/shaders/GammaCorrectionShader.js"></script>
+<script src="vendor/postprocessing/Pass.js"></script>
+<script src="vendor/postprocessing/MaskPass.js"></script>
+<script src="vendor/postprocessing/ShaderPass.js"></script>
+<script src="vendor/postprocessing/RenderPass.js"></script>
+<script src="vendor/postprocessing/EffectComposer.js"></script>
+<script src="vendor/postprocessing/UnrealBloomPass.js"></script>
 <script src="js/textures.js"></script>
 <script src="js/characters.js"></script>
 <script src="js/city.js"></script>
 <script src="js/camp.js"></script>
 <script src="js/player.js"></script>
 <script src="js/hud.js"></script>
+<script src="js/combat.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
