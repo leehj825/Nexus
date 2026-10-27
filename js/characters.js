@@ -88,6 +88,39 @@ const Chars = (() => {
   function pouch(parent, m, x, y, z, s = 1) { add(parent, box(0.07 * s, 0.09 * s, 0.05 * s), m, x, y, z); }
   // A rig's own seated pose: joint name -> [x, y, z] rotations laid over the default seat (thighs level, shins down)
   const pose = (c, o) => { c.seatPose = o; };
+  const SEAT_POSE = {
+    ruen: { shR: [-0.15, 0, -0.22], elR: [-0.2, 0, 0], wrR: [0, 0, 0.2], shL: [-0.3, 0, 0.42], elL: [-1.25, 0, 0], wrL: [0.2, 0, 0] },
+    kyle: { torso: [0.32, 0, 0], head: [-0.3, 0, 0], shL: [-0.7, -0.45, -0.05], shR: [-0.7, 0.45, 0.05], elL: [-0.85, 0, 0], elR: [-0.85, 0, 0], wrL: [-0.2, 0, 0], wrR: [-0.2, 0, 0] },
+    yuna: { torso: [0.08, 0, 0], shL: [-0.35, 0, 0.1], shR: [-0.35, 0, -0.05], elL: [-0.55, 0, 0], elR: [-0.55, 0, 0], wrL: [0.75, 0, 0], wrR: [0.75, 0, 0] },
+  };
+
+  // The data-orb: a glowing ball with specks of light round it, floating over her left palm (placed each frame in update)
+  function addOrb(c) {
+    const orbit = joint(c.root, 0, 0, 0), orb = joint(orbit, 0, 0, 0);
+    add(orb, new THREE.IcosahedronGeometry(0.13, 1), new THREE.MeshStandardMaterial({ color: 0x0a2030, emissive: 0x37d8ff, emissiveIntensity: 1.1, transparent: true, opacity: 0.8, flatShading: true }));
+    add(orb, new THREE.IcosahedronGeometry(0.06, 0), lit(0xbff6ff, 2.0));
+    const speck = lit(0x7fe9ff, 2.0);
+    c.specks = [];
+    for (let i = 0; i < 10; i++) {
+      const sp = add(orb, box(0.02, 0.02, 0.02), speck);
+      sp.userData = { a: i * 2.4, r: 0.15 + (i % 3) * 0.035, y: ((i * 37) % 10) / 10 - 0.5, v: 0.8 + (i % 4) * 0.35 };
+      c.specks.push(sp);
+    }
+    if (typeof Tex !== 'undefined') {
+      const g = new THREE.Sprite(new THREE.SpriteMaterial({ map: Tex.glow(), color: 0x37d8ff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.6, toneMapped: false }));
+      g.scale.set(0.7, 0.7, 1); orb.add(g);
+    }
+    c.orb = orb; c.orbit = orbit;
+  }
+  // The energy blade in the right hand: a dark grip in the fist, a short guard, and a cyan blade with a white core
+  // running on forward and down from the hand. m needs steelD, bladeEdge and bladeCore
+  function addBlade(c, m) {
+    const blade = joint(c.j.wrR, 0, -0.08, 0.01); blade.rotation.x = -0.6;
+    add(blade, box(0.03, 0.12, 0.03), m.steelD, 0, -0.03, 0);                                                  // the grip
+    add(blade, box(0.09, 0.02, 0.035), m.steelD, 0, -0.08, 0);                                                 // the guard
+    add(blade, box(0.022, 0.6, 0.008), m.bladeEdge, 0, -0.38, 0);                                              // the blade
+    add(blade, box(0.008, 0.58, 0.01), m.bladeCore, 0, -0.38, 0);                                              // its white core
+  }
 
   // ---------------- Ruen: the Intuitive Hacker. Slender, a brown chin-length bob with a fringe, an open navy jacket over an
   // olive top, a tan belt, brown trousers and boots. One hand rests on the pipe, the other is held out palm up under the data-orb ----------------
@@ -119,23 +152,8 @@ const Chars = (() => {
     for (const s of [-1, 1]) add(H, tb(0.04, 0.05, 0.29, 0.25, 0.26), m.hair, s * 0.145, 0.17, 0.0);         // sides, down to the jaw
     add(H, box(0.27, 0.06, 0.04), m.hair, 0, 0.285, 0.12);                                                  // the fringe
     tilt(add(H, box(0.13, 0.07, 0.035), m.hair, 0.05, 0.255, 0.13), 0, 0, -0.45);                           // swept to one side
-    // The data-orb: a glowing ball with specks of light round it, floating over her left palm (placed each frame in update)
-    const orbit = joint(c.root, 0, 0, 0), orb = joint(orbit, 0, 0, 0);
-    add(orb, new THREE.IcosahedronGeometry(0.13, 1), new THREE.MeshStandardMaterial({ color: 0x0a2030, emissive: 0x37d8ff, emissiveIntensity: 1.1, transparent: true, opacity: 0.8, flatShading: true }));
-    add(orb, new THREE.IcosahedronGeometry(0.06, 0), lit(0xbff6ff, 2.0));
-    const speck = lit(0x7fe9ff, 2.0);
-    c.specks = [];
-    for (let i = 0; i < 10; i++) {
-      const sp = add(orb, box(0.02, 0.02, 0.02), speck);
-      sp.userData = { a: i * 2.4, r: 0.15 + (i % 3) * 0.035, y: ((i * 37) % 10) / 10 - 0.5, v: 0.8 + (i % 4) * 0.35 };
-      c.specks.push(sp);
-    }
-    if (typeof Tex !== 'undefined') {
-      const g = new THREE.Sprite(new THREE.SpriteMaterial({ map: Tex.glow(), color: 0x37d8ff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.6, toneMapped: false }));
-      g.scale.set(0.7, 0.7, 1); orb.add(g);
-    }
-    c.orb = orb; c.orbit = orbit;
-    pose(c, { shR: [-0.15, 0, -0.22], elR: [-0.2, 0, 0], wrR: [0, 0, 0.2], shL: [-0.3, 0, 0.42], elL: [-1.25, 0, 0], wrL: [0.2, 0, 0] });
+    addOrb(c);
+    pose(c, SEAT_POSE.ruen);
     return c;
   }
 
@@ -185,7 +203,7 @@ const Chars = (() => {
       for (let i = 0; i < 4; i++) add(W, box(0.055, 0.075, 0.07), m.steelD, 0, -0.19, -0.09 + i * 0.06);       // fingers
       add(W, box(0.06, 0.1, 0.07), m.steelD, -s * 0.12, -0.12, 0.09);                                          // thumb
     }
-    pose(c, { torso: [0.32, 0, 0], head: [-0.3, 0, 0], shL: [-0.7, -0.45, -0.05], shR: [-0.7, 0.45, 0.05], elL: [-0.85, 0, 0], elR: [-0.85, 0, 0], wrL: [-0.2, 0, 0], wrR: [-0.2, 0, 0] });
+    pose(c, SEAT_POSE.kyle);
     return c;
   }
 
@@ -259,7 +277,7 @@ const Chars = (() => {
       add(gun, box(0.065, 0.065, 0.025), m.plasma, 0, 0.08, 0.435);
       add(gun, box(0.08, 0.1, 0.07), m.gunD, 0, 0.07, -0.15);                                                 // rear block
     }
-    pose(c, { torso: [0.08, 0, 0], shL: [-0.35, 0, 0.1], shR: [-0.35, 0, -0.05], elL: [-0.55, 0, 0], elR: [-0.55, 0, 0], wrL: [0.75, 0, 0], wrR: [0.75, 0, 0] });
+    pose(c, SEAT_POSE.yuna);
     return c;
   }
 
@@ -300,13 +318,7 @@ const Chars = (() => {
     add(H, box(0.27, 0.04, 0.04), m.hair, 0, 0.29, 0.12);                                                    // hairline
     for (const s of [-1, 1]) add(H, box(0.03, 0.045, 0.16), m.visor, s * 0.14, 0.18, 0.04);                   // the visor's arms
     add(H, box(0.27, 0.045, 0.02), m.lens, 0, 0.18, 0.132);                                                  // and its lens
-    // The energy blade in the right hand: a dark grip in the fist, a short guard, and a cyan blade with a white core
-    // running on forward and down from the hand
-    const blade = joint(c.j.wrR, 0, -0.08, 0.01); blade.rotation.x = -0.6;
-    add(blade, box(0.03, 0.12, 0.03), m.steelD, 0, -0.03, 0);                                                  // the grip
-    add(blade, box(0.09, 0.02, 0.035), m.steelD, 0, -0.08, 0);                                                 // the guard
-    add(blade, box(0.022, 0.6, 0.008), m.bladeEdge, 0, -0.38, 0);                                              // the blade
-    add(blade, box(0.008, 0.58, 0.01), m.bladeCore, 0, -0.38, 0);                                              // its white core
+    addBlade(c, m);
     return c;
   }
 
@@ -399,6 +411,53 @@ const Chars = (() => {
   }
 
 
+  // ---------------- The custom models: the rig comes from Models, the extras (seat, data-orb, blade, blasters) are added here ----------------
+  const MODEL_SETUP = {
+    ruen: { kind: 'seated', seatH: 0.62, seed: 1.3, seat: SEAT_POSE.ruen, extra: c => addOrb(c) },
+    kyle: { kind: 'seated', seatH: 0.72, seed: 2.1, seat: SEAT_POSE.kyle, extra: () => {} },
+    yuna: { kind: 'seated', seatH: 0.62, seed: 4.0, extra: c => blasters(c),
+      seat: { torso: [0.08, 0, 0], shL: [-0.5, 0, 0.1], shR: [-0.5, 0, -0.05], elL: [-0.6, 0, 0], elR: [-0.6, 0, 0] } },
+    player: { kind: 'stand', seed: 0.6, extra: c => addBlade(c, { steelD: std(0x464b54, { roughness: 0.45, metalness: 0.45 }), bladeEdge: lit(0x3ff0ff, 1.6), bladeCore: lit(0xe6feff, 2.4) }) },
+  };
+  // Yuna's blasters: short pistols held in each hand with the barrel running along the forearm (the grip sits in the fist,
+  // the body on top of the hand), after the reference
+  function blasters(c) {
+    const m = {
+      gun: std(0x77808c, { metalness: 0.35, roughness: 0.45 }), gunD: std(0x23282f, { metalness: 0.4, roughness: 0.4 }),
+      gunTop: std(0xb4aaa6, { metalness: 0.3, roughness: 0.45 }), plasma: lit(0x3ff0ff, 1.7), glove: std(0x2b2629),
+    };
+    for (const k of ['L', 'R']) {
+      const gun = joint(c.j['wr' + k], 0, -0.11, 0.045); gun.rotation.x = Math.PI / 2 - 0.1;
+      add(gun, box(0.06, 0.09, 0.07), m.gunD, 0, -0.045, -0.055);                                             // grip, in the fist
+      add(gun, box(0.1, 0.1, 0.085), m.glove, 0, -0.055, -0.055);                                             // a glove round the grip (the model's own hand is torn)
+      add(gun, box(0.085, 0.11, 0.34), m.gunD, 0, 0.055, 0.12);                                               // dark body
+      add(gun, box(0.07, 0.02, 0.34), m.gunTop, 0, 0.12, 0.12);                                               // pale top plate
+      add(gun, box(0.05, 0.05, 0.1), m.gunD, 0, 0.07, 0.34);                                                  // short barrel
+      add(gun, box(0.055, 0.04, 0.012), m.plasma, 0, 0.07, 0.395);                                            // muzzle glow
+      add(gun, box(0.05, 0.02, 0.1), m.gunD, 0, 0.0, 0.07);                                                   // trigger guard
+      for (const s of [-1, 1]) {
+        tilt(add(gun, box(0.012, 0.018, 0.22), m.plasma, s * 0.046, 0.085, 0.14), 0.12, 0, 0);
+        tilt(add(gun, box(0.012, 0.018, 0.16), m.plasma, s * 0.046, 0.045, 0.1), 0.12, 0, 0);
+      }
+    }
+  }
+  function modelRig(kind) {
+    const c = Models.rig(kind), s = MODEL_SETUP[kind];
+    c.kind = s.kind; c.seed = s.seed; if (s.seatH) c.seatH = s.seatH; if (s.seat) c.seatPose = s.seat;
+    s.extra(c);
+    return c;
+  }
+  // The custom models were made in an A-pose (arms swung out), but every pose and clip assumes arms hanging straight down.
+  // Turning the shoulder by the opposite of the swing, and conjugating the elbow and wrist by it, plays them as if the arms hung down.
+  const zq = new THREE.Quaternion(), zn = new THREE.Quaternion(), Z = new THREE.Vector3(0, 0, 1);
+  function undoAPose(c) {
+    for (const k of ['L', 'R']) {
+      const a = c.armFix[k]; zq.setFromAxisAngle(Z, a); zn.setFromAxisAngle(Z, -a);
+      c.j['sh' + k].quaternion.multiply(zn);
+      for (const n of ['el', 'wr']) c.j[n + k].quaternion.premultiply(zq).multiply(zn);
+    }
+  }
+
   const orbAt = new THREE.Vector3();
   const kinds = { ruen, kyle, yuna, player, stranger, husk };
   // The clips a figure walks, runs and idles with, and the idle it holds in battle. Nobody holds a weapon, so everyone
@@ -409,7 +468,7 @@ const Chars = (() => {
 
   // Builds one of the crew by name and returns its rig (the root is what the scene adds)
   function create(kind) {
-    const c = kinds[kind](); c.name = kind;
+    const c = Models.has(kind) ? modelRig(kind) : kinds[kind](); c.name = kind;
     c.walk = 0; c.speed = 0;
     c.mocap = true; c.loco = LOCO[kind] || UNARMED; c.idleClip = c.loco.idle;   // standing figures use the clips; idleClip is what they do when still
     return c;
@@ -447,6 +506,7 @@ const Chars = (() => {
         if (c.lean) c.torso.rotation.x = c.lean;
       }
     }
+    if (c.armFix) undoAPose(c);
     if (c.name === 'ruen') {                                                     // the orb floats over her left palm, specks circling it
       c.root.updateMatrixWorld(true);
       c.j.wrL.getWorldPosition(orbAt); c.root.worldToLocal(orbAt);
