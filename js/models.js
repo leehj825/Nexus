@@ -62,7 +62,7 @@ const Models = (() => {
     mesh.frustumCulled = false;
     root.add(mesh); root.updateMatrixWorld(true);
     mesh.bind(new THREE.Skeleton(D.bones.map(n => joints[n])));
-    const c = { root, hips: joints.hips, torso: joints.torso, head: joints.head, j: {}, hipsRest: J.hips[1], armFix: m.tilt };
+    const c = { root, hips: joints.hips, torso: joints.torso, head: joints.head, j: {}, hipsRest: J.hips[1], armFix: m.tilt, headTop: [0, m.headTop - J.head[1], 0] };
     for (const n of D.bones) if (n !== 'hips') c.j[n] = joints[n];
     return c;
   }
