@@ -25,6 +25,7 @@
     <button id="btnMap" type="button" aria-label="Map" title="Map">&#9638;</button>
     <button id="btnPause" type="button" aria-label="Pause" title="Pause (P)">&#10074;&#10074;</button>
     <button id="btnSound" type="button" aria-label="Sound" title="Sound">&#9834;</button>
+    <button id="btnSettings" type="button" aria-label="Settings" title="Settings">&#9881;</button>
   </div>
 
   <div class="minimap">
@@ -59,6 +60,37 @@
   </div>
 </div>
 
+<div id="settings" class="camp" hidden>
+  <div class="camp-card" role="dialog" aria-labelledby="setTitle">
+    <header><h2 id="setTitle">Settings</h2></header>
+    <ul class="camp-list">
+      <li><div><b>Model Check</b><span>Watch every move and pose of every character</span></div><button id="openModelCheck" type="button">Open</button></li>
+    </ul>
+    <button id="settingsClose" class="camp-close" type="button">Close</button>
+  </div>
+</div>
+
+<div id="mcheck" class="mcheck" hidden>
+  <div id="mcStage" class="mc-stage"></div>
+  <aside class="mc-side">
+    <header><h2>Model Check</h2><button id="mcClose" type="button" class="mc-x" aria-label="Close">&times;</button></header>
+    <div class="mc-h">Character</div><div id="mcWho" class="mc-row"></div>
+    <div class="mc-h">Now playing</div>
+    <div id="mcName" class="mc-name"></div><div id="mcTime" class="mc-time"></div>
+    <input id="mcScrub" type="range" min="0" max="1" step="0.01" value="0">
+    <div class="mc-ctl">
+      <button id="mcPlay" type="button">&#10074;&#10074; Pause</button><button id="mcRestart" type="button">&#8634; Restart</button><button id="mcTour" type="button">Tour all moves</button>
+    </div>
+    <label class="mc-opt">Speed <input id="mcSpeed" type="range" min="0.1" max="2" step="0.05" value="1"><span id="mcSpeedV">1.00&times;</span></label>
+    <label class="mc-opt"><input id="mcLoop" type="checkbox" checked> Loop</label>
+    <label class="mc-opt"><input id="mcBones" type="checkbox"> Show joints</label>
+    <label class="mc-opt"><input id="mcWire" type="checkbox"> Wireframe</label>
+    <input id="mcFilter" class="mc-filter" type="search" placeholder="Filter moves">
+    <div id="mcClips" class="mc-clips"></div>
+  </aside>
+  <div class="mc-hint">Drag to orbit &middot; wheel to zoom &middot; double-click to reset</div>
+</div>
+
 <script src="vendor/three.min.js"></script>
 <script src="vendor/shaders/CopyShader.js"></script>
 <script src="vendor/shaders/LuminosityHighPassShader.js"></script>
@@ -84,6 +116,7 @@
 <script src="js/hud.js"></script>
 <script src="js/combat.js"></script>
 <script src="js/campui.js"></script>
+<script src="js/modelcheck.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
