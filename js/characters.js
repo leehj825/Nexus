@@ -1,8 +1,8 @@
 // Nexus - the crew, built in code the way Deepward builds its heroes: a joint hierarchy of Groups dressed with primitive meshes,
 // flat-shaded and posed procedurally (no model or animation files).
 // Conventions: feet at y=0, facing +Z, the character's right hand is on -X. Joints rotate so that a negative x swings a limb forward.
-// The look follows the reference shot: chunky faceted low-poly bodies, tapered torsos, big faces with eyes, brows and noses,
-// layered clothing and armour, and thin cyan light lines on the tech.
+// The look follows the reference shot (1792912047890.jpg): chunky low-poly bodies with boxy square limbs, tapered torsos, faces
+// with eyes, brows and noses, layered clothing and armour, and cyan light lines on the tech.
 const Chars = (() => {
   const std = (c, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.8, metalness: 0.1, flatShading: true }, o));
   const lit = (c, k = 1.4) => new THREE.MeshStandardMaterial({ color: 0x111111, emissive: c, emissiveIntensity: k, roughness: 0.4, flatShading: true });
@@ -20,7 +20,7 @@ const Chars = (() => {
   // A limb segment hanging down from its joint, returns the joint at its far end
   const seg = (parent, len, r0, r1, m) => { if (m) add(parent, new THREE.CylinderGeometry(r0, r1, len, 6), m, 0, -len / 2, 0); return joint(parent, 0, -len, 0); };
 
-  // The skeleton. p: { thigh, shin, shoulderW, torsoH, armR, legR }. Returns the rig with its named joints
+  // The skeleton. p: { thigh, shin, shoulderW, torsoH, armR, legR, hipW, headS }. Returns the rig with its named joints
   function skeleton(p) {
     const root = new THREE.Group();
     const hips = joint(root, 0, p.thigh + p.shin, 0);
@@ -28,10 +28,10 @@ const Chars = (() => {
     const head = joint(torso, 0, p.torsoH, 0);
     const c = { root, hips, torso, head, j: {} };
     c.j.torso = torso; c.j.head = head; c.hipsRest = p.thigh + p.shin;   // the mocap clips write these joints
-    head.scale.setScalar(p.headS || 1.2);                                   // the reference crew has big, readable heads
+    head.scale.setScalar(p.headS || 1.1);                                   // the reference crew has big, readable heads
     for (const side of [-1, 1]) {
       const k = side > 0 ? 'L' : 'R';
-      c.j['hip' + k] = joint(hips, side * 0.13, 0, 0);
+      c.j['hip' + k] = joint(hips, side * (p.hipW || 0.12), 0, 0);
       c.j['knee' + k] = seg(c.j['hip' + k], p.thigh, p.legR, p.legR * 0.85, null);
       c.j['ank' + k] = seg(c.j['knee' + k], p.shin, p.legR * 0.85, p.legR * 0.7, null);
       c.j['sh' + k] = joint(torso, side * p.shoulderW, p.torsoH - 0.1, 0);
@@ -41,24 +41,25 @@ const Chars = (() => {
     return c;
   }
 
-  // Limbs: tapered legs with a knee, chunky boots with a cuff and a sole, sleeves with cuffs, blocky hands with a thumb.
-  // m.pants m.shoes m.sleeve m.skin are needed; m.sole, m.hand, m.cuff are optional
+  // Limbs, boxy like the reference: square tapered thighs, shins, upper arms and forearms, block knees and elbows that fill the
+  // bend, boots with a shaft, a toe-heavy foot and a sole, cuffs, and blocky hands with a thumb.
+  // m.pants m.shoes m.sleeve m.skin are needed; m.sole, m.hand, m.cuff are optional. p.bootH sets the height of the boot shaft
   function limbs(c, p, m) {
-    const sole = m.sole || dark, hand = m.hand || m.skin, cuff = m.cuff || m.sleeve;
+    const sole = m.sole || dark, hand = m.hand || m.skin, cuff = m.cuff || m.sleeve, r = p.legR, a = p.armR, bh = p.bootH || 0.17;
     for (const k of ['L', 'R']) {
-      add(c.j['hip' + k], new THREE.CylinderGeometry(p.legR * 1.15, p.legR * 0.92, p.thigh, 6), m.pants, 0, -p.thigh / 2, 0);
-      add(c.j['knee' + k], new THREE.CylinderGeometry(p.legR * 0.92, p.legR * 0.74, p.shin, 6), m.pants, 0, -p.shin / 2, 0);
-      add(c.j['knee' + k], new THREE.SphereGeometry(p.legR * 0.95, 6, 4), m.pants, 0, 0, 0.01);                                   // the knee
-      add(c.j['ank' + k], new THREE.CylinderGeometry(p.legR * 0.95, p.legR * 1.08, 0.17, 6), m.shoes, 0, 0.06, 0);                // boot shaft
-      add(c.j['ank' + k], tb(0.15, 0.17, 0.09, 0.2, 0.3), m.shoes, 0, -0.04, 0.07);                                             // boot body, toe-heavy
-      add(c.j['ank' + k], box(0.18, 0.035, 0.33), sole, 0, -0.085, 0.07);                                                       // sole
-      add(c.j['sh' + k], new THREE.SphereGeometry(p.armR * 1.3, 6, 5), m.sleeve, 0, 0, 0);
-      add(c.j['sh' + k], new THREE.CylinderGeometry(p.armR * 1.05, p.armR * 0.88, 0.34, 6), m.sleeve, 0, -0.17, 0);
-      add(c.j['el' + k], new THREE.CylinderGeometry(p.armR * 0.88, p.armR * 0.72, 0.32, 6), m.sleeve, 0, -0.16, 0);
-      add(c.j['el' + k], new THREE.SphereGeometry(p.armR * 0.9, 6, 4), m.sleeve, 0, 0, 0);                                      // the elbow
-      add(c.j['wr' + k], new THREE.CylinderGeometry(p.armR * 0.78, p.armR * 0.82, 0.05, 6), cuff, 0, 0.02, 0);                   // cuff
-      add(c.j['wr' + k], box(p.armR * 1.7, 0.1, p.armR * 1.45), hand, 0, -0.06, 0);                                              // the hand
-      add(c.j['wr' + k], box(p.armR * 0.55, 0.07, p.armR * 0.7), hand, (k === 'L' ? -1 : 1) * p.armR * 0.95, -0.045, p.armR * 0.35); // thumb
+      add(c.j['hip' + k], tb(r * 2.3, r * 1.95, p.thigh, r * 2.3, r * 2.0), m.pants, 0, -p.thigh / 2, 0);
+      add(c.j['knee' + k], tb(r * 1.95, r * 1.6, p.shin, r * 2.0, r * 1.7), m.pants, 0, -p.shin / 2, 0);
+      add(c.j['knee' + k], box(r * 1.9, r * 1.6, r * 2.0), m.pants, 0, 0, 0);                                                 // the knee
+      add(c.j['ank' + k], tb(r * 1.85, r * 1.9, bh, r * 1.95, r * 2.0), m.shoes, 0, bh / 2 - 0.04, 0);                         // boot shaft
+      add(c.j['ank' + k], tb(0.14, 0.16, 0.09, 0.2, 0.28), m.shoes, 0, -0.045, 0.065);                                         // boot body, toe-heavy
+      add(c.j['ank' + k], box(0.17, 0.035, 0.31), sole, 0, -0.09, 0.065);                                                      // sole
+      add(c.j['sh' + k], box(a * 2.3, a * 2.1, a * 2.3), m.sleeve, 0, -0.01, 0);                                              // shoulder
+      add(c.j['sh' + k], tb(a * 2.1, a * 1.8, 0.34, a * 2.1, a * 1.8), m.sleeve, 0, -0.17, 0);
+      add(c.j['el' + k], tb(a * 1.8, a * 1.5, 0.32, a * 1.8, a * 1.5), m.sleeve, 0, -0.16, 0);
+      add(c.j['el' + k], box(a * 1.75, a * 1.6, a * 1.75), m.sleeve, 0, 0, 0);                                                 // the elbow
+      add(c.j['wr' + k], box(a * 1.65, 0.05, a * 1.65), cuff, 0, 0.015, 0);                                                    // cuff
+      add(c.j['wr' + k], box(a * 1.7, 0.11, a * 1.45), hand, 0, -0.06, 0);                                                     // the hand
+      add(c.j['wr' + k], box(a * 0.55, 0.07, a * 0.7), hand, (k === 'L' ? -1 : 1) * a * 0.95, -0.045, a * 0.35);               // thumb
     }
   }
 
@@ -66,255 +67,268 @@ const Chars = (() => {
   // o: { w, d, brow (material), eye (iris colour), skin (material) }. The front of the face is at z = d / 2
   function face(head, m, o = {}) {
     const w = o.w || 0.28, d = o.d || 0.27, z = d / 2;
-    add(head, new THREE.CylinderGeometry(0.06, 0.07, 0.12, 6), m.skin, 0, 0.0, 0);                                      // neck
-    add(head, tb(w, w * 0.78, 0.3, d, d * 0.88), m.skin, 0, 0.16, 0);                                                    // skull, narrowing to the jaw
-    add(head, box(0.04, 0.05, 0.045), m.skin, 0, 0.125, z + 0.012);                                                      // nose
+    add(head, box(0.11, 0.12, 0.11), m.skin, 0, 0.0, 0);                                                                  // neck
+    add(head, tb(w, w * 0.8, 0.3, d, d * 0.9), m.skin, 0, 0.16, 0);                                                      // skull, narrowing to the jaw
+    add(head, box(0.04, 0.055, 0.045), m.skin, 0, 0.125, z + 0.012);                                                     // nose
     for (const s of [-1, 1]) {
       add(head, box(0.03, 0.065, 0.045), m.skin, s * (w * 0.5 + 0.008), 0.155, 0);                                       // ears
-      if (o.simple) { add(head, box(0.034, 0.034, 0.012), o.eye || dark, s * 0.06, 0.165, z + 0.003); continue; }           // plain dark eyes, no brows
+      if (o.simple) { add(head, box(0.034, 0.03, 0.012), o.eye || dark, s * 0.06, 0.168, z + 0.003); continue; }            // plain dark eyes
       add(head, box(0.052, 0.03, 0.012), white, s * 0.065, 0.178, z + 0.002);                                            // eye white
       add(head, box(0.028, 0.03, 0.012), o.eye || dark, s * 0.065 + (o.look || 0) * 0.01, 0.178, z + 0.008);             // iris
-      add(head, box(0.07, 0.016, 0.016), o.brow || m.hair, s * 0.066, 0.215, z + 0.004).rotation.z = s * -0.12 * (o.angry || 1);   // brow
+      add(head, box(0.07, o.browH || 0.016, 0.016), o.brow || m.hair, s * 0.066, 0.215, z + 0.004).rotation.z = s * -0.12 * (o.angry || 1);   // brow
     }
     add(head, box(o.simple ? 0.05 : 0.07, 0.012, 0.012), std(0x8a4a48, { roughness: 0.6 }), 0, 0.07, z + 0.002);                           // mouth
   }
 
   // Detail pieces shared by the crew
-  const gemMesh = () => new THREE.OctahedronGeometry(0.05, 0).scale(1, 1.3, 0.5);
   function belt(torso, m, w, d, y = 0.0) {
     add(torso, box(w, 0.06, d), m.belt || dark, 0, y, 0);
     add(torso, box(0.07, 0.05, 0.015), m.buckle || m.trim || white, 0, y, d / 2 + 0.003);
   }
   function pouch(parent, m, x, y, z, s = 1) { add(parent, box(0.07 * s, 0.09 * s, 0.05 * s), m, x, y, z); }
+  // A rig's own seated pose: joint name -> [x, y, z] rotations laid over the default seat (thighs level, shins down)
+  const pose = (c, o) => { c.seatPose = o; };
 
-  // ---------------- Ruen: the Intuitive Hacker. Slender, bob cut, a dark jacket over a tan vest, a floating data-orb ----------------
+  // ---------------- Ruen: the Intuitive Hacker. Slender, a brown chin-length bob with a fringe, an open navy jacket over an
+  // olive top, a tan belt, brown trousers and boots. One hand rests on the pipe, the other is held out palm up under the data-orb ----------------
   function ruen() {
-    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.22, torsoH: 0.6, armR: 0.075, legR: 0.085, headS: 1.25 };
+    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.19, torsoH: 0.58, armR: 0.062, legR: 0.078, hipW: 0.1, headS: 1.12, bootH: 0.14 };
     const m = {
-      skin: std(0xdba98c, { roughness: 0.6 }), hair: std(0x2a1a1c, { roughness: 0.45 }), jacket: std(0x1b2230), vest: std(0x8a7358),
-      armor: std(0x9fb4bd, { roughness: 0.45, metalness: 0.25 }), armorDark: std(0x6f8590, { roughness: 0.5, metalness: 0.25 }),
-      trim: lit(0x37e0ff, 0.9), pants: std(0x4a3d34), shoes: std(0x15171c), sleeve: std(0x1b2230), cuff: std(0x39424f), gem: lit(0x37e0ff, 1.6),
-      belt: std(0x2a2018),
+      skin: std(0xe2ad8c, { roughness: 0.6 }), hair: std(0x40291e, { roughness: 0.55 }), jacket: std(0x1d2334), top: std(0x6c705c),
+      pants: std(0x6e5642), shoes: std(0x3a2a20), sole: std(0x1e1612), sleeve: std(0x1d2334), cuff: std(0x283044),
+      belt: std(0x8a6a48), buckle: std(0xc2a47a, { roughness: 0.4, metalness: 0.3 }),
     };
     const c = skeleton(p); limbs(c, p, m);
     c.seatH = 0.62; c.kind = 'seated'; c.seed = 1.3;
     const T = c.torso;
-    add(T, tb(0.34, 0.27, 0.52, 0.21, 0.18), m.jacket, 0, 0.3, 0);                                         // jacket body, wide at the shoulder
-    add(T, box(0.13, 0.44, 0.02), m.vest, 0, 0.3, 0.107);                                                   // tan vest showing between the lapels
+    add(T, tb(0.26, 0.21, 0.5, 0.17, 0.15), m.top, 0, 0.3, 0);                                             // the olive top
+    add(T, tb(0.2, 0.21, 0.1, 0.05, 0.07), m.top, 0, 0.4, 0.075);                                           // bust
+    add(T, tb(0.31, 0.26, 0.5, 0.05, 0.05), m.jacket, 0, 0.3, -0.075);                                      // jacket back
     for (const s of [-1, 1]) {
-      tilt(add(T, box(0.09, 0.4, 0.03), m.jacket, s * 0.085, 0.3, 0.115), 0, 0, s * 0.12);                  // lapels
-      add(T, box(0.01, 0.4, 0.012), m.trim, s * 0.14, 0.3, 0.12);                                           // light piping down the front edge
-      add(T, box(0.1, 0.08, 0.1), m.armorDark, s * 0.2, 0.55, 0);                                           // small shoulder plates
-      add(T, box(0.1, 0.012, 0.1), m.trim, s * 0.2, 0.595, 0);
+      add(T, tb(0.09, 0.08, 0.5, 0.19, 0.17), m.jacket, s * 0.115, 0.3, 0.005);                              // jacket fronts, open over the top
+      tilt(add(T, box(0.055, 0.24, 0.03), m.jacket, s * 0.085, 0.44, 0.1), 0, 0, s * 0.28);                  // lapels
+      add(T, box(0.012, 0.42, 0.012), m.cuff, s * 0.07, 0.27, 0.104);                                        // the jacket's front edge
     }
-    add(T, gemMesh(), m.gem, 0, 0.42, 0.125);                                                              // the data gem at the throat
-    add(T, tb(0.3, 0.36, 0.2, 0.2, 0.24), m.jacket, 0, -0.07, 0);                                           // jacket skirt over the hips
-    belt(T, m, 0.29, 0.2, 0.02);
-    pouch(T, m.belt, 0.17, -0.01, 0.06);
-    add(T, tb(0.22, 0.2, 0.08, 0.2, 0.18), m.jacket, 0, 0.62, 0);                                           // high collar
+    add(T, tb(0.21, 0.25, 0.07, 0.17, 0.2), m.jacket, 0, 0.585, -0.01);                                     // collar
+    add(T, tb(0.24, 0.27, 0.2, 0.16, 0.18), m.pants, 0, -0.07, 0);                                          // hips
+    belt(T, m, 0.265, 0.185, 0.03);
     const H = c.head;
-    face(H, m, { w: 0.27, d: 0.26, eye: std(0x3a2418), angry: 0.5 });
-    add(H, tb(0.31, 0.31, 0.12, 0.31, 0.3), m.hair, 0, 0.3, -0.01);                                         // crown
-    add(H, tb(0.3, 0.3, 0.32, 0.06, 0.06), m.hair, 0, 0.14, -0.15);                                         // the back of the bob
-    for (const s of [-1, 1]) {
-      add(H, tb(0.05, 0.06, 0.34, 0.27, 0.28), m.hair, s * 0.155, 0.15, -0.02);                             // side panels to the jaw
-      tilt(add(H, box(0.1, 0.16, 0.05), m.hair, s * 0.09, 0.25, 0.14), 0, 0, s * 0.35);                     // swept fringe
+    face(H, m, { w: 0.25, d: 0.25, eye: std(0x3a2418), angry: 0.5 });
+    add(H, tb(0.24, 0.285, 0.09, 0.24, 0.285), m.hair, 0, 0.33, -0.01);                                     // crown
+    add(H, box(0.285, 0.3, 0.06), m.hair, 0, 0.17, -0.12);                                                  // the back of the bob
+    for (const s of [-1, 1]) add(H, tb(0.04, 0.05, 0.29, 0.25, 0.26), m.hair, s * 0.145, 0.17, 0.0);         // sides, down to the jaw
+    add(H, box(0.27, 0.06, 0.04), m.hair, 0, 0.285, 0.12);                                                  // the fringe
+    tilt(add(H, box(0.13, 0.07, 0.035), m.hair, 0.05, 0.255, 0.13), 0, 0, -0.45);                           // swept to one side
+    // The data-orb: a glowing ball with specks of light round it, floating over her left palm (placed each frame in update)
+    const orbit = joint(c.root, 0, 0, 0), orb = joint(orbit, 0, 0, 0);
+    add(orb, new THREE.IcosahedronGeometry(0.13, 1), new THREE.MeshStandardMaterial({ color: 0x0a2030, emissive: 0x37d8ff, emissiveIntensity: 1.1, transparent: true, opacity: 0.8, flatShading: true }));
+    add(orb, new THREE.IcosahedronGeometry(0.06, 0), lit(0xbff6ff, 2.0));
+    const speck = lit(0x7fe9ff, 2.0);
+    c.specks = [];
+    for (let i = 0; i < 10; i++) {
+      const sp = add(orb, box(0.02, 0.02, 0.02), speck);
+      sp.userData = { a: i * 2.4, r: 0.15 + (i % 3) * 0.035, y: ((i * 37) % 10) / 10 - 0.5, v: 0.8 + (i % 4) * 0.35 };
+      c.specks.push(sp);
     }
-    tilt(add(H, box(0.18, 0.06, 0.05), m.hair, 0, 0.275, 0.145), -0.2, 0, 0);
-    // The data-orb: a glowing sphere that circles her right hand
-    const hand = joint(c.j.wrR, 0, -0.1, 0.12), orbit = joint(hand, 0, 0, 0);
-    const orb = add(orbit, new THREE.IcosahedronGeometry(0.075, 1), lit(0x37e0ff, 1.6), 0.18, 0, 0);
-    add(orbit, new THREE.TorusGeometry(0.16, 0.008, 4, 18), lit(0x37e0ff, 1.2), 0, 0, 0).rotation.x = Math.PI / 2;
+    if (typeof Tex !== 'undefined') {
+      const g = new THREE.Sprite(new THREE.SpriteMaterial({ map: Tex.glow(), color: 0x37d8ff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.6, toneMapped: false }));
+      g.scale.set(0.7, 0.7, 1); orb.add(g);
+    }
     c.orb = orb; c.orbit = orbit;
-    c.armR = 0.0;
+    pose(c, { shR: [-0.15, 0, -0.22], elR: [-0.2, 0, 0], wrR: [0, 0, 0.2], shL: [-0.3, 0, 0.42], elL: [-1.25, 0, 0], wrL: [0.2, 0, 0] });
     return c;
   }
 
-  // ---------------- Kyle: the Steadfast Protector. Heavy, bulky, bearded, steel gauntlets with cyan light ----------------
+  // ---------------- Kyle: the Steadfast Protector. Burly, a square head with short dark hair and a full beard, a riveted leather
+  // vest over a tan shirt, bare upper arms with a cyan band, huge boxy steel gauntlets with screens on the backs of the hands ----------------
   function kyle() {
-    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.44, torsoH: 0.62, armR: 0.14, legR: 0.16, headS: 1.3 };
+    const p = { thigh: 0.44, shin: 0.42, shoulderW: 0.3, torsoH: 0.62, armR: 0.1, legR: 0.12, hipW: 0.14, headS: 1.12 };
     const m = {
-      skin: std(0xc99672, { roughness: 0.7 }), hair: std(0x3a281c), armor: std(0x9fb4bd, { roughness: 0.45, metalness: 0.25 }),
-      plate: std(0x6f8590, { roughness: 0.5, metalness: 0.25 }), vestM: std(0x5a4636), under: std(0x1d2430), pants: std(0x2a2623), shoes: std(0x14171c),
-      sleeve: std(0x2a323f), steel: std(0x5c6470, { roughness: 0.4, metalness: 0.5 }), cyan: lit(0x3ff0ff, 0.9), gem: lit(0x3ff0ff, 1.4),
-      belt: std(0x241a14), hand: std(0x2a2f38, { roughness: 0.6 }), cuff: std(0x5c6470, { metalness: 0.5, roughness: 0.4 }),
+      skin: std(0xcf9670, { roughness: 0.7 }), hair: std(0x2e1f16), shirt: std(0x9a7a5e), vest: std(0x4b3b30, { roughness: 0.75 }),
+      rivet: std(0xa89a88, { metalness: 0.5, roughness: 0.4 }), pants: std(0x4a3428), shoes: std(0x2a2420), sleeve: std(0xcf9670, { roughness: 0.7 }),
+      steel: std(0x6a7078, { roughness: 0.45, metalness: 0.45 }), steelD: std(0x464b54, { roughness: 0.45, metalness: 0.45 }),
+      cyan: lit(0x3ff0ff, 1.1), amber: lit(0xff8a30, 1.3), belt: std(0x241a14), cuff: std(0x464b54, { metalness: 0.45 }),
     };
+    m.hand = m.steel;
     const c = skeleton(p); limbs(c, p, m);
     c.seatH = 0.72; c.kind = 'seated'; c.seed = 2.1;
     const T = c.torso;
-    add(T, tb(0.9, 0.66, 0.72, 0.5, 0.42), m.under, 0, 0.32, 0);                                            // broad chest
-    add(T, tb(0.62, 0.5, 0.6, 0.06, 0.06), m.vestM, 0, 0.34, 0.25);                                         // leather vest panel
-    add(T, tb(0.36, 0.26, 0.3, 0.06, 0.06), m.plate, 0, 0.36, 0.285);                                       // chest plate
-    add(T, gemMesh().scale(1.3, 1.3, 1.3), m.gem, 0, 0.38, 0.32);                                           // the gem
-    add(T, box(0.04, 0.34, 0.02), m.cyan, -0.2, 0.34, 0.275);                                               // lights down the plate
-    add(T, box(0.04, 0.34, 0.02), m.cyan, 0.2, 0.34, 0.275);
-    add(T, tb(0.46, 0.5, 0.24, 0.44, 0.46), m.under, 0, -0.06, 0);                                          // waist
-    belt(T, m, 0.5, 0.46, 0.03);
-    pouch(T, m.belt, -0.28, -0.04, 0.12, 1.4); pouch(T, m.belt, 0.28, -0.04, 0.12, 1.4);
+    add(T, tb(0.6, 0.48, 0.6, 0.34, 0.3), m.shirt, 0, 0.31, 0);                                              // broad chest in the shirt
+    add(T, tb(0.62, 0.5, 0.6, 0.36, 0.32), m.vest, 0, 0.31, 0);                                             // the leather vest over it
+    add(T, box(0.012, 0.5, 0.012), dark, 0, 0.28, 0.172);                                                    // the vest's front seam
     for (const s of [-1, 1]) {
-      add(T, tb(0.44, 0.34, 0.26, 0.52, 0.46), m.plate, s * 0.47, 0.62, 0);                                  // pauldrons
-      add(T, tb(0.46, 0.36, 0.05, 0.54, 0.48), m.armor, s * 0.47, 0.76, 0);
-      add(T, box(0.02, 0.12, 0.2), m.cyan, s * 0.65, 0.58, 0);                                                // glow strip on the pauldron's edge
+      add(T, box(0.13, 0.05, 0.36), m.vest, s * 0.19, 0.57, 0);                                              // straps over the shoulders
+      add(T, box(0.17, 0.12, 0.25), m.shirt, s * 0.3, 0.53, 0);                                              // the shirt's short sleeves
+      for (const y of [0.42, 0.3, 0.18]) add(T, box(0.025, 0.025, 0.012), m.rivet, s * 0.11, y, 0.173);       // rivets down the front
     }
-    add(T, tb(0.38, 0.5, 0.14, 0.34, 0.4), m.under, 0, 0.7, 0);                                              // thick neck collar
+    add(T, tb(0.26, 0.3, 0.07, 0.22, 0.25), m.vest, 0, 0.6, -0.01);                                          // thick collar
+    add(T, tb(0.46, 0.5, 0.22, 0.3, 0.32), m.pants, 0, -0.06, 0);                                            // waist
+    belt(T, m, 0.5, 0.33, 0.03);
+    pouch(T, m.belt, -0.24, -0.04, 0.12, 1.3); pouch(T, m.belt, 0.24, -0.04, 0.12, 1.3);
+    add(c.j.shL, box(0.215, 0.035, 0.215), m.cyan, 0, -0.22, 0);                                             // the light band round his left arm
     const H = c.head;
-    face(H, m, { w: 0.3, d: 0.29, eye: std(0x2a1a10), angry: 1.8 });
-    add(H, tb(0.33, 0.33, 0.07, 0.32, 0.31), m.hair, 0, 0.32, -0.01);                                        // short hair
-    add(H, box(0.34, 0.1, 0.05), m.hair, 0, 0.26, -0.14);
-    for (const s of [-1, 1]) add(H, box(0.04, 0.2, 0.1), m.hair, s * 0.155, 0.12, 0.05);                      // sideburns running into the beard
-    add(H, tb(0.28, 0.2, 0.19, 0.12, 0.12), m.hair, 0, 0.055, 0.14);                                         // the beard
-    add(H, tb(0.3, 0.26, 0.1, 0.2, 0.26), m.hair, 0, 0.05, 0.03);
-    add(H, box(0.13, 0.035, 0.04), m.hair, 0, 0.098, 0.165);                                                 // moustache
-    for (const k of ['L', 'R']) {                                                                              // gauntlets on both forearms
-      add(c.j['el' + k], tb(0.31, 0.26, 0.38, 0.31, 0.26), m.steel, 0, -0.2, 0);
-      add(c.j['el' + k], box(0.02, 0.24, 0.1), m.cyan, 0.16, -0.2, 0.06);
-      add(c.j['el' + k], box(0.02, 0.24, 0.1), m.cyan, -0.16, -0.2, 0.06);
-      add(c.j['el' + k], box(0.2, 0.02, 0.3), m.cyan, 0, -0.04, 0);
-      add(c.j['wr' + k], tb(0.22, 0.2, 0.12, 0.2, 0.18), m.steel, 0, -0.07, 0);                                // knuckle guard
+    face(H, m, { w: 0.29, d: 0.28, eye: std(0x2a1a10), angry: 1.8, browH: 0.024 });
+    add(H, tb(0.3, 0.31, 0.07, 0.29, 0.3), m.hair, 0, 0.33, -0.01);                                          // short flat-topped hair
+    add(H, box(0.31, 0.14, 0.05), m.hair, 0, 0.25, -0.13);
+    for (const s of [-1, 1]) add(H, box(0.04, 0.2, 0.1), m.hair, s * 0.148, 0.16, 0.04);                      // sideburns running into the beard
+    add(H, tb(0.27, 0.2, 0.13, 0.08, 0.08), m.hair, 0, 0.055, 0.135);                                        // the beard
+    add(H, tb(0.29, 0.25, 0.1, 0.2, 0.24), m.hair, 0, 0.04, 0.03);
+    add(H, box(0.14, 0.035, 0.04), m.hair, 0, 0.098, 0.158);                                                 // moustache
+    for (const k of ['L', 'R']) {                                                                              // the gauntlets, elbow to fingertips
+      const s = k === 'L' ? 1 : -1, E = c.j['el' + k], W = c.j['wr' + k];
+      add(E, tb(0.25, 0.23, 0.3, 0.26, 0.24), m.steel, 0, -0.17, 0);
+      add(E, box(0.27, 0.06, 0.28), m.steelD, 0, -0.03, 0);                                                    // the gauntlet's cuff
+      add(E, box(0.27, 0.03, 0.28), k === 'L' ? m.cyan : m.amber, 0, -0.075, 0);                               // a light band below it
+      add(E, box(0.012, 0.06, 0.16), m.cyan, s * 0.122, -0.2, 0);                                              // a readout on the outside
+      add(W, box(0.25, 0.15, 0.25), m.steel, 0, -0.08, 0);                                                     // the fist
+      add(W, box(0.012, 0.1, 0.13), m.cyan, s * 0.128, -0.08, 0);                                              // the screen on the back of the hand
+      for (let i = 0; i < 4; i++) add(W, box(0.055, 0.075, 0.07), m.steelD, 0, -0.19, -0.09 + i * 0.06);       // fingers
+      add(W, box(0.06, 0.1, 0.07), m.steelD, -s * 0.12, -0.12, 0.09);                                          // thumb
     }
-    c.armL = 0.05;
+    pose(c, { torso: [0.32, 0, 0], head: [-0.3, 0, 0], shL: [-0.7, -0.45, -0.05], shR: [-0.7, 0.45, 0.05], elL: [-0.85, 0, 0], elR: [-0.85, 0, 0], wrL: [-0.2, 0, 0], wrR: [-0.2, 0, 0] });
     return c;
   }
 
-  // ---------------- Yuna: the Independent Ranger. After the reference: a small plain face, a dark side-swept bob and a tall ponytail,
-  // a fitted dark suit, one big grey armoured arm with vertical cyan light strips, armoured shins, and two long cyan-lit blasters ----------------
+  // ---------------- Yuna: the Independent Ranger. A small plain face, dark hair pulled back with a high arched ponytail and a tie,
+  // an earpiece, a fitted dark suit with light stripes down the thighs, a big armoured left shoulder with a back unit lit by
+  // vertical cyan bars, banded bracers, tall tan boots, and two long cyan-lit blasters ----------------
   function yuna() {
-    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.19, torsoH: 0.6, armR: 0.065, legR: 0.075, headS: 1.12 };
+    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.18, torsoH: 0.58, armR: 0.06, legR: 0.072, hipW: 0.1, headS: 1.08, bootH: 0.3 };
     const m = {
-      skin: std(0xe0b79a, { roughness: 0.6 }), hair: std(0x3a2b28, { roughness: 0.55 }), suit: std(0x3b3538, { roughness: 0.7 }),
-      suitB: std(0x2b2629, { roughness: 0.7 }), accent: lit(0x3ff0ff, 1.0), pants: std(0x2d2a31), shoes: std(0x4a3a32), sole: std(0x1a1416),
-      sleeve: std(0x2d2a31), armor: std(0x7f8a98, { roughness: 0.5, metalness: 0.2 }), armorB: std(0x5d6672, { roughness: 0.5, metalness: 0.25 }),
+      skin: std(0xe6b696, { roughness: 0.6 }), hair: std(0x2e2220, { roughness: 0.55 }), suit: std(0x3c3537, { roughness: 0.7 }),
+      suitB: std(0x2c2729, { roughness: 0.7 }), stripe: std(0x6e6260), accent: lit(0x3ff0ff, 1.1), tie: std(0xc0606a),
+      pants: std(0x332e31), shoes: std(0x6a4c3a), sole: std(0x1a1416), sleeve: std(0x332e31),
+      armor: std(0x8a95a2, { roughness: 0.5, metalness: 0.2 }), armorB: std(0x5d6672, { roughness: 0.5, metalness: 0.25 }),
       hand: std(0x2b2629), cuff: std(0x5d6672, { metalness: 0.25 }), belt: std(0x1a1416),
-      gun: std(0x77808c, { metalness: 0.35, roughness: 0.45 }), gunD: std(0x2a2e36, { metalness: 0.4, roughness: 0.4 }), plasma: lit(0x3ff0ff, 1.7),
+      gun: std(0x8a929c, { metalness: 0.35, roughness: 0.45 }), gunD: std(0x2e323a, { metalness: 0.4, roughness: 0.4 }), plasma: lit(0x3ff0ff, 1.8),
     };
     const c = skeleton(p); limbs(c, p, m);
     c.seatH = 0.62; c.kind = 'seated'; c.seed = 4.0;
     const T = c.torso;
-    add(T, tb(0.3, 0.24, 0.56, 0.2, 0.17), m.suit, 0, 0.29, 0);                                             // fitted suit
-    add(T, tb(0.22, 0.18, 0.3, 0.05, 0.05), m.suitB, 0, 0.33, 0.1);                                         // darker chest panel
-    add(T, tb(0.25, 0.28, 0.2, 0.18, 0.2), m.suit, 0, -0.07, 0);
-    belt(T, m, 0.27, 0.19, 0.02);
-    for (const s of [-1, 1]) pouch(T, m.gunD, s * 0.15, -0.1, 0.07, 0.9);                                   // hip holsters
-    add(T, tb(0.17, 0.2, 0.07, 0.17, 0.19), m.suit, 0, 0.62, 0);
-    // The armoured arm (her left): a tall pauldron, a vertical light strip stack and a heavy forearm guard
-    tilt(add(T, tb(0.17, 0.23, 0.2, 0.22, 0.24), m.armor, 0.22, 0.53, 0), 0, 0, -0.18);
-    for (const dz of [-0.07, 0.0, 0.07]) add(T, box(0.012, 0.15, 0.025), m.accent, 0.318, 0.53, dz);
-    add(c.j.shL, tb(0.17, 0.15, 0.3, 0.17, 0.15), m.armorB, 0.0, -0.2, 0);
-    for (const dz of [-0.04, 0.04]) add(c.j.shL, box(0.012, 0.2, 0.02), m.accent, 0.088, -0.2, dz);
-    add(c.j.elL, tb(0.15, 0.17, 0.3, 0.15, 0.17), m.armorB, 0, -0.16, 0);                                   // forearm guard
-    add(c.j.elR, tb(0.12, 0.13, 0.22, 0.12, 0.13), m.armorB, 0, -0.18, 0);                                  // a lighter bracer on the other arm
+    add(T, tb(0.28, 0.21, 0.3, 0.18, 0.15), m.suit, 0, 0.42, 0);                                            // chest, narrowing to the waist
+    add(T, tb(0.2, 0.23, 0.27, 0.15, 0.17), m.suit, 0, 0.14, 0);
+    add(T, tb(0.2, 0.21, 0.1, 0.05, 0.07), m.suit, 0, 0.42, 0.075);                                         // bust
+    add(T, tb(0.07, 0.03, 0.12, 0.02, 0.02), m.skin, 0, 0.52, 0.09);                                        // the neckline
+    add(T, tb(0.03, 0.1, 0.26, 0.02, 0.02), m.suitB, 0, 0.2, 0.085);                                        // darker panel down the front
+    add(T, tb(0.23, 0.26, 0.2, 0.17, 0.19), m.suit, 0, -0.07, 0);
+    belt(T, m, 0.25, 0.18, 0.02);
+    add(T, tb(0.15, 0.18, 0.07, 0.15, 0.17), m.suit, 0, 0.6, 0);
+    // The armoured left shoulder: a tall pauldron over a back unit with vertical light bars, and a plated upper arm
+    tilt(add(T, tb(0.17, 0.23, 0.18, 0.24, 0.26), m.armor, 0.2, 0.53, 0), 0, 0, -0.2);
+    add(T, box(0.17, 0.3, 0.12), m.armorB, 0.12, 0.36, -0.14);                                               // the back unit
+    for (const dx of [0.07, 0.14]) add(T, box(0.02, 0.22, 0.012), m.accent, dx, 0.36, -0.204);
+    for (const dz of [-0.1, -0.16]) add(T, box(0.012, 0.22, 0.02), m.accent, 0.207, 0.36, dz);
+    add(c.j.shL, tb(0.16, 0.14, 0.24, 0.16, 0.14), m.armorB, 0.0, -0.17, 0);
     for (const k of ['L', 'R']) {
-      add(c.j['knee' + k], tb(0.13, 0.12, 0.26, 0.15, 0.13), m.armorB, 0, -0.26, 0.015);                    // shin armour
-      add(c.j['knee' + k], box(0.15, 0.08, 0.11), m.armor, 0, -0.01, 0.06);                                 // knee cap
+      for (const y of [-0.1, -0.22]) add(c.j['el' + k], box(0.135, 0.1, 0.135), m.armor, 0, y, 0);           // banded bracers
+      add(c.j['el' + k], box(0.012, 0.18, 0.04), m.accent, (k === 'L' ? 1 : -1) * 0.068, -0.16, 0);
+      add(c.j['hip' + k], box(0.05, p.thigh * 0.9, 0.012), m.stripe, 0, -p.thigh / 2, p.legR * 1.06);         // light stripes down the thighs
+      add(c.j['knee' + k], box(0.15, 0.08, 0.06), m.armorB, 0, -0.01, 0.07);                                 // knee pads
     }
     const H = c.head;
-    face(H, m, { w: 0.255, d: 0.25, eye: std(0x2a1a14), simple: true });
-    add(H, tb(0.255, 0.29, 0.2, 0.27, 0.28), m.hair, 0, 0.215, -0.045);                                     // hair pulled back over the crown, sides and back
-    add(H, box(0.275, 0.05, 0.04), m.hair, 0, 0.292, 0.128);                                                 // hairline
-    tilt(add(H, box(0.15, 0.1, 0.035), m.hair, -0.06, 0.245, 0.136), 0, 0, 0.45);                           // the fringe, swept across to one side
-    for (const s of [-1, 1]) add(H, box(0.03, 0.2, 0.16), m.hair, s * 0.145, 0.17, -0.05);                  // hair framing the ears
-    const tail = joint(H, 0, 0.2, -0.17);                                                                    // the hair is tied at the back and the ponytail hangs down
-    add(tail, box(0.12, 0.04, 0.05), m.accent, 0, 0.0, 0.0);                                                 // hair tie
-    add(tail, tb(0.1, 0.05, 0.42, 0.08, 0.05), m.hair, 0, -0.22, -0.005);
-    tail.rotation.x = 0.12;
-    c.tail = tail;
-    c.seatArm = { sh: -0.3, el: -0.55, wr: 0.95 };                                                           // arms resting forward, blasters level
+    face(H, m, { w: 0.24, d: 0.24, eye: std(0x2a1a14), simple: true });
+    add(H, tb(0.22, 0.27, 0.1, 0.22, 0.27), m.hair, 0, 0.33, -0.015);                                       // hair pulled back smooth over the crown
+    add(H, box(0.265, 0.27, 0.06), m.hair, 0, 0.19, -0.115);                                                // and down the back
+    add(H, box(0.26, 0.045, 0.04), m.hair, 0, 0.29, 0.115);                                                 // hairline
+    tilt(add(H, box(0.14, 0.07, 0.035), m.hair, -0.05, 0.28, 0.125), 0, 0, 0.35);                         // the fringe, swept across to one side
+    for (const s of [-1, 1]) add(H, box(0.03, 0.16, 0.18), m.hair, s * 0.135, 0.22, -0.035);                // hair framing the ears
+    add(H, box(0.035, 0.09, 0.09), m.armorB, 0.135, 0.15, 0.0);                                              // the earpiece
+    add(H, box(0.01, 0.03, 0.05), m.accent, 0.154, 0.15, 0.0);
+    // The ponytail: tied high at the back of the crown, it rises and arches back, then hangs down behind her
+    const tail = joint(H, 0, 0.31, -0.12);
+    add(tail, box(0.08, 0.05, 0.07), m.tie, 0, 0, 0);
+    const rise = joint(tail, 0, 0, 0); rise.rotation.x = -0.6;
+    add(rise, tb(0.09, 0.08, 0.17, 0.09, 0.08), m.hair, 0, 0.08, 0);
+    const fall = joint(rise, 0, 0.16, 0); fall.rotation.x = -2.25;
+    add(fall, tb(0.1, 0.05, 0.4, 0.09, 0.05), m.hair, 0, 0.19, 0);
+    c.tail = tail; tail.userData.fall = fall;
     // Long blasters held by the hand around a pistol grip: the fist wraps the grip under the body, the barrel runs forward and
     // the body sits on top of the hand with a trigger guard in front of the fingers. m.hand is the glove
     for (const k of ['L', 'R']) {
       const g = c.j['wr' + k], gun = joint(g, 0, 0, 0.0); gun.rotation.x = 0.12;
       add(gun, box(0.062, 0.14, 0.07), m.gunD, 0, -0.065, 0.0);                                               // the grip inside the fist
       add(gun, box(0.12, 0.05, 0.035), m.hand, 0, -0.06, 0.05);                                               // fingers wrapped round the front
-      add(gun, box(0.08, 0.09, 0.44), m.gun, 0, 0.05, 0.1);                                                   // body on top of the hand
-      add(gun, box(0.045, 0.035, 0.4), m.gunD, 0, 0.11, 0.1);                                                 // top rail
+      add(gun, box(0.09, 0.12, 0.46), m.gun, 0, 0.065, 0.11);                                                 // body on top of the hand
+      add(gun, box(0.075, 0.04, 0.48), m.gunD, 0, 0.14, 0.1);                                                 // top slide
       add(gun, box(0.05, 0.015, 0.09), m.gunD, 0, 0.0, 0.1);                                                  // trigger guard
       for (const s of [-1, 1]) {
-        add(gun, box(0.012, 0.025, 0.3), m.plasma, s * 0.045, 0.055, 0.12);                                   // light strips down the sides
-        add(gun, box(0.012, 0.045, 0.03), m.plasma, s * 0.045, 0.055, -0.05);
+        for (const y of [0.04, 0.09]) add(gun, box(0.012, 0.018, 0.32), m.plasma, s * 0.05, y, 0.13);         // two light strips down each side
+        add(gun, box(0.012, 0.07, 0.025), m.plasma, s * 0.05, 0.065, -0.06);
       }
-      add(gun, box(0.045, 0.045, 0.16), m.gunD, 0, 0.055, 0.38);                                              // barrel
-      add(gun, box(0.055, 0.055, 0.03), m.plasma, 0, 0.055, 0.47);
-      add(gun, box(0.07, 0.07, 0.08), m.gunD, 0, 0.05, -0.15);                                                // rear stock
+      add(gun, box(0.06, 0.06, 0.1), m.gunD, 0, 0.08, 0.38);                                                   // muzzle
+      add(gun, box(0.065, 0.065, 0.025), m.plasma, 0, 0.08, 0.435);
+      add(gun, box(0.08, 0.1, 0.07), m.gunD, 0, 0.07, -0.15);                                                 // rear block
     }
-    c.armR = 0; c.armL = 0;
+    pose(c, { torso: [0.08, 0, 0], shL: [-0.35, 0, 0.1], shR: [-0.35, 0, -0.05], elL: [-0.55, 0, 0], elR: [-0.55, 0, 0], wrL: [0.75, 0, 0], wrR: [0.75, 0, 0] });
     return c;
   }
 
-  // ---------------- The player: an armoured figure after the reference shot. A boxy helmet with a light visor, a grey hood and
-  // pauldrons, a dark vest with a back plate and a cyan gem, light forearm guards, dark trousers, brown boots ----------------
+  // ---------------- The player, seen from behind in the reference: short brown hair with a visor, a stepped grey hood folded
+  // over the back and shoulders with a cyan light at its top, round grey pauldrons, a dark navy shirt and trousers, banded
+  // light bracers, dark gloves and brown boots ----------------
   function player() {
-    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.27, torsoH: 0.6, armR: 0.085, legR: 0.09, headS: 1.2 };
+    const p = { thigh: 0.43, shin: 0.43, shoulderW: 0.23, torsoH: 0.6, armR: 0.072, legR: 0.085, hipW: 0.11, headS: 1.12, bootH: 0.16 };
     const m = {
-      skin: std(0xc9a080, { roughness: 0.6 }), hair: std(0x3a2a22, { roughness: 0.7 }), under: std(0x1d2430), vest: std(0x161b25),
-      armor: std(0x9fb4bd, { roughness: 0.45, metalness: 0.25 }), armorDark: std(0x6f8590, { roughness: 0.5, metalness: 0.25 }),
-      gem: lit(0x3ff0ff, 1.6), pants: std(0x1a1f2a), shoes: std(0x4a3426, { roughness: 0.8 }), sleeve: std(0x2a3342), glove: std(0x14181f),
-      hand: std(0x14181f), cuff: std(0x9fb4bd, { metalness: 0.25 }), visor: lit(0x6fdcff, 0.9), helmet: std(0x3b3f48, { roughness: 0.55, metalness: 0.2 }),
-      belt: std(0x2a2018), trim: lit(0x3ff0ff, 1.2),
+      skin: std(0xc9a080, { roughness: 0.6 }), hair: std(0x3a2a20, { roughness: 0.7 }), shirt: std(0x141926),
+      hood: std(0x8494aa, { roughness: 0.55, metalness: 0.15 }), hoodD: std(0x66748a, { roughness: 0.55, metalness: 0.15 }),
+      trim: lit(0x3ff0ff, 1.2), pants: std(0x1d2333), shoes: std(0x5a3c28, { roughness: 0.8 }), sole: std(0x2a1c14), sleeve: std(0x2a3446),
+      bracer: std(0xaeb8c6, { roughness: 0.45, metalness: 0.2 }), hand: std(0x3a2a22), cuff: std(0xaeb8c6, { metalness: 0.2 }),
+      visor: std(0xb6c0cc, { roughness: 0.4, metalness: 0.3 }), lens: lit(0x6fdcff, 0.9), belt: std(0x3a2618),
     };
     const c = skeleton(p); limbs(c, p, m);
     c.kind = 'stand'; c.seed = 0.6;
     const T = c.torso;
-    // Torso: a dark under-layer and vest, a light back plate with the gem, a chest plate, a belt with pouches
-    add(T, tb(0.42, 0.34, 0.5, 0.27, 0.23), m.under, 0, 0.27, 0);
-    add(T, tb(0.38, 0.3, 0.4, 0.05, 0.05), m.vest, 0, 0.28, 0.14);                                          // front vest
-    add(T, tb(0.38, 0.3, 0.06, 0.07, 0.07), m.armorDark, 0, 0.45, 0.155);                                   // chest yoke
-    add(T, tb(0.42, 0.34, 0.36, 0.06, 0.06), m.armor, 0, 0.3, -0.15);                                        // back plate
-    add(T, gemMesh().scale(1.2, 1.2, 1.2), m.gem, 0, 0.34, -0.19);
-    add(T, box(0.02, 0.28, 0.01), m.trim, -0.12, 0.28, -0.185);                                              // light lines on the back plate
-    add(T, box(0.02, 0.28, 0.01), m.trim, 0.12, 0.28, -0.185);
-    add(T, tb(0.38, 0.4, 0.14, 0.26, 0.28), m.under, 0, -0.04, 0);
-    belt(T, m, 0.42, 0.28, 0.02);
-    pouch(T, m.belt, -0.18, -0.03, 0.15); pouch(T, m.belt, 0.18, -0.03, 0.15);
-    pouch(T, m.belt, 0.0, -0.01, -0.17, 1.2);
-    // Hood and pauldrons: angled light plates over each shoulder
-    add(T, tb(0.34, 0.4, 0.14, 0.3, 0.32), m.armorDark, 0, 0.6, -0.03);
-    for (const side of [-1, 1]) {
-      tilt(add(T, tb(0.2, 0.26, 0.12, 0.3, 0.32), m.armor, side * 0.31, 0.53, 0), 0, 0, -side * 0.2);
-      add(T, box(0.2, 0.012, 0.3), m.trim, side * 0.33, 0.595, 0);
-    }
-    // Forearm guards on each arm (the joints are the elbows)
-    for (const k of ['L', 'R']) {
-      add(c.j['el' + k], tb(0.17, 0.15, 0.26, 0.19, 0.17), m.armor, 0, -0.2, 0);
-      add(c.j['el' + k], box(0.015, 0.2, 0.12), m.trim, 0.085, -0.2, 0);
-    }
-    // Head: a bare face under a boxy helmet with a light visor on each side
+    add(T, tb(0.38, 0.32, 0.5, 0.24, 0.21), m.shirt, 0, 0.27, 0);                                            // dark shirt, tapering to the waist
+    add(T, tb(0.33, 0.36, 0.16, 0.22, 0.24), m.pants, 0, -0.05, 0);
+    belt(T, m, 0.37, 0.25, 0.02);
+    pouch(T, m.belt, -0.16, -0.03, 0.13); pouch(T, m.belt, 0.16, -0.03, 0.13);
+    // The hood: folded over the shoulders, wide across the top of the back and stepping in to a point between the shoulder blades
+    add(T, tb(0.36, 0.42, 0.1, 0.27, 0.3), m.hood, 0, 0.55, -0.01);                                          // round the neck and shoulders
+    add(T, tb(0.44, 0.3, 0.14, 0.05, 0.05), m.hood, 0, 0.44, -0.135);
+    add(T, tb(0.28, 0.16, 0.1, 0.05, 0.05), m.hood, 0, 0.32, -0.135);
+    add(T, tb(0.14, 0.04, 0.08, 0.05, 0.05), m.hood, 0, 0.23, -0.135);
+    add(T, tb(0.06, 0.14, 0.025, 0.04, 0.04), m.trim, 0, 0.535, -0.158);                                     // the light at the top
+    add(T, tb(0.3, 0.26, 0.08, 0.04, 0.04), m.hoodD, 0, 0.5, 0.118);                                         // the hood's front edge
+    for (const s of [-1, 1]) tilt(add(T, tb(0.13, 0.2, 0.12, 0.2, 0.23), m.hood, s * 0.25, 0.53, 0), 0, 0, -s * 0.25);   // pauldrons
+    for (const k of ['L', 'R']) for (const y of [-0.09, -0.21]) add(c.j['el' + k], box(0.13, 0.1, 0.13), m.bracer, 0, y, 0);   // banded bracers
     const H = c.head;
     face(H, m, { w: 0.25, d: 0.25, eye: std(0x2a1a10), angry: 1.2 });
-    add(H, tb(0.31, 0.3, 0.17, 0.31, 0.3), m.helmet, 0, 0.3, -0.01);
-    add(H, tb(0.31, 0.31, 0.22, 0.05, 0.05), m.helmet, 0, 0.19, -0.15);
-    add(H, box(0.3, 0.05, 0.04), m.hair, 0, 0.255, 0.145);                                                   // hair under the brim
-    for (const s of [-1, 1]) {
-      add(H, box(0.04, 0.12, 0.2), m.helmet, s * 0.15, 0.2, -0.02);
-      add(H, box(0.025, 0.07, 0.12), m.visor, s * 0.172, 0.2, 0.0);                                         // glowing visor on the side
-    }
+    add(H, tb(0.26, 0.275, 0.08, 0.26, 0.275), m.hair, 0, 0.33, -0.01);                                      // short hair
+    add(H, box(0.275, 0.24, 0.05), m.hair, 0, 0.2, -0.12);
+    for (const s of [-1, 1]) add(H, box(0.03, 0.12, 0.2), m.hair, s * 0.135, 0.24, -0.02);
+    add(H, box(0.27, 0.04, 0.04), m.hair, 0, 0.29, 0.12);                                                    // hairline
+    for (const s of [-1, 1]) add(H, box(0.03, 0.045, 0.16), m.visor, s * 0.14, 0.18, 0.04);                   // the visor's arms
+    add(H, box(0.27, 0.045, 0.02), m.lens, 0, 0.18, 0.132);                                                  // and its lens
     return c;
   }
 
-  // ---------------- A crew member on the street: pale, slender, in a cap and a teal jacket with glowing seams ----------------
+  // ---------------- A crew member on the street: lean, in a tan beanie with a cyan visor band, a teal jacket with a light zip
+  // stripe and a pink backpack strap, teal trousers, pale gloves ----------------
   function stranger() {
-    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.19, torsoH: 0.6, armR: 0.06, legR: 0.065, headS: 1.2 };
+    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.2, torsoH: 0.6, armR: 0.06, legR: 0.075, hipW: 0.1, headS: 1.12 };
     const m = {
-      skin: std(0x9fd3c8, { roughness: 0.4, metalness: 0.2 }), hair: std(0x6aa39a), coat: std(0x7fbdb2, { roughness: 0.5, metalness: 0.2 }),
-      coatB: std(0x5f9a92, { roughness: 0.5, metalness: 0.2 }), plate: std(0x9fb4bd, { roughness: 0.45, metalness: 0.25 }),
-      seam: lit(0x3ff0ff, 1.3), pants: std(0x4f7d78), shoes: std(0x2b3b3a), sleeve: std(0x7fbdb2), cuff: std(0x5f9a92), hand: std(0x9fd3c8),
-      cap: std(0xc9d6d9, { roughness: 0.6 }), belt: std(0x2b3b3a),
+      skin: std(0xd8b498, { roughness: 0.6 }), hair: std(0x3a2a22), coat: std(0x3e6068, { roughness: 0.6 }), coatB: std(0x2f4a52),
+      zip: std(0xb8a888), strap: std(0xc0709a), pants: std(0x36494e), shoes: std(0x1e2224), sleeve: std(0x3e6068), cuff: std(0x2f4a52),
+      hand: std(0xd8d4cc), cap: std(0xb09a7c, { roughness: 0.8 }), band: std(0x5a4c72), visor: lit(0x4ff0ff, 1.1), belt: std(0x1e2224),
     };
     const c = skeleton(p); limbs(c, p, m);
     c.kind = 'stand'; c.seed = 3.7;
     const T = c.torso;
-    add(T, tb(0.35, 0.29, 0.58, 0.22, 0.19), m.coat, 0, 0.3, 0);
-    add(T, tb(0.3, 0.24, 0.3, 0.05, 0.05), m.plate, 0, 0.36, 0.125);                                         // light chest plate
-    add(T, box(0.015, 0.5, 0.2), m.seam, -0.16, 0.28, 0);
-    add(T, box(0.015, 0.5, 0.2), m.seam, 0.16, 0.28, 0);
-    add(T, tb(0.28, 0.32, 0.18, 0.2, 0.22), m.coatB, 0, -0.06, 0);                                           // jacket hem
-    belt(T, m, 0.28, 0.2, 0.02);
-    add(T, tb(0.2, 0.24, 0.08, 0.19, 0.21), m.coatB, 0, 0.62, 0);
+    add(T, tb(0.34, 0.29, 0.56, 0.21, 0.19), m.coat, 0, 0.29, 0);
+    add(T, box(0.035, 0.54, 0.012), m.zip, 0, 0.29, 0.103);                                                  // the zip stripe
+    add(T, tb(0.29, 0.31, 0.18, 0.2, 0.21), m.coatB, 0, -0.06, 0);                                           // jacket hem
+    belt(T, m, 0.3, 0.215, 0.03);
+    add(T, tb(0.18, 0.22, 0.08, 0.17, 0.2), m.coatB, 0, 0.6, 0);                                             // collar
+    add(T, box(0.06, 0.04, 0.24), m.strap, 0.1, 0.57, -0.01);                                                // backpack strap over the shoulder
+    add(T, box(0.06, 0.4, 0.015), m.strap, 0.1, 0.38, 0.105);
+    add(T, box(0.24, 0.32, 0.1), m.coatB, 0, 0.34, -0.15);                                                    // the pack
     const H = c.head;
-    face(H, m, { w: 0.25, d: 0.25, eye: lit(0x3ff0ff, 1.4), brow: m.coatB, angry: 0.5 });
-    add(H, tb(0.28, 0.28, 0.11, 0.28, 0.28), m.cap, 0, 0.31, -0.01);                                         // cap crown
-    add(H, box(0.29, 0.03, 0.1), m.cap, 0, 0.255, 0.18);                                                    // brim
-    add(H, box(0.285, 0.022, 0.275), m.seam, 0, 0.265, -0.01);                                              // the glowing band round the cap
-    for (const s of [-1, 1]) add(H, box(0.03, 0.12, 0.2), m.hair, s * 0.14, 0.17, -0.04);
+    face(H, m, { w: 0.25, d: 0.25, eye: dark, simple: true });
+    add(H, tb(0.26, 0.27, 0.12, 0.26, 0.27), m.cap, 0, 0.33, -0.005);                                        // the beanie
+    add(H, box(0.27, 0.035, 0.27), m.band, 0, 0.255, 0.0);                                                  // its band
+    add(H, box(0.265, 0.05, 0.03), m.visor, 0, 0.19, 0.125);                                                 // the visor over the eyes
+    for (const s of [-1, 1]) add(H, box(0.025, 0.05, 0.2), m.visor, s * 0.13, 0.19, 0.03);
+    add(H, box(0.26, 0.1, 0.04), m.hair, 0, 0.2, -0.115);
     return c;
   }
 
@@ -367,14 +381,17 @@ const Chars = (() => {
     c.j.kneeL.rotation.x = c.j.kneeR.rotation.x = Math.PI / 2;
     c.torso.rotation.x = 0.06;
     c.torso.position.y = 0.1 + Math.sin(t * 1.5) * 0.012;               // breathing
-    c.head.rotation.y = Math.sin(t * 0.4 + c.seed) * 0.18;
-    const a = c.seatArm || { sh: -0.45, el: -0.9, wr: 0 };                  // a rig can hold its arms differently (Yuna rests hers, guns level)
-    c.j.shL.rotation.x = c.j.shR.rotation.x = a.sh;
-    c.j.elL.rotation.x = c.j.elR.rotation.x = a.el;
-    c.j.wrL.rotation.x = c.j.wrR.rotation.x = a.wr;
+    c.j.shL.rotation.x = c.j.shR.rotation.x = -0.45;
+    c.j.elL.rotation.x = c.j.elR.rotation.x = -0.9;
+    for (const k in c.seatPose || {}) {                                       // each rig sits its own way (Kyle leans on his knees, Ruen holds out the orb)
+      const j = c.j[k], r = c.seatPose[k];
+      j.rotation.set(r[0], r[1], r[2]);
+    }
+    c.head.rotation.y += Math.sin(t * 0.4 + c.seed) * 0.18;
   }
 
 
+  const orbAt = new THREE.Vector3();
   const kinds = { ruen, kyle, yuna, player, stranger, husk };
   // The clips a figure walks, runs and idles with, and the idle it holds in battle. Nobody holds a weapon, so everyone
   // walks and runs with the plain unarmed locomotion. The crew drop into the magic stance when a fight starts (their
@@ -422,8 +439,17 @@ const Chars = (() => {
         if (c.lean) c.torso.rotation.x = c.lean;
       }
     }
-    if (c.name === 'ruen') { c.orbit.rotation.y = t * 1.6; c.orb.position.y = Math.sin(t * 2.2) * 0.03; }
-    if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = 0.12 - Math.min(speed, 4) * 0.05; }
+    if (c.name === 'ruen') {                                                     // the orb floats over her left palm, specks circling it
+      c.root.updateMatrixWorld(true);
+      c.j.wrL.getWorldPosition(orbAt); c.root.worldToLocal(orbAt);
+      c.orbit.position.set(orbAt.x, orbAt.y + 0.3 + Math.sin(t * 2.2) * 0.025, orbAt.z);
+      c.orb.rotation.y = t * 0.8;
+      for (const sp of c.specks) {
+        const u = sp.userData, a = u.a + t * u.v;
+        sp.position.set(Math.cos(a) * u.r, u.y * 0.16 + Math.sin(t * 1.3 + u.a) * 0.02, Math.sin(a) * u.r);
+      }
+    }
+    if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = -Math.min(speed, 4) * 0.06; }
   }
 
   return { create, update, play, clipLength };
