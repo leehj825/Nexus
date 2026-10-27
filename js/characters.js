@@ -75,14 +75,19 @@ const Chars = (() => {
   function ruen() {
     const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.22, torsoH: 0.6, armR: 0.075, legR: 0.085, headS: 1.25 };
     const m = {
-      skin: std(0xd9a88a, { roughness: 0.6 }), hair: std(0x1b1420, { roughness: 0.5 }), shirt: std(0x1d2a33),
-      coat: std(0x2d3b4a), trim: lit(0x37e0ff, 0.9), pants: std(0x1a1f2a), shoes: std(0x101216), sleeve: std(0x2d3b4a),
+      skin: std(0xd9a88a, { roughness: 0.6 }), hair: std(0x1b1420, { roughness: 0.5 }), shirt: std(0x1d2430),
+      armor: std(0x9fb4bd, { roughness: 0.45, metalness: 0.25 }), armorDark: std(0x6f8590, { roughness: 0.5, metalness: 0.25 }),
+      trim: lit(0x37e0ff, 0.9), pants: std(0x1a1f2a), shoes: std(0x101216), sleeve: std(0x1d2430), glove: std(0x14181f),
+      gem: lit(0x37e0ff, 1.6),
     };
     const c = skeleton(p); limbs(c, p, m);
     c.seatH = 0.62; c.kind = 'seated'; c.seed = 1.3;
-    add(c.torso, new THREE.BoxGeometry(0.3, 0.52, 0.2), m.shirt, 0, 0.3, 0);
-    add(c.torso, new THREE.CylinderGeometry(0.2, 0.27, 0.9, 6).scale(1, 1, 0.6), m.coat, 0, -0.32, 0);     // long coat
-    add(c.torso, new THREE.BoxGeometry(0.02, 0.8, 0.02), m.trim, 0.0, -0.3, 0.18);                    // a line of light down the front
+    add(c.torso, new THREE.BoxGeometry(0.32, 0.46, 0.22), m.shirt, 0, 0.3, 0);                          // under-layer
+    add(c.torso, new THREE.BoxGeometry(0.34, 0.3, 0.06), m.armor, 0, 0.32, 0.13);                       // light chest plate
+    add(c.torso, new THREE.OctahedronGeometry(0.05, 0).scale(1, 1.3, 0.5), m.gem, 0, 0.36, 0.17);        // the data gem
+    add(c.torso, new THREE.BoxGeometry(0.36, 0.1, 0.24), m.armorDark, 0, 0.5, 0);                       // a shoulder yoke
+    add(c.torso, new THREE.BoxGeometry(0.36, 0.2, 0.24), m.shirt, 0, -0.02, 0);                          // waist
+    add(c.torso, new THREE.BoxGeometry(0.02, 0.4, 0.02), m.trim, 0.0, 0.0, 0.2);                         // a line of light down the front
     add(c.head, new THREE.SphereGeometry(0.16, 9, 7), m.skin, 0, 0.14, 0).scale.set(0.92, 1.05, 0.95);
     add(c.head, new THREE.SphereGeometry(0.19, 9, 7), m.hair, 0, 0.19, -0.02).scale.set(1.05, 0.85, 1.1);   // bob cap
     add(c.head, new THREE.BoxGeometry(0.06, 0.26, 0.22), m.hair, -0.16, 0.04, 0);
@@ -103,14 +108,15 @@ const Chars = (() => {
   function kyle() {
     const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.44, torsoH: 0.62, armR: 0.14, legR: 0.16, headS: 1.3 };
     const m = {
-      skin: std(0xc89570, { roughness: 0.7 }), hair: std(0x3a2a20), armor: std(0x6b6247, { roughness: 0.6, metalness: 0.2 }),
-      plate: std(0x4a4436, { roughness: 0.5, metalness: 0.3 }), under: std(0x2a2e33), pants: std(0x2b2f38), shoes: std(0x14171c),
-      sleeve: std(0x2a2e33), steel: std(0x5c6470, { roughness: 0.4, metalness: 0.5 }), cyan: lit(0x3ff0ff, 1.5),
+      skin: std(0xc89570, { roughness: 0.7 }), hair: std(0x3a2a20), armor: std(0x9fb4bd, { roughness: 0.45, metalness: 0.25 }),
+      plate: std(0x6f8590, { roughness: 0.5, metalness: 0.25 }), under: std(0x1d2430), pants: std(0x1a1f2a), shoes: std(0x14171c),
+      sleeve: std(0x1d2430), steel: std(0x5c6470, { roughness: 0.4, metalness: 0.5 }), cyan: lit(0x3ff0ff, 1.5), gem: lit(0x3ff0ff, 1.6),
     };
     const c = skeleton(p); limbs(c, p, m);
     c.seatH = 0.72; c.kind = 'seated'; c.seed = 2.1;
     add(c.torso, new THREE.BoxGeometry(0.84, 0.68, 0.48), m.armor, 0, 0.33, 0);                          // chest
     add(c.torso, new THREE.BoxGeometry(0.56, 0.4, 0.06), m.plate, 0, 0.28, 0.27);                       // chest plate
+    add(c.torso, new THREE.OctahedronGeometry(0.07, 0).scale(1, 1.3, 0.5), m.gem, 0, 0.34, 0.3);          // the gem
     add(c.torso, new THREE.BoxGeometry(0.1, 0.3, 0.07), m.cyan, 0, 0.3, 0.3);                           // a light down the plate
     add(c.torso, new THREE.BoxGeometry(0.34, 0.24, 0.5), m.under, 0, -0.06, 0);                          // waist
     for (const x of [-0.47, 0.47]) add(c.torso, new THREE.BoxGeometry(0.36, 0.26, 0.5), m.plate, x, 0.6, 0); // pauldrons
@@ -133,6 +139,7 @@ const Chars = (() => {
     const m = {
       skin: std(0xd9a88a, { roughness: 0.6 }), hair: std(0x2a1f2e), suit: std(0x1e2a33, { roughness: 0.6 }),
       accent: lit(0x3ff0ff, 1.1), pants: std(0x1e2a33), shoes: std(0x101216), sleeve: std(0x1e2a33),
+      armor: std(0x9fb4bd, { roughness: 0.45, metalness: 0.25 }),
       skinHand: std(0xd9a88a), gun: std(0x2e3440, { metalness: 0.4, roughness: 0.4 }), plasma: lit(0x3ff0ff, 2.2),
     };
     const c = skeleton(p); limbs(c, p, m);
@@ -140,6 +147,7 @@ const Chars = (() => {
     add(c.torso, new THREE.BoxGeometry(0.3, 0.56, 0.2), m.suit, 0, 0.29, 0);
     add(c.torso, new THREE.BoxGeometry(0.31, 0.03, 0.21), m.accent, 0, 0.2, 0);                       // suit accent band
     add(c.torso, new THREE.BoxGeometry(0.28, 0.2, 0.18), m.suit, 0, -0.08, 0);
+    for (const x of [-0.2, 0.2]) add(c.torso, new THREE.BoxGeometry(0.16, 0.1, 0.22), m.armor, x, 0.5, 0);   // light shoulder plates
     add(c.head, new THREE.SphereGeometry(0.155, 9, 7), m.skin, 0, 0.14, 0).scale.set(0.92, 1.05, 0.95);
     add(c.head, new THREE.SphereGeometry(0.175, 9, 7), m.hair, 0, 0.2, -0.02).scale.set(1, 0.7, 1.05); // hair cap
     add(c.head, new THREE.BoxGeometry(0.3, 0.06, 0.1), m.hair, 0, 0.27, 0.11).rotation.x = -0.3;     // fringe
@@ -200,6 +208,7 @@ const Chars = (() => {
     const c = skeleton(p); limbs(c, p, m);
     c.kind = 'stand'; c.seed = 3.7;
     add(c.torso, new THREE.BoxGeometry(0.34, 0.58, 0.22), m.coat, 0, 0.3, 0);
+    add(c.torso, new THREE.BoxGeometry(0.36, 0.3, 0.06), std(0x9fb4bd, { roughness: 0.45, metalness: 0.25 }), 0, 0.34, 0.14);   // light chest plate
     add(c.torso, new THREE.BoxGeometry(0.02, 0.5, 0.23), m.seam, -0.17, 0.28, 0);
     add(c.torso, new THREE.BoxGeometry(0.02, 0.5, 0.23), m.seam, 0.17, 0.28, 0);
     add(c.head, new THREE.BoxGeometry(0.2, 0.26, 0.2), m.skin, 0, 0.14, 0);
@@ -227,12 +236,16 @@ const Chars = (() => {
   }
 
   const kinds = { ruen, kyle, yuna, player, stranger, husk };
+  // The clips a figure walks, runs and idles with, and the idle it holds in battle. Nobody holds a weapon yet, so the
+  // unarmed set is the default; Ruen casts, so she has the magic set. Swap a set when a character gets a weapon.
+  const UNARMED = { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' };
+  const LOCO = { ruen: { idle: 'mgIdle', walk: 'mgWalk', run: 'mgRun', battle: 'mgIdle' } };
 
   // Builds one of the crew by name and returns its rig (the root is what the scene adds)
   function create(kind) {
     const c = kinds[kind](); c.name = kind;
     c.walk = 0; c.speed = 0;
-    c.mocap = true; c.idleClip = 'idleEase';          // standing figures use the clips; idleClip is what they do when still
+    c.mocap = true; c.loco = LOCO[kind] || UNARMED; c.idleClip = c.loco.idle;   // standing figures use the clips; idleClip is what they do when still
     return c;
   }
 
@@ -258,7 +271,7 @@ const Chars = (() => {
       if (!played && c.mocap) {
         const moving = speed > 0.15, run = speed > 3.2;
         if (moving) c.walkT = (c.walkT || 0) + dt * (run ? speed / 3.6 : speed / 1.6);
-        Mocap.sample(c, !moving ? c.idleClip : run ? 'run' : 'walk', moving ? c.walkT : t);
+        Mocap.sample(c, !moving ? c.idleClip : run ? c.loco.run : c.loco.walk, moving ? c.walkT : t);
         played = true;
       }
       if (!played) {

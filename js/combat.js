@@ -22,7 +22,7 @@ const Combat = (() => {
   const HUSK = { name: 'Husk', hp: 60, rate: 0.09, color: '#ff5a7a' };
   const COMMANDS = {
     you: [{ label: 'Strike', run: u => strike(u, 16, 'slash3') }, { label: 'Brace', run: u => brace(u) }],
-    ruen: [{ label: 'Data Bolt', run: u => strike(u, 22, 'attack2') }, { label: 'Data Burst', run: u => startCast(u) }],
+    ruen: [{ label: 'Data Bolt', run: u => strike(u, 22, 'mgBolt') }, { label: 'Data Burst', run: u => startCast(u) }],
     kyle: [{ label: 'Strike', run: u => strike(u, 18, 'attack1') }, { label: 'Guard', run: u => guard(u) }],
     yuna: [{ label: 'Blast', run: u => { strike(u, 14, 'shoot'); strike(u, 14, null); } }, { label: 'Stagger', run: u => stagger(u) }],
   };
@@ -155,7 +155,8 @@ const Combat = (() => {
     shot(u, t, u.color);
     endTurn(u);
   }
-  function startCast(u) { cast = { t: 0 }; Chars.play(u.rig, 'attack3'); log('Ruen begins Data Burst.'); endTurn(u); }
+  function ruenRig() { return party.find(p => p.id === 'ruen').rig; }
+  function startCast(u) { cast = { t: 0 }; Chars.play(u.rig, 'mgHoly'); log('Ruen begins Data Burst.'); endTurn(u); }
 
   // ---------------- Husk AI ----------------
   function foeAct(f) {
@@ -195,13 +196,13 @@ const Combat = (() => {
     for (const u of party) {
       u.hp = u.hpMax; u.alive = true; u.ready = false; u.atb = rand(0, 0.3); u.guard = 0; u.brace = 0;
       u.home = { x: u.rig.root.position.x, z: u.rig.root.position.z, ry: u.rig.root.rotation.y };   // where the avatar stands now
-      u.rig.combat = true; u.rig.kind = 'stand'; u.rig.clip = null; u.rig.idleClip = 'idleAlert';
+      u.rig.combat = true; u.rig.kind = 'stand'; u.rig.clip = null; u.rig.idleClip = u.rig.loco.battle;
       u.from = u.rig.root.position.clone(); u.rig.root.rotation.set(0, Math.PI, 0);
       u.to = new THREE.Vector3(SPOT[u.id][0], 0, SPOT[u.id][1]);
     }
     for (const f of foes) {
       f.hp = f.hpMax; f.alive = true; f.atb = rand(0, 0.2); f.rig.combat = true; f.wind = null;
-      f.rig.clip = null; f.rig.idleClip = 'idleAlert';
+      f.rig.clip = null; f.rig.idleClip = f.rig.loco.battle;
       f.from = f.rig.root.position.clone(); f.to = new THREE.Vector3(f.spot[0], 0, f.spot[1]);
       f.rig.root.rotation.set(0, 0, 0);
     }
@@ -227,7 +228,7 @@ const Combat = (() => {
   function finishLeave() {
     phase = 'explore'; phaseT = 0;
     for (const u of party) {
-      u.rig.combat = false; u.rig.clip = null; u.rig.idleClip = 'idleEase';
+      u.rig.combat = false; u.rig.clip = null; u.rig.idleClip = u.rig.loco.idle;
       if (u.id !== 'you') u.rig.kind = 'seated';
       u.rig.root.rotation.set(0, u.home.ry, 0); u.rig.root.position.y = 0;
       u.rig.root.position.set(u.home.x, 0, u.home.z);
@@ -281,8 +282,8 @@ const Combat = (() => {
       for (const u of party) {
         if (!u.alive) continue;
         u.guard = Math.max(0, u.guard - dt);
-        if (u.brace > 0) { u.brace = Math.max(0, u.brace - dt); if (u.brace === 0) u.rig.idleClip = 'idleAlert'; }
-        if (u.id === 'kyle' && u.guard === 0 && u.rig.idleClip === 'blockIdle') u.rig.idleClip = 'idleAlert';
+        if (u.brace > 0) { u.brace = Math.max(0, u.brace - dt); if (u.brace === 0) u.rig.idleClip = u.rig.loco.battle; }
+        if (u.id === 'kyle' && u.guard === 0 && u.rig.idleClip === 'blockIdle') u.rig.idleClip = u.rig.loco.battle;
         u.atb = Math.min(1, u.atb + u.rate * dt);
         if (u.atb >= 1 && !(u.id === 'ruen' && cast)) u.ready = true;
       }
@@ -295,6 +296,7 @@ const Combat = (() => {
       if (cast) {
         cast.t = Math.min(1, cast.t + CAST_RATE * dt);
         if (cast.t >= 1) {
+          Chars.play(ruenRig(), 'mgNova');
           for (const f of foesAlive()) hitFoe(f, 30);
           log('Data Burst!');
           cast = null;
