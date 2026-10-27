@@ -135,6 +135,7 @@ const Combat = (() => {
   function endTurn(u) { u.atb = 0; u.ready = false; menuFor = null; }
   function strike(u, dmg, clip = 'brawlPunch') {                     // clip null: the second blow of a combo, the first one's clip plays on
     const t = selected(); if (!t) return;
+    dmg = Math.round(dmg * Camp.damageMult(u.id));                   // the camp's weapon upgrades
     if (clip) Chars.play(u.rig, clip);
     shot(u, t, u.color); hitFoe(t, dmg); log(u.name + ' hits the husk for ' + dmg + '.');
     endTurn(u);

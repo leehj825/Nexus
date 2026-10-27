@@ -85,6 +85,26 @@ body.battle .hints, body.battle .prompt { display: none; }
 .card .bar.atb i { background: var(--gold); }
 .card .bar.atb.full { outline: 1px solid #fff; }
 .card .bar.cast i { background: #c9a0ff; }
+/* Camp: the Camp button by the fire, the crafting panel over the scene, and the scrap toast */
+.camp { position: fixed; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(4, 6, 12, 0.5); }
+.camp[hidden] { display: none; }
+.camp-card { width: min(440px, 100%); padding: 18px 20px; background: rgba(12, 12, 20, 0.95); border: 1px solid rgba(255, 200, 110, 0.35); border-radius: 8px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6); }
+.camp-card header { display: flex; align-items: baseline; justify-content: space-between; }
+.camp-card h2 { margin: 0; font-size: 18px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); }
+.camp-parts { font-size: 14px; color: var(--ink); }
+.camp-note { margin: 8px 0 10px; font-size: 13px; color: var(--dim); }
+.camp-list { list-style: none; margin: 0; padding: 0; }
+.camp-list li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255, 255, 255, 0.08); }
+.camp-list b { display: block; font-size: 14px; }
+.camp-list span { display: block; margin-top: 2px; font-size: 12px; color: var(--dim); }
+.camp-list button, .camp-close { flex: none; padding: 9px 14px; background: rgba(8, 8, 14, 0.88); border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 6px; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.camp-list button:not(:disabled):hover, .camp-close:hover { border-color: var(--gold); }
+.camp-list button:disabled { opacity: 0.4; cursor: default; }
+.camp-list li.done b { color: var(--dim); }
+.camp-close { display: block; width: 100%; margin-top: 12px; }
+.toast { position: absolute; left: 50%; bottom: 150px; transform: translate(-50%, 6px); padding: 6px 14px; background: var(--panel); border-radius: 4px; font-size: 13px; color: #3ff0ff; opacity: 0; transition: opacity 0.3s, transform 0.3s; pointer-events: none; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
 .labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 .lbl { position: absolute; left: 0; top: 0; width: 120px; margin-left: -60px; text-align: center; font-size: 12px; text-shadow: 0 1px 3px #000; pointer-events: auto; }
 .lbl[hidden] { display: none; }
@@ -109,4 +129,5 @@ body.battle .hints, body.battle .prompt { display: none; }
   .card { width: 108px; }
   .log { width: 170px; top: 150px; font-size: 12px; }
   .prompt { bottom: 40px; }
+  .toast { bottom: 120px; }
 }

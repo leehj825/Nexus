@@ -1,9 +1,23 @@
 // Nexus - the fire at the heart of the scene: a burning oil drum with the crew sat around it, and the embers it throws up.
 // The drum sits at the origin; everything else is placed relative to it, facing it.
+// The camp is the safe zone: the crew scavenge scrap from the alley and spend it at the fire on weapon upgrades.
 const Camp = (() => {
   const crew = [];                                   // { name, rig }, updated each frame
   const colliders = [];                              // circles the player walks around
   let flames = [], embers = null, fireLight = null, fireGlow = null, glowBase = null;
+
+  // Scrap: glowing tech parts in the alley. Walking over one takes it. The upgrades cost scrap at the fire.
+  const FIRE_R = 4.0, PICK_R = 1.1;                  // metres: how close to the drum counts as at the camp, and to a scrap
+  const SCRAP_AT = [[-4.6, 0.8], [4.2, 2.0], [-2.0, -8.0], [3.6, -9.5], [-6.0, -13.0], [5.6, -16.0], [-1.0, -19.0], [-4.0, -21.0]];
+  const scrap = [];                                  // { x, z, mesh, taken, phase }
+  const UPGRADES = [
+    { id: 'orb', who: 'ruen', name: 'Data-Orb Core', cost: 2, text: 'Ruen\'s Data Bolt hits 25% harder' },
+    { id: 'gauntlet', who: 'kyle', name: 'Kinetic Gauntlet', cost: 2, text: 'Kyle\'s Strike hits 25% harder' },
+    { id: 'blasters', who: 'yuna', name: 'Tuned Blasters', cost: 3, text: 'Yuna\'s Blast hits 25% harder' },
+  ];
+  const UPGRADE_MULT = 1.25;
+  const owned = new Set();
+  let parts = 0;
 
   // Turns a rig to look at the drum from where it stands
   const faceFire = (obj, x, z) => { obj.rotation.y = Math.atan2(-x, -z); };
@@ -85,10 +99,21 @@ const Camp = (() => {
     colliders.push({ x: s.x, z: s.z, r: 0.5 });
   }
 
+  // The scrap lies on the ground: a small cyan octahedron that bobs and turns until it is picked up
+  function scatterScrap(root) {
+    const m = new THREE.MeshStandardMaterial({ color: 0x0b2a30, emissive: 0x3ff0ff, emissiveIntensity: 1.4, roughness: 0.4, flatShading: true });
+    for (const [x, z] of SCRAP_AT) {
+      const mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), m);
+      mesh.position.set(x, 0.4, z); root.add(mesh);
+      scrap.push({ x, z, mesh, taken: false, phase: Math.random() * Math.PI * 2 });
+    }
+  }
+
   function build(scene) {
     const root = new THREE.Group(); scene.add(root);
     drum(root);
     emberField(root);
+    scatterScrap(root);
     for (const s of SEATS) {
       const rig = Chars.create(s.who);
       rig.seatH = s.h;
@@ -104,8 +129,32 @@ const Camp = (() => {
     return root;
   }
 
+  // Scrap: spin and bob, and take any that the avatar walks over
+  function collectScrap(t, dt, p) {
+    for (const s of scrap) {
+      if (s.taken) continue;
+      s.mesh.position.y = 0.4 + Math.sin(t * 3 + s.phase) * 0.06;
+      s.mesh.rotation.y += dt * 1.5;
+      if (Math.hypot(p.x - s.x, p.z - s.z) < PICK_R) { s.taken = true; s.mesh.visible = false; parts += 1; }
+    }
+  }
+
+  // The upgrades: buying one spends its scrap and keeps it for good
+  function buy(id) {
+    const u = UPGRADES.find(x => x.id === id);
+    if (!u || owned.has(id) || parts < u.cost) return false;
+    parts -= u.cost; owned.add(id);
+    return true;
+  }
+  // The damage multiplier a crew member's attacks get from their upgrade (1 when there is none)
+  function damageMult(who) {
+    return UPGRADES.some(u => u.who === who && owned.has(u.id)) ? UPGRADE_MULT : 1;
+  }
+  const nearFire = p => Math.hypot(p.x, p.z) < FIRE_R;
+
   // Flicker the flames and the light, rise the embers, and pose the crew
   function update(t, dt) {
+    collectScrap(t, dt, Player.state());
     for (const f of flames) {
       const k = 0.85 + 0.25 * Math.sin(t * 9 + f.userData.phase) * Math.sin(t * 4.3 + f.userData.phase * 0.7);
       f.scale.set(1, k, 1);
@@ -124,5 +173,10 @@ const Camp = (() => {
     for (const c of crew) if (!c.rig.combat) Chars.update(c.rig, t, dt, 0);   // Combat poses the crew during a battle
   }
 
-  return { build, update, crew, colliders, SEATS };
+  return {
+    build, update, crew, colliders, SEATS,
+    UPGRADES, buy, damageMult, nearFire, FIRE_R,
+    isOwned: id => owned.has(id),
+    get parts() { return parts; },
+  };
 })();

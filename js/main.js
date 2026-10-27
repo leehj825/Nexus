@@ -23,6 +23,7 @@
   Player.init(scene, canvas, camera);
   HUD.init();
   Combat.init(scene, camera);
+  CampUI.init();
   window.nexus = { state: () => Player.state(), scene, camera };          // read-only hook for debugging and automated checks
 
   function resize() {
@@ -57,6 +58,7 @@
     Combat.update(step, camera);
     composer.render();
     HUD.update(t, Player.state());
+    CampUI.update();
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
