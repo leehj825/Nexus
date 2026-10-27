@@ -1,6 +1,6 @@
 # Nexus
 
-A browser-based story JRPG in a cyberpunk megacity, built with Three.js. The art is flat-shaded low-poly with neon lighting and no image or model files: the characters, props and signs are all built in code. See `Game Design Document.md`, `Project Intent.md` and `Development Roadmap.md`.
+A browser-based story JRPG in a cyberpunk megacity, built with Three.js. The art is flat-shaded low-poly with neon lighting and no image or model files: the characters, props and signs are all built in code. See `Game Design Document.md`, `Project Intent.md`, `Development Roadmap.md` and `Story.md`.
 
 ## Current build: the Neon District scene
 
@@ -33,6 +33,7 @@ Opening `index.html` straight from the file system also works in most browsers.
 | Mouse | Look around (while locked) |
 | W A S D | Walk |
 | Shift | Run |
+| C | Open the camp (near the fire) |
 | P | Pause |
 | Esc | Release the mouse |
 
@@ -48,7 +49,8 @@ js/mocap.js         plays the clips on the rigs: quaternion slerp between frames
 js/models.js        the custom crew models (js/models_data.js: four skinned low-poly characters, one texture atlas) bound to the same joints
 js/characters.js    the crew: joint hierarchy of Groups with primitive meshes; standing figures play mocap, seated ones are posed by hand
 js/city.js          the alley: blocks, signs, cables, props, the gate and portal
-js/camp.js          the fire, embers, seats and the crew placed around it
+js/camp.js          the fire, embers, seats and the crew placed around it; the scrap pickups and the weapon upgrades
+js/campui.js        the camp panel by the fire: the crafting list, the Camp button and the scrap toast
 js/player.js        the avatar, WASD movement, collisions and the reference camera
 js/hud.js           status, minimap and buttons
 js/combat.js        battle: the ATB encounter (the avatar included), the camera transition, the crew mechanics and husk AI
@@ -61,4 +63,4 @@ Coordinates: feet at y = 0, the fire at the origin, the alley running along z wi
 
 - **Phase 1, Foundation:** done. Flat-shaded low-poly pipeline with neon lights and bloom; WASD, tap-to-walk and a high-angle camera.
 - **Phase 2, Combat:** in progress. Battle encounters from the alley (press E or tap Engage near the husks), with the camera transition to the battle angle, the ATB gauges, Ruen's dual-gauge Data Burst, Kyle's Guard and Intercept, Yuna's fast gauge and Stagger, and husk AI with telegraphed Crush attacks.
-- **Phase 3, World:** next. Chunk loading, the first two zones, and the camp's safe-zone UI.
+- **Phase 3, World:** in progress. Done: the camp's safe-zone panel. Scrap in the alley pays for weapon upgrades (Data-Orb Core, Kinetic Gauntlet, Tuned Blasters, each +25% damage in battle). Next: chunk loading and the first two zones.
