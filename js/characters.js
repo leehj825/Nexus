@@ -71,11 +71,12 @@ const Chars = (() => {
     add(head, box(0.04, 0.05, 0.045), m.skin, 0, 0.125, z + 0.012);                                                      // nose
     for (const s of [-1, 1]) {
       add(head, box(0.03, 0.065, 0.045), m.skin, s * (w * 0.5 + 0.008), 0.155, 0);                                       // ears
+      if (o.simple) { add(head, box(0.034, 0.034, 0.012), o.eye || dark, s * 0.06, 0.165, z + 0.003); continue; }           // plain dark eyes, no brows
       add(head, box(0.052, 0.03, 0.012), white, s * 0.065, 0.178, z + 0.002);                                            // eye white
       add(head, box(0.028, 0.03, 0.012), o.eye || dark, s * 0.065 + (o.look || 0) * 0.01, 0.178, z + 0.008);             // iris
       add(head, box(0.07, 0.016, 0.016), o.brow || m.hair, s * 0.066, 0.215, z + 0.004).rotation.z = s * -0.12 * (o.angry || 1);   // brow
     }
-    add(head, box(0.07, 0.012, 0.012), std(0x7a3a3a, { roughness: 0.6 }), 0, 0.07, z + 0.002);                           // mouth
+    add(head, box(o.simple ? 0.05 : 0.07, 0.012, 0.012), std(0x8a4a48, { roughness: 0.6 }), 0, 0.07, z + 0.002);                           // mouth
   }
 
   // Detail pieces shared by the crew
@@ -178,7 +179,7 @@ const Chars = (() => {
   // ---------------- Yuna: the Independent Ranger. After the reference: a small plain face, a dark side-swept bob and a tall ponytail,
   // a fitted dark suit, one big grey armoured arm with vertical cyan light strips, armoured shins, and two long cyan-lit blasters ----------------
   function yuna() {
-    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.19, torsoH: 0.6, armR: 0.065, legR: 0.075, headS: 1.2 };
+    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.19, torsoH: 0.6, armR: 0.065, legR: 0.075, headS: 1.12 };
     const m = {
       skin: std(0xe0b79a, { roughness: 0.6 }), hair: std(0x2f2528, { roughness: 0.5 }), suit: std(0x3b3538, { roughness: 0.7 }),
       suitB: std(0x2b2629, { roughness: 0.7 }), accent: lit(0x3ff0ff, 1.0), pants: std(0x2d2a31), shoes: std(0x4a3a32), sole: std(0x1a1416),
@@ -207,18 +208,16 @@ const Chars = (() => {
       add(c.j['knee' + k], box(0.15, 0.08, 0.11), m.armor, 0, -0.01, 0.06);                                 // knee cap
     }
     const H = c.head;
-    face(H, m, { w: 0.255, d: 0.25, eye: std(0x2a1a14), angry: 0.6 });
-    add(H, tb(0.29, 0.29, 0.1, 0.3, 0.29), m.hair, 0, 0.3, -0.01);                                          // crown
-    add(H, tb(0.29, 0.29, 0.2, 0.06, 0.06), m.hair, 0, 0.19, -0.14);                                        // back of the head
-    add(H, box(0.04, 0.2, 0.2), m.hair, -0.15, 0.2, -0.03);                                                 // hair swept back over the ears
-    add(H, box(0.04, 0.2, 0.2), m.hair, 0.15, 0.2, -0.03);
-    tilt(add(H, box(0.2, 0.11, 0.05), m.hair, -0.05, 0.27, 0.14), 0, 0, 0.35);                              // a long side-swept fringe over one brow
-    tilt(add(H, box(0.1, 0.18, 0.04), m.hair, -0.11, 0.2, 0.14), 0, 0, 0.1);
-    const tail = joint(H, 0, 0.3, -0.13);                                                                    // a tall ponytail rising off the crown
-    add(tail, new THREE.SphereGeometry(0.045, 5, 4), m.accent, 0, 0, 0);                                    // glowing hair tie
-    add(tail, tb(0.04, 0.1, 0.3, 0.04, 0.1), m.hair, 0, 0.17, 0);
-    add(tail, tb(0.06, 0.04, 0.2, 0.06, 0.04), m.hair, 0, 0.36, -0.02);
+    face(H, m, { w: 0.255, d: 0.25, eye: std(0x2a1a14), simple: true });
+    add(H, tb(0.285, 0.285, 0.2, 0.28, 0.28), m.hair, 0, 0.215, -0.045);                                    // hair shell over the crown, sides and back
+    add(H, box(0.275, 0.05, 0.04), m.hair, 0, 0.292, 0.128);                                                 // hairline
+    tilt(add(H, box(0.15, 0.1, 0.035), m.hair, -0.06, 0.245, 0.136), 0, 0, 0.45);                           // the fringe, swept across to one side
+    for (const s of [-1, 1]) add(H, box(0.03, 0.2, 0.16), m.hair, s * 0.145, 0.17, -0.05);                  // hair framing the ears
+    const tail = joint(H, 0, 0.3, -0.12);                                                                    // a tall ponytail rising off the back of the crown
+    add(tail, new THREE.SphereGeometry(0.05, 6, 4), m.accent, 0, 0, 0);                                     // glowing hair tie
+    add(tail, new THREE.CylinderGeometry(0.03, 0.075, 0.46, 6), m.hair, 0, 0.23, 0);
     c.tail = tail;
+    c.seatArm = { sh: -0.3, el: -0.55, wr: 0.95 };                                                           // arms resting forward, blasters level
     // Long blasters, one in each hand, held forward: a grey body, a dark top rail and cyan strips along the side
     for (const k of ['L', 'R']) {
       const g = c.j['wr' + k];
@@ -364,8 +363,10 @@ const Chars = (() => {
     c.torso.rotation.x = 0.06;
     c.torso.position.y = 0.1 + Math.sin(t * 1.5) * 0.012;               // breathing
     c.head.rotation.y = Math.sin(t * 0.4 + c.seed) * 0.18;
-    c.j.shL.rotation.x = c.j.shR.rotation.x = -0.45;
-    c.j.elL.rotation.x = c.j.elR.rotation.x = -0.9;
+    const a = c.seatArm || { sh: -0.45, el: -0.9, wr: 0 };                  // a rig can hold its arms differently (Yuna rests hers, guns level)
+    c.j.shL.rotation.x = c.j.shR.rotation.x = a.sh;
+    c.j.elL.rotation.x = c.j.elR.rotation.x = a.el;
+    c.j.wrL.rotation.x = c.j.wrR.rotation.x = a.wr;
   }
 
 
