@@ -11,7 +11,7 @@ const Player = (() => {
   const keys = {};
   const pos = { x: START.x, z: START.z };
   let heading = Math.PI, speed = 0, yaw = 0, pitch = 0, avatar = null, camera = null, view = null;
-  let goal = null, marker = null;
+  let goal = null, marker = null, frozen = false;
   const pointers = new Map();                                                 // every pointer on the canvas, by id
   const camPos = new THREE.Vector3(), look = new THREE.Vector3();
   const ray = new THREE.Raycaster(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), ndc = new THREE.Vector2(), hit = new THREE.Vector3();
@@ -98,22 +98,27 @@ const Player = (() => {
     return { fx: f.x / d, fz: f.z / d, rx: -f.z / d, rz: f.x / d };
   }
 
+  function exploreView() { return { pos: camPos, look }; }
+  function setFrozen(on) { frozen = on; if (on) { goal = null; marker.visible = false; for (const k in keys) keys[k] = false; } }
+
   function update(t, dt) {
     // Camera: the reference pose, eased toward the avatar's walk, turned by the look yaw around the look point
     look.set(LOOK.x + (pos.x - START.x) * FOLLOW, LOOK.y, LOOK.z + (pos.z - START.z) * FOLLOW);
     const ox = CAM.x - LOOK.x, oz = CAM.z - LOOK.z;
     camPos.set(look.x + ox * Math.cos(yaw) + oz * Math.sin(yaw), CAM.y - pitch * 2.5, look.z - ox * Math.sin(yaw) + oz * Math.cos(yaw));
 
-    // Direction, in priority: keys, then a tap target
+    // Direction, in priority: keys, then a tap target. A battle freezes the avatar.
     const b = basis();
     let mx = 0, mz = 0, v = 0, run = !!keys.shift;
-    if (keys.w) { mx += b.fx; mz += b.fz; }
-    if (keys.s) { mx -= b.fx; mz -= b.fz; }
-    if (keys.d) { mx += b.rx; mz += b.rz; }
-    if (keys.a) { mx -= b.rx; mz -= b.rz; }
+    if (!frozen) {
+      if (keys.w) { mx += b.fx; mz += b.fz; }
+      if (keys.s) { mx -= b.fx; mz -= b.fz; }
+      if (keys.d) { mx += b.rx; mz += b.rz; }
+      if (keys.a) { mx -= b.rx; mz -= b.rz; }
+    }
     if (mx || mz) {
       const m = Math.hypot(mx, mz); mx /= m; mz /= m; v = run ? RUN : WALK;
-    } else if (goal) {
+    } else if (goal && !frozen) {
       const gx = goal.x - pos.x, gz = goal.z - pos.z, dist = Math.hypot(gx, gz);
       if (dist < ARRIVE) { goal = null; marker.visible = false; }
       else { mx = gx / dist; mz = gz / dist; v = WALK; }
@@ -138,5 +143,5 @@ const Player = (() => {
 
   function state() { return { x: pos.x, z: pos.z, heading, speed, moving: speed > 0.1 }; }
 
-  return { init, update, applyCamera, state };
+  return { init, update, applyCamera, state, exploreView, setFrozen };
 })();

@@ -121,7 +121,7 @@ const Camp = (() => {
       if (pos[i * 3 + 1] > 4.4) respawn(pos, vel, life, i, false);
     }
     embers.geometry.attributes.position.needsUpdate = true;
-    for (const c of crew) Chars.update(c.rig, t, dt, 0);
+    for (const c of crew) if (!c.rig.combat) Chars.update(c.rig, t, dt, 0);   // Combat poses the crew during a battle
   }
 
   return { build, update, crew, colliders, SEATS };

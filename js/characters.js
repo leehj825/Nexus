@@ -196,7 +196,26 @@ const Chars = (() => {
     return c;
   }
 
-  const kinds = { ruen, kyle, yuna, player, stranger };
+  // ---------------- A husk: a hunched, tattered thing from the glitch zones. Cyan eyes, claws, a hood ----------------
+  function husk() {
+    const p = { thigh: 0.42, shin: 0.42, shoulderW: 0.27, torsoH: 0.58, armR: 0.085, legR: 0.09, headS: 1.1 };
+    const m = {
+      skin: std(0x6d7480, { roughness: 0.8 }), rag: std(0x1d1822), rag2: std(0x2a2430), pants: std(0x15121a),
+      shoes: std(0x0c0b10), sleeve: std(0x1d1822), eye: lit(0x3ff0ff, 2.6), seam: lit(0xff3fb4, 1.2), claw: std(0x9aa0aa, { metalness: 0.4 }),
+    };
+    const c = skeleton(p); limbs(c, p, m);
+    c.kind = 'stand'; c.seed = 5.5; c.lean = 0.28; c.stance = true;
+    add(c.torso, new THREE.BoxGeometry(0.46, 0.56, 0.3), m.rag, 0, 0.28, 0);
+    add(c.torso, new THREE.BoxGeometry(0.3, 0.3, 0.02), m.seam, 0, 0.3, 0.16);
+    add(c.torso, new THREE.CylinderGeometry(0.26, 0.34, 0.5, 6), m.rag2, 0, -0.25, 0).scale.set(1, 1, 0.7);
+    add(c.head, new THREE.BoxGeometry(0.22, 0.26, 0.22), m.skin, 0, 0.14, 0);
+    add(c.head, new THREE.BoxGeometry(0.26, 0.12, 0.26), m.rag, 0, 0.3, 0);
+    for (const x of [-0.05, 0.05]) add(c.head, new THREE.BoxGeometry(0.06, 0.03, 0.02), m.eye, x, 0.15, 0.12);
+    for (const k of ['L', 'R']) add(c.j['wr' + k], new THREE.ConeGeometry(0.03, 0.12, 4), m.claw, 0, -0.1, 0.02).rotation.x = Math.PI;
+    return c;
+  }
+
+  const kinds = { ruen, kyle, yuna, player, stranger, husk };
 
   // Builds one of the crew by name and returns its rig (the root is what the scene adds)
   function create(kind) {
@@ -212,7 +231,9 @@ const Chars = (() => {
       c.speed = speed;
       c.walk += dt * (2 + speed * 2.4) * (speed > 0.05 ? 1 : 0);
       rest(c); standPose(c, t, speed);
+      if (c.stance) { c.j.shL.rotation.x = c.j.shR.rotation.x = -0.9; c.j.elL.rotation.x = c.j.elR.rotation.x = -0.8; }
     }
+    if (c.lean) c.torso.rotation.x = c.lean;
     if (c.name === 'ruen') { c.orbit.rotation.y = t * 1.6; c.orb.position.y = Math.sin(t * 2.2) * 0.03; }
     if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = -0.35 + Math.sin(t * 3.2) * 0.12 - speed * 0.2; }
   }

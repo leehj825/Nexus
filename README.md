@@ -41,18 +41,21 @@ Opening `index.html` straight from the file system also works in most browsers.
 ```
 index.html          page, HUD markup, script order
 css/style.css       HUD and page styling, phone layout
-vendor/             three.js r128 (copied from Deepward) and its licence
+vendor/             three.js r128 (core and bloom addons) and its licence
 js/textures.js      canvas-drawn LED signs, portal face, glows, awning stripes
 js/characters.js    the crew: joint hierarchy of Groups with primitive meshes and procedural poses
 js/city.js          the alley: blocks, signs, cables, props, the gate and portal
 js/camp.js          the fire, embers, seats and the crew placed around it
 js/player.js        the avatar, WASD movement, collisions and the reference camera
 js/hud.js           status, minimap and buttons
+js/combat.js        battle: the ATB encounter, the camera transition, the crew mechanics and husk AI
 js/main.js          renderer, scene, and the frame loop
 ```
 
 Coordinates: feet at y = 0, the fire at the origin, the alley running along z with the gate at z = -26. Characters face +Z by default.
 
-## Next
+## Roadmap
 
-Following the roadmap: click-to-move and camera interpolation to the ATB combat angle, then the first combat encounters, then the Neon Market zone.
+- **Phase 1, Foundation:** done. Flat-shaded low-poly pipeline with neon lights and bloom; WASD, tap-to-walk and a high-angle camera.
+- **Phase 2, Combat:** in progress. Battle encounters from the alley (press E or tap Engage near the husks), with the camera transition to the battle angle, the ATB gauges, Ruen's dual-gauge Data Burst, Kyle's Guard and Intercept, Yuna's fast gauge and Stagger, and husk AI with telegraphed Crush attacks.
+- **Phase 3, World:** next. Chunk loading, the first two zones, and the camp's safe-zone UI.

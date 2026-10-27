@@ -22,6 +22,7 @@
   Camp.build(scene);
   Player.init(scene, canvas, camera);
   HUD.init();
+  Combat.init(scene, camera);
   window.nexus = { state: () => Player.state(), scene };          // read-only hook for debugging and automated checks
 
   function resize() {
@@ -52,7 +53,8 @@
     City.update(t, step);
     Camp.update(t, step);
     Player.update(t, step);
-    Player.applyCamera(camera);
+    if (Combat.active()) Combat.applyCamera(camera); else Player.applyCamera(camera);
+    Combat.update(step, camera);
     composer.render();
     HUD.update(t, Player.state());
     requestAnimationFrame(frame);
