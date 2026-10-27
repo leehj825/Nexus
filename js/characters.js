@@ -185,7 +185,7 @@ const Chars = (() => {
       suitB: std(0x2b2629, { roughness: 0.7 }), accent: lit(0x3ff0ff, 1.0), pants: std(0x2d2a31), shoes: std(0x4a3a32), sole: std(0x1a1416),
       sleeve: std(0x2d2a31), armor: std(0x7f8a98, { roughness: 0.5, metalness: 0.2 }), armorB: std(0x5d6672, { roughness: 0.5, metalness: 0.25 }),
       hand: std(0x2b2629), cuff: std(0x5d6672, { metalness: 0.25 }), belt: std(0x1a1416),
-      gun: std(0x77808c, { metalness: 0.35, roughness: 0.45 }), gunD: std(0x2a2e36, { metalness: 0.4, roughness: 0.4 }), plasma: lit(0x3ff0ff, 1.7),
+      gun: std(0x77808c, { metalness: 0.35, roughness: 0.45 }), gunD: std(0x23282f, { metalness: 0.4, roughness: 0.4 }), gunTop: std(0xb4aaa6, { metalness: 0.3, roughness: 0.45 }), plasma: lit(0x3ff0ff, 1.7),
     };
     const c = skeleton(p); limbs(c, p, m);
     c.seatH = 0.62; c.kind = 'seated'; c.seed = 4.0;
@@ -219,22 +219,22 @@ const Chars = (() => {
     tail.rotation.x = 0.12;
     c.tail = tail;
     c.seatArm = { sh: -0.3, el: -0.55, wr: 0.95 };                                                           // arms resting forward, blasters level
-    // Long blasters held by the hand around a pistol grip: the fist wraps the grip under the body, the barrel runs forward and
-    // the body sits on top of the hand with a trigger guard in front of the fingers. m.hand is the glove
+    // Blasters after the reference: short chunky pistols, a pale top plate over dark sides, diagonal cyan strips, a slanted grip
+    // held in the fist with the body sitting forward of the hand and tipped slightly nose-down
     for (const k of ['L', 'R']) {
-      const g = c.j['wr' + k], gun = joint(g, 0, 0, 0.0); gun.rotation.x = 0.12;
-      add(gun, box(0.062, 0.14, 0.07), m.gunD, 0, -0.065, 0.0);                                               // the grip inside the fist
-      add(gun, box(0.12, 0.05, 0.035), m.hand, 0, -0.06, 0.05);                                               // fingers wrapped round the front
-      add(gun, box(0.08, 0.09, 0.44), m.gun, 0, 0.05, 0.1);                                                   // body on top of the hand
-      add(gun, box(0.045, 0.035, 0.4), m.gunD, 0, 0.11, 0.1);                                                 // top rail
-      add(gun, box(0.05, 0.015, 0.09), m.gunD, 0, 0.0, 0.1);                                                  // trigger guard
+      const g = c.j['wr' + k], gun = joint(g, 0, 0, 0.0); gun.rotation.x = 0.14;
+      tilt(add(gun, box(0.062, 0.15, 0.075), m.gunD, 0, -0.07, -0.01), 0.3, 0, 0);                             // grip, raked back
+      add(gun, box(0.12, 0.05, 0.035), m.hand, 0, -0.065, 0.04);                                              // fingers round the front of the grip
+      add(gun, box(0.085, 0.11, 0.34), m.gunD, 0, 0.055, 0.12);                                               // dark body
+      add(gun, box(0.07, 0.02, 0.34), m.gunTop, 0, 0.12, 0.12);                                               // pale top plate
+      add(gun, box(0.05, 0.05, 0.1), m.gunD, 0, 0.07, 0.34);                                                  // short barrel
+      add(gun, box(0.055, 0.04, 0.012), m.plasma, 0, 0.07, 0.395);                                            // muzzle glow
+      add(gun, box(0.05, 0.02, 0.1), m.gunD, 0, 0.0, 0.07);                                                   // trigger guard
       for (const s of [-1, 1]) {
-        add(gun, box(0.012, 0.025, 0.3), m.plasma, s * 0.045, 0.055, 0.12);                                   // light strips down the sides
-        add(gun, box(0.012, 0.045, 0.03), m.plasma, s * 0.045, 0.055, -0.05);
+        tilt(add(gun, box(0.012, 0.018, 0.22), m.plasma, s * 0.046, 0.085, 0.14), 0.12, 0, 0);               // upper diagonal strip
+        tilt(add(gun, box(0.012, 0.018, 0.16), m.plasma, s * 0.046, 0.045, 0.1), 0.12, 0, 0);                // lower strip
+        add(gun, box(0.012, 0.05, 0.014), m.plasma, s * 0.046, 0.06, -0.02);                                  // rear accent
       }
-      add(gun, box(0.045, 0.045, 0.16), m.gunD, 0, 0.055, 0.38);                                              // barrel
-      add(gun, box(0.055, 0.055, 0.03), m.plasma, 0, 0.055, 0.47);
-      add(gun, box(0.07, 0.07, 0.08), m.gunD, 0, 0.05, -0.15);                                                // rear stock
     }
     c.armR = 0; c.armL = 0;
     return c;
