@@ -43,12 +43,14 @@ index.html          page, HUD markup, script order
 css/style.css       HUD and page styling, phone layout
 vendor/             three.js r128 (core and bloom addons) and its licence
 js/textures.js      canvas-drawn LED signs, portal face, glows, awning stripes
-js/characters.js    the crew: joint hierarchy of Groups with primitive meshes and procedural poses
+js/anims.js          motion-capture clips (Mixamo, retargeted to this rig; copied from Deepward), read-only data
+js/mocap.js         plays the clips on the rigs: quaternion slerp between frames, pelvis height and forward shift
+js/characters.js    the crew: joint hierarchy of Groups with primitive meshes; standing figures play mocap, seated ones are posed by hand
 js/city.js          the alley: blocks, signs, cables, props, the gate and portal
 js/camp.js          the fire, embers, seats and the crew placed around it
 js/player.js        the avatar, WASD movement, collisions and the reference camera
 js/hud.js           status, minimap and buttons
-js/combat.js        battle: the ATB encounter, the camera transition, the crew mechanics and husk AI
+js/combat.js        battle: the ATB encounter (the avatar included), the camera transition, the crew mechanics and husk AI
 js/main.js          renderer, scene, and the frame loop
 ```
 

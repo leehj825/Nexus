@@ -16,6 +16,7 @@ const Chars = (() => {
     const torso = joint(hips, 0, 0.1, 0);
     const head = joint(torso, 0, p.torsoH, 0);
     const c = { root, hips, torso, head, j: {} };
+    c.j.torso = torso; c.j.head = head; c.hipsRest = p.thigh + p.shin;   // the mocap clips write these joints
     head.scale.setScalar(p.headS || 1.2);                                   // the reference crew has big, readable heads
     for (const side of [-1, 1]) {
       const k = side > 0 ? 'L' : 'R';
@@ -45,7 +46,7 @@ const Chars = (() => {
   // A person in a pose. kind: 'seated' (hips on a seat at c.seatH) or 'stand' (walks with `speed`)
   function rest(c) {
     for (const k in c.j) c.j[k].rotation.set(0, 0, 0);
-    c.torso.rotation.set(0, 0, 0); c.head.rotation.set(0, 0, 0);
+    c.hips.rotation.set(0, 0, 0); c.hips.position.set(0, c.hipsRest, 0);
   }
   function standPose(c, t, speed) {
     const ph = c.walk || 0;
@@ -221,22 +222,45 @@ const Chars = (() => {
   function create(kind) {
     const c = kinds[kind](); c.name = kind;
     c.walk = 0; c.speed = 0;
+    c.mocap = true; c.idleClip = 'idleEase';          // standing figures use the clips; idleClip is what they do when still
     return c;
   }
 
+  // Plays a one-shot clip on a rig: it runs once and hands back to the idle. hold keeps its last frame (a death, say)
+  function play(c, name, hold = false) { c.clip = { name, t: 0, hold }; }
+  function clipLength(name) { return Mocap.clips[name] ? Mocap.clips[name].d : 0; }
+
   // Poses one character for time t. speed (m/s) drives the walk cycle of standing figures
+  // Poses one character at time t. Standing figures use motion capture: a clip played on purpose (play) first, then the
+  // idle or locomotion clip by speed. A rig without mocap falls back to the procedural pose. Seated figures are posed by hand.
   function update(c, t, dt, speed = 0) {
+    c.speed = speed;
     if (c.kind === 'seated') { rest(c); seatPose(c, t); }
     else {
-      c.speed = speed;
-      c.walk += dt * (2 + speed * 2.4) * (speed > 0.05 ? 1 : 0);
-      rest(c); standPose(c, t, speed);
-      if (c.stance) { c.j.shL.rotation.x = c.j.shR.rotation.x = -0.9; c.j.elL.rotation.x = c.j.elR.rotation.x = -0.8; }
+      rest(c);
+      let played = false;
+      if (c.clip) {
+        const clip = Mocap.clips[c.clip.name];
+        c.clip.t += dt;
+        if (clip.loop || c.clip.hold || c.clip.t < clip.d) { Mocap.sample(c, c.clip.name, c.clip.t); played = true; }
+        else c.clip = null;
+      }
+      if (!played && c.mocap) {
+        const moving = speed > 0.15, run = speed > 3.2;
+        if (moving) c.walkT = (c.walkT || 0) + dt * (run ? speed / 3.6 : speed / 1.6);
+        Mocap.sample(c, !moving ? c.idleClip : run ? 'run' : 'walk', moving ? c.walkT : t);
+        played = true;
+      }
+      if (!played) {
+        c.walk += dt * (2 + speed * 2.4) * (speed > 0.05 ? 1 : 0);
+        standPose(c, t, speed);
+        if (c.stance) { c.j.shL.rotation.x = c.j.shR.rotation.x = -0.9; c.j.elL.rotation.x = c.j.elR.rotation.x = -0.8; }
+        if (c.lean) c.torso.rotation.x = c.lean;
+      }
     }
-    if (c.lean) c.torso.rotation.x = c.lean;
     if (c.name === 'ruen') { c.orbit.rotation.y = t * 1.6; c.orb.position.y = Math.sin(t * 2.2) * 0.03; }
     if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = -0.35 + Math.sin(t * 3.2) * 0.12 - speed * 0.2; }
   }
 
-  return { create, update };
+  return { create, update, play, clipLength };
 })();

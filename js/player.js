@@ -99,6 +99,7 @@ const Player = (() => {
   }
 
   function exploreView() { return { pos: camPos, look }; }
+  function rig() { return avatar; }
   function setFrozen(on) { frozen = on; if (on) { goal = null; marker.visible = false; for (const k in keys) keys[k] = false; } }
 
   function update(t, dt) {
@@ -131,9 +132,12 @@ const Player = (() => {
     }
     speed += (v - speed) * Math.min(1, dt * 8);
     if (marker.visible) marker.scale.setScalar(1 + Math.sin(t * 6) * 0.08);
-    avatar.root.position.set(pos.x, 0, pos.z);
-    avatar.root.rotation.y = heading;
-    Chars.update(avatar, t, dt, speed);
+    // In a battle the avatar is posed and placed by Combat
+    if (!avatar.combat) {
+      avatar.root.position.set(pos.x, 0, pos.z);
+      avatar.root.rotation.y = heading;
+      Chars.update(avatar, t, dt, speed);
+    }
   }
 
   function applyCamera(cam) {
@@ -143,5 +147,5 @@ const Player = (() => {
 
   function state() { return { x: pos.x, z: pos.z, heading, speed, moving: speed > 0.1 }; }
 
-  return { init, update, applyCamera, state, exploreView, setFrozen };
+  return { init, update, applyCamera, state, exploreView, setFrozen, rig };
 })();
