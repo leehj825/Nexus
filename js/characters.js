@@ -218,13 +218,13 @@ const Chars = (() => {
     add(tail, tb(0.1, 0.05, 0.42, 0.08, 0.05), m.hair, 0, -0.22, -0.005);
     tail.rotation.x = 0.12;
     c.tail = tail;
-    c.seatArm = { sh: -0.3, el: -0.55, wr: 0.95 };                                                           // arms resting forward, blasters level
+    c.seatArm = { sh: -0.3, el: -0.55, wr: 0.7 };                                                           // arms resting forward, blasters level
     // Blasters after the reference: short chunky pistols, a pale top plate over dark sides, diagonal cyan strips, a slanted grip
     // held in the fist with the body sitting forward of the hand and tipped slightly nose-down
     for (const k of ['L', 'R']) {
-      const g = c.j['wr' + k], gun = joint(g, 0, 0, 0.0); gun.rotation.x = 0.14;
-      tilt(add(gun, box(0.062, 0.15, 0.075), m.gunD, 0, -0.07, -0.01), 0.3, 0, 0);                             // grip, raked back
-      add(gun, box(0.12, 0.05, 0.035), m.hand, 0, -0.065, 0.04);                                              // fingers round the front of the grip
+      const g = c.j['wr' + k], gun = joint(g, 0, 0.0, 0.07); gun.rotation.x = 0.1;   // pushed forward of the wrist so the body clears the forearm
+      tilt(add(gun, box(0.062, 0.15, 0.075), m.gunD, 0, -0.07, -0.06), 0.3, 0, 0);                            // grip, raked back, under the fist
+      add(gun, box(0.12, 0.05, 0.035), m.hand, 0, -0.065, -0.02);                                             // fingers round the front of the grip
       add(gun, box(0.085, 0.11, 0.34), m.gunD, 0, 0.055, 0.12);                                               // dark body
       add(gun, box(0.07, 0.02, 0.34), m.gunTop, 0, 0.12, 0.12);                                               // pale top plate
       add(gun, box(0.05, 0.05, 0.1), m.gunD, 0, 0.07, 0.34);                                                  // short barrel
