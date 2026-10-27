@@ -274,6 +274,7 @@ const Chars = (() => {
       trim: lit(0x3ff0ff, 1.2), pants: std(0x1d2333), shoes: std(0x5a3c28, { roughness: 0.8 }), sole: std(0x2a1c14), sleeve: std(0x2a3446),
       bracer: std(0xaeb8c6, { roughness: 0.45, metalness: 0.2 }), hand: std(0x3a2a22), cuff: std(0xaeb8c6, { metalness: 0.2 }),
       visor: std(0xb6c0cc, { roughness: 0.4, metalness: 0.3 }), lens: lit(0x6fdcff, 0.9), belt: std(0x3a2618),
+      bladeEdge: lit(0x3ff0ff, 1.6), bladeCore: lit(0xe6feff, 2.4), steelD: std(0x464b54, { roughness: 0.45, metalness: 0.45 }),
     };
     const c = skeleton(p); limbs(c, p, m);
     c.kind = 'stand'; c.seed = 0.6;
@@ -299,6 +300,13 @@ const Chars = (() => {
     add(H, box(0.27, 0.04, 0.04), m.hair, 0, 0.29, 0.12);                                                    // hairline
     for (const s of [-1, 1]) add(H, box(0.03, 0.045, 0.16), m.visor, s * 0.14, 0.18, 0.04);                   // the visor's arms
     add(H, box(0.27, 0.045, 0.02), m.lens, 0, 0.18, 0.132);                                                  // and its lens
+    // The energy blade in the right hand: a dark grip in the fist, a short guard, and a cyan blade with a white core
+    // running on forward and down from the hand
+    const blade = joint(c.j.wrR, 0, -0.08, 0.01); blade.rotation.x = -0.6;
+    add(blade, box(0.03, 0.12, 0.03), m.steelD, 0, -0.03, 0);                                                  // the grip
+    add(blade, box(0.09, 0.02, 0.035), m.steelD, 0, -0.08, 0);                                                 // the guard
+    add(blade, box(0.022, 0.6, 0.008), m.bladeEdge, 0, -0.38, 0);                                              // the blade
+    add(blade, box(0.008, 0.58, 0.01), m.bladeCore, 0, -0.38, 0);                                              // its white core
     return c;
   }
 
