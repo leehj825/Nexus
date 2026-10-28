@@ -18,6 +18,7 @@ const City = (() => {
   const colliders = [];
   const buzzers = [];
   let portalDust = null, portalGlow = null;
+  let glitchK = 0, resonK = 0, holo = null, rings = [], ringT = 0;
 
   // Blocks along both walls: each shows a grid of windows, some lit in warm, cyan and pink
   function blocks(root) {
@@ -165,10 +166,57 @@ const City = (() => {
     colliders.push({ x: -4.4, z: FAR + 1, r: 1.4 }, { x: 4.4, z: FAR + 1, r: 1.4 });
   }
 
+  // The glitch hologram: a crude figure made of flat additive slabs that tear sideways and grow spikes as the glitch builds (Act 2)
+  function glitchHolo(root) {
+    holo = new THREE.Group(); holo.position.set(-4.2, 0, -10.5); holo.rotation.y = 0.5; holo.visible = false; root.add(holo);
+    const mk = c => new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+    const cols = [new THREE.Color(0xff3fb4), new THREE.Color(0x3ff0ff)];
+    const parts = [[0, 3.55, 0.5, 0.55, 0.55], [0, 2.85, 0.9, 0.9, 0.35], [0, 2.2, 1.0, 0.9, 0.35], [0, 1.45, 0.6, 1.1, 0.35], [-0.75, 2.6, 0.25, 1.3, 0.25], [0.75, 2.6, 0.25, 1.3, 0.25], [-0.25, 0.6, 0.3, 1.2, 0.3], [0.25, 0.6, 0.3, 1.2, 0.3]];
+    holo.userData.slabs = parts.map((p, i) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(p[2], p[3]), mk(cols[i % 2])); m.position.set(p[0], p[1], 0); holo.add(m);
+      return { m, x: p[0], y: p[1], ph: i * 1.7 };
+    });
+    holo.userData.spikes = [];
+    for (let i = 0; i < 9; i++) {                                                   // the "too many teeth": thin spikes that only show once it turns monstrous
+      const sp = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.7 + (i % 3) * 0.25, 4), mk(cols[(i + 1) % 2]));
+      sp.position.set(-0.5 + i * 0.125, 3.45 + (i % 2) * 0.1, 0.08); sp.rotation.z = Math.PI + (i - 4) * 0.25; holo.add(sp); holo.userData.spikes.push(sp);
+    }
+    // rings that spread from the gate down the alley: the resonance Ruen feels
+    const rm = new THREE.MeshBasicMaterial({ color: 0x3ff0ff, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false, side: THREE.DoubleSide });
+    for (let i = 0; i < 4; i++) {
+      const r = new THREE.Mesh(new THREE.RingGeometry(0.97, 1, 48), rm.clone()); r.rotation.x = -Math.PI / 2; r.position.set(0, 0.06, FAR + 1); r.visible = false; root.add(r); rings.push({ r, age: -1 });
+    }
+  }
+  const setGlitch = k => { glitchK = Math.max(0, Math.min(1, k)); };
+  const setResonance = k => { resonK = Math.max(0, Math.min(1, k)); };
+  function updateGlitch(t, dt) {
+    if (holo) {
+      holo.visible = glitchK > 0.05;
+      if (holo.visible) {
+        const j = glitchK, hash = n => Math.sin(n * 91.7 + Math.floor(t * 14) * 12.9898) * 43758.5453 % 1;
+        for (const sl of holo.userData.slabs) {
+          const tear = Math.abs(hash(sl.ph)) > 0.82 - j * 0.3 ? hash(sl.ph + 3) * 0.9 * j : 0;       // a slab jumps sideways in bursts
+          sl.m.position.x = sl.x + tear; sl.m.position.y = sl.y + Math.sin(t * 3 + sl.ph) * 0.03;
+          sl.m.material.opacity = (0.25 + 0.5 * Math.abs(Math.sin(t * 9 + sl.ph * 2))) * Math.min(1, j * 1.6) * (Math.abs(hash(sl.ph + 7)) > 0.9 ? 0.15 : 1);
+          sl.m.scale.set(1 + j * 0.5 * Math.abs(hash(sl.ph + 1)), 1 + j * 0.8 * Math.abs(hash(sl.ph + 2)), 1);
+        }
+        holo.userData.spikes.forEach((sp, i) => { sp.visible = j > 0.45 && Math.abs(hash(i + 20)) < j; });
+        holo.scale.setScalar(1 + (Math.abs(hash(5)) > 0.9 ? 0.25 * j : 0));
+      }
+    }
+    ringT -= dt;
+    if (resonK > 0.05 && ringT <= 0) { ringT = 1.5 / (0.5 + resonK); const r = rings.find(q => q.age < 0); if (r) { r.age = 0; r.r.visible = true; } }
+    for (const q of rings) if (q.age >= 0) {
+      q.age += dt; const u = q.age / 4.5;
+      if (u >= 1) { q.age = -1; q.r.visible = false; continue; }
+      q.r.scale.setScalar(1 + u * 30); q.r.material.opacity = (1 - u) * 0.55 * Math.min(1, resonK * 2);
+    }
+  }
+
   // Builds the alley into the scene and sets its light: low cool ambient, a faint key from above, and the neon doing most of the work
   function build(scene) {
     const root = new THREE.Group(); scene.add(root);
-    blocks(root); signs(root); cables(root); props(root); gate(root);
+    blocks(root); signs(root); cables(root); props(root); gate(root); glitchHolo(root);
     scene.add(new THREE.AmbientLight(0x1b2338, 0.55));
     scene.add(new THREE.HemisphereLight(0x2a3a60, 0x06060a, 0.35));
     const moon = new THREE.DirectionalLight(0x6a7ac0, 0.22); moon.position.set(-6, 14, 8); scene.add(moon);
@@ -177,10 +225,12 @@ const City = (() => {
 
   // Keeps the signs buzzing and the portal breathing and drifting
   function update(t, dt) {
+    updateGlitch(t, dt);
     for (const b of buzzers) {
       // Mostly steady, with the odd stutter as a failing tube does
       const stutter = Math.sin(t * 23 + b.phase * 5) > 0.9995 || Math.sin(t * 7.3 + b.phase) < -0.9985;
-      const k = stutter ? 0.35 : 1;
+      const fail = glitchK > 0 && Math.sin(Math.floor(t * 10) * 3.7 + b.phase * 11) > 1 - glitchK * 0.9;                // under the glitch whole signs cut out in bursts
+      const k = stutter || fail ? 0.2 + 0.3 * (b.phase % 1) : 1;
       b.mesh.material.color.setScalar(k * 1.8);   // above 1 so the neon blooms
       b.halo.material.opacity = 0.6 * k;
       b.light.intensity = b.base * (0.9 + 0.1 * Math.sin(t * 2 + b.phase)) * k;
@@ -197,5 +247,5 @@ const City = (() => {
     }
   }
 
-  return { build, update, colliders, HALF, FAR };
+  return { build, update, colliders, HALF, FAR, setGlitch, setResonance };
 })();

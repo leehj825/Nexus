@@ -467,6 +467,8 @@ const Chars = (() => {
   const gq = new THREE.Quaternion(), ge = new THREE.Euler(), gv = new THREE.Vector3();
   const addRot = (j, x, y = 0, z = 0) => { if (j) j.quaternion.multiply(gq.setFromEuler(ge.set(x, y, z))); };
   function setTalk(c, mood, speaking = true) { c.talkMood = mood; c.talkSpeaking = speaking; }
+  const tmpAim = new THREE.Vector3();
+  function setOrbAim(c, on) { c.orbAimOn = !!on; }
   function setLook(c, pt) { c.lookPt = pt || null; }
   function gesture(c, t, dt) {
     const want = c.talkMood ? (c.talkSpeaking ? 1 : 0.35) : 0;
@@ -557,7 +559,11 @@ const Chars = (() => {
     if (c.name === 'ruen') {                                                     // the orb floats over her left palm, specks circling it
       c.root.updateMatrixWorld(true);
       c.j.wrL.getWorldPosition(orbAt); c.root.worldToLocal(orbAt);
-      c.orbit.position.set(orbAt.x, orbAt.y + 0.3 + Math.sin(t * 2.2) * 0.025, orbAt.z);
+      c.orbAim = (c.orbAim || 0) + ((c.orbAimOn ? 1 : 0) - (c.orbAim || 0)) * Math.min(1, dt * 2.2);
+      if (c.orbAim > 0.002) {                                                     // the orb drifts out toward the alley's far end, like a compass needle
+        gv.set(0, 0.25, -2.0).multiplyScalar(c.orbAim); c.root.localToWorld(gv.set(orbAt.x, orbAt.y + 0.3, orbAt.z)); gv.add(tmpAim.set(0, 0.2 * c.orbAim, -2.2 * c.orbAim)); c.root.worldToLocal(gv);
+        c.orbit.position.set(gv.x, gv.y + Math.sin(t * 2.2) * 0.025, gv.z);
+      } else c.orbit.position.set(orbAt.x, orbAt.y + 0.3 + Math.sin(t * 2.2) * 0.025, orbAt.z);
       c.orb.rotation.y = t * 0.8;
       for (const sp of c.specks) {
         const u = sp.userData, a = u.a + t * u.v;
@@ -567,5 +573,5 @@ const Chars = (() => {
     if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = -Math.min(speed, 4) * 0.06; }
   }
 
-  return { create, update, play, clipLength, setTalk, setLook };
+  return { create, update, play, clipLength, setTalk, setLook, setOrbAim };
 })();
