@@ -99,7 +99,7 @@ const Cutscene = (() => {
 
   function begin(list, done) {
     steps = list; i = 0; ending = 0; active = true; onDone = done || null; t = 0;
-    Player.setFrozen(true);
+    Player.setFrozen(true); Camp.seatAll();
     Player.scriptTo(JIN_SPOT[0], JIN_SPOT[1], Math.atan2(-JIN_SPOT[0], -JIN_SPOT[1]));          // Jin takes his place by the fire, facing it
     const ex = Player.exploreView(); pos.copy(ex.pos); look.copy(ex.look);       // start the glide from where the camera is
     document.body.classList.add('cutscene'); $('dlg').hidden = false; show();

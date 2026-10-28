@@ -271,7 +271,7 @@ const Combat = (() => {
     phase = 'explore'; phaseT = 0;
     for (const u of party) {
       u.rush = null; u.rig.combat = false; u.rig.clip = null; u.rig.idleClip = u.rig.loco.idle;
-      if (u.id !== 'you') u.rig.kind = 'seated';
+      if (u.id !== 'you') Camp.afterBattle(u.rig);
       u.rig.root.rotation.set(0, u.home.ry, 0); u.rig.root.position.y = 0;
       u.rig.root.position.set(u.home.x, 0, u.home.z);
     }

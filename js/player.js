@@ -160,5 +160,5 @@ const Player = (() => {
 
   function state() { return { x: pos.x, z: pos.z, heading, speed, moving: speed > 0.1 }; }
 
-  return { init, update, applyCamera, state, exploreView, setFrozen, scriptTo, teleport, rig };
+  return { init, update, applyCamera, state, exploreView, setFrozen, scriptTo, teleport, collidePoint: (x, z) => collide(x, z), rig };
 })();
