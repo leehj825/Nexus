@@ -61,6 +61,17 @@
     glitchT -= dt; if (glitchT <= 0 && City.glitch() > 0.25) { Sound.sfx('glitch', { vol: City.glitch() }); glitchT = 0.5 + Math.random() * 1.2; }
   }
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('button')) Sound.sfx('click'); });
+  // The gate: sealed by a barrier until the alley's husks are beaten, then it dissolves. Bumping into it says why.
+  let gateWas = false, gateHint = 0;
+  function gateWatch(dt) {
+    const cleared = Combat.alleyCleared();
+    if (cleared !== gateWas) { gateWas = cleared; City.setGate(cleared); if (cleared) Cutscene.gateOpened(); }
+    gateHint -= dt;
+    if (!cleared && gateHint <= 0 && Player.state().z < City.FAR + 4.4) {
+      gateHint = 6; const toast = document.getElementById('toast');
+      if (toast) { toast.textContent = 'The gate is sealed. Something is guarding it.'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+    }
+  }
   function frame(ms) {
     const now = ms / 1000, raw = now - last, dt = Math.min(0.05, raw);
     last = now;
@@ -76,6 +87,7 @@
     const step = paused ? 0 : dt;
     t += step;
     City.update(t, step);
+    gateWatch(step);
     Camp.update(t, step);
     World.update(t, step, Player.state());
     FX.update(step);

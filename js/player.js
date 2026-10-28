@@ -88,6 +88,7 @@ const Player = (() => {
     const half = z > gz + 6 ? b : z > gz + 2 ? b + (gate - b) * (gz + 6 - z) / 4 : z > gz - 4.5 ? gate : z > gz - 8 ? gate + (World.HALF_X - gate) * (gz - 4.5 - z) / 3.5 : World.HALF_X;
     x = clamp(x, -half, half);
     z = clamp(z, World.MIN_Z, 9);
+    if (!Combat.alleyCleared()) z = Math.max(z, gz + 3.2);                           // the gate's barrier holds until the husks that guard it are beaten
     for (const c of [...Camp.colliders, ...City.colliders]) {
       const dx = x - c.x, dz = z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.35;
       if (d < min && d > 0.0001) { x = c.x + dx / d * min; z = c.z + dz / d * min; }

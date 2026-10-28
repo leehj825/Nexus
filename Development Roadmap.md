@@ -16,6 +16,7 @@ Status key: ✅ done · 🟡 partly done · ⬜ not started. Last updated after 
     *   ✅ Ruen's dual-gauge Data Burst (the cast breaks if she is hit).
     *   ✅ Jin and Kyle run up and strike in melee; Ruen and Yuna attack from range.
 *   🟡 **Enemy AI:** husks attack on their own and telegraph a Crush that Stagger can break. Still to do: targeting that reacts to the crew's state, and the new enemy types designed in `Enemies.md` (waiting on models).
+*   ✅ **The alley ambush:** the three husks that hold the alley fight you once when you come near and are gone for good; the gate's blue barrier stays sealed until they are beaten, then dissolves into an open doorway.
 *   ✅ **Fighting in the field:** a battle starts wherever the crew meets a husk group. The stage is turned and moved onto open ground, and patrols in the Market chase when you come close.
 
 ## Phase 3: World Building & Content 🟡

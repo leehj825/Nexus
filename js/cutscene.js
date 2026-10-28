@@ -239,15 +239,20 @@ const Cutscene = (() => {
   let stage = 0;
   const QUEST = ['\u25c6 Speak with the crew', '\u25c6 Rest by the fire and feel for the resonance', '\u25c6 Go through the gate into the Neon Market', '\u25c6 Follow the orb up the avenue', '\u25c6 Reach the foot of the tower', '\u25c6 Follow the pull to the Industrial Hub gate', '\u25c6 Cross the Hub to the Foundry', '\u25c6 Reach the Foundry\'s shutter', '\u25c6 Find the three access nodes', '\u25c6 Return to the Foundry\'s shutter', '\u25c6 Enter the Foundry', '\u25c6 Defeat the Loader Mech', '\u25c6 Take the Data Core', '\u25c6 Act 2 complete: the Spire waits in Act 3'];
   function setQuest(n) {
-    const q = $('qtext'); if (q) q.textContent = QUEST[n]; if (n > 0) Sound.sfx('quest');
+    const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; if (n > 0) Sound.sfx('quest');
     const toast = $('toast'); if (toast && n > 0) { toast.textContent = 'Quest updated'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
   }
   const setStage = n => { stage = n; setQuest(n); };
+  // The alley's husks are beaten and the gate opens: the quest line says so
+  function gateOpened() {
+    const toast = $('toast'); if (toast) { toast.textContent = 'The gate\'s barrier dissolves'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); }
+    if (stage === 2) { const q = $('qtext'); if (q) q.textContent = QUEST[2]; Sound.sfx('quest'); }
+  }
   // Each access node picked up: the toast and the quest line show the count
   function nodeTaken(n) { const q = $('qtext'); if (q && stage === 8) q.textContent = QUEST[8] + ' (' + n + '/3)'; const toast = $('toast'); if (toast) { toast.textContent = 'Access node ' + n + ' / 3'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1800); } }
   // The objective the map points at: the gate, then the tower
   function objective() {
-    if (stage === 2) return { x: 0, z: World.Z0 + 4, label: 'the gate' };
+    if (stage === 2) return Combat.alleyCleared() ? { x: 0, z: World.Z0 + 4, label: 'the gate' } : { x: 0, z: -14, label: 'the husks' };
     if (stage === 3 || stage === 4) return { x: World.TOWER.x, z: World.TOWER.z, label: 'the tower' };
     if (stage === 5) return { x: World.GATE.x, z: World.GATE.z + 6, label: 'the Hub gate' };
     if (stage === 6 || stage === 7 || stage === 9) return { x: World.FOUNDRY.x, z: World.FOUNDRY.z, label: stage === 9 ? 'the shutter' : 'the Foundry' };
@@ -315,5 +320,5 @@ const Cutscene = (() => {
     if (!active && !campOpen && !Combat.active() && !Combat.engaging()) checkTriggers();
   }
 
-  return { init, update, updateUI, applyCamera, active: () => active, start, started: () => started, stage: () => stage, objective, nodeTaken, debugStage: n => setStage(n) };
+  return { init, update, updateUI, applyCamera, active: () => active, start, started: () => started, stage: () => stage, objective, nodeTaken, gateOpened, debugStage: n => setStage(n) };
 })();

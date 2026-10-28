@@ -19,7 +19,7 @@ const Combat = (() => {
   const W = (lx, lz) => ({ x: stage.ox + lx * Math.cos(stage.th) + lz * Math.sin(stage.th), z: stage.oz - lx * Math.sin(stage.th) + lz * Math.cos(stage.th) });
   const stagePos = new THREE.Vector3().copy(BATTLE.pos), stageLook = new THREE.Vector3().copy(BATTLE.look);
   const groups = new Map();                                        // every husk group that can be fought: { id, x, z, rigs, tier, aggro, onClear }
-  let cur = null, aggroCd = 4;
+  let cur = null, aggroCd = 4, alleyDone = false;                    // the husks that hold the alley's gate: beaten once, gone for good
   const PARTY = {
     you: { name: 'You', hp: 110, rate: 0.12, color: '#ffffff' },
     ruen: { name: 'Ruen', hp: 90, rate: 0.13, color: '#c9a0ff' },
@@ -62,7 +62,7 @@ const Combat = (() => {
     for (let i = 0; i < 3; i++) {
       const rig = Chars.create('husk'); rig.root.position.set(FOE_HOME[i][0], 0, FOE_HOME[i][1]); scene.add(rig.root); alleyRigs.push(rig);
     }
-    register({ id: 'alley', x: 0, z: -14, rigs: alleyRigs, tier: 0, aggro: false, persistent: true, text: 'An ambush from the alley!' });
+    register({ id: 'alley', x: 0, z: -14, rigs: alleyRigs, tier: 0, aggro: true, aggroR: 7.5, radius: 9, text: 'An ambush from the alley!', onClear: () => { alleyDone = true; } });
     target = null;
     buildUI();
     bindView(document.getElementById('game'), camera);
@@ -567,5 +567,5 @@ const Combat = (() => {
     ui.actions.hidden = !who || phase !== 'battle';
   }
 
-  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
+  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, debugClearAlley: () => { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); }, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
 })();
