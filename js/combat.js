@@ -28,7 +28,7 @@ const Combat = (() => {
   };
   const ORDER = ['you', 'ruen', 'kyle', 'yuna'];
   const HUSK = { name: 'Husk', hp: 60, rate: 0.09, color: '#ff5a7a' };
-  const BRUTE = { name: 'Husk Brute', hp: 130, rate: 0.065, color: '#ff8a4a' };       // big and slow: no light attacks, only the telegraphed Crush, which hits hard
+  const BRUTE = { name: 'Husk Brute', hp: 110, rate: 0.065, color: '#ff8a4a' };       // big and slow: no light attacks, only the telegraphed Crush, which hits hard
   const COMMANDS = {
     you: [{ label: 'Strike', run: u => strike(u, 16, 'brawlPunch') }, { label: 'Brace', run: u => brace(u) }],
     ruen: [{ label: 'Data Bolt', run: u => strike(u, 22, 'mgBolt') }, { label: 'Data Burst', run: u => startCast(u) }],
@@ -259,7 +259,7 @@ const Combat = (() => {
       const t = pick(); if (!t) return;
       const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.7, 24), new THREE.MeshBasicMaterial({ color: 0xff3a5a, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }));
       ring.rotation.x = -Math.PI / 2; ring.position.set(t.rig.root.position.x, 0.04, t.rig.root.position.z); scene.add(ring);
-      f.wind = { t: WIND, target: t, ring, dmg: Math.round((f.brute ? rand(38, 46) : rand(30, 36)) * f.dmgMul) };
+      f.wind = { t: WIND, target: t, ring, dmg: Math.round((f.brute ? rand(32, 40) : rand(30, 36)) * f.dmgMul) };
       log(f.name + ' winds up on ' + t.name + '!'); Sound.sfx('growl');
     } else {
       const t = pick(); if (!t) return;

@@ -37,7 +37,7 @@ Theme: the first corrupted district. Holograms and signs turn on the people who 
 
 ### Husk Patrol (in the game, variants wanted)
 * **Husk Vendor:** a Husk in a stall apron with a still-lit price-tag hologram flickering over its head. Same stats as a Husk, but it drops Scrap.
-* **Husk Brute (in the game, custom model):** a Husk with its arms swollen into slabs of fused crates and scrap. 2.1 m, slow, 130 HP. Only the telegraphed Crush (38 to 46 damage), no light hit. Rewards using Stagger. Leads the patrols from the second row of the Market on.
+* **Husk Brute (in the game, custom model):** a Husk with its arms swollen into slabs of fused crates and scrap. 2.1 m, slow, 110 HP. Only the telegraphed Crush (32 to 40 damage), no light hit. Rewards using Stagger. Leads the patrols from the second row of the Market on.
 
 ### Glitch Wraith (new)
 * **Who:** a hologram that broke out of its projector. It is the "holograms glitch into monstrous shapes" beat in Story.md, so the first time you see one it should come out of a billboard.

@@ -5,16 +5,20 @@
 // Solid things are boxes and circles on the ground (collide()); lit windows are one InstancedMesh per chunk; neon signs are glowing
 // planes, and a small pool of real lights follows the nearest signs so the lighting stays cheap however many are loaded.
 const World = (() => {
-  const CH = 32, COLS = 4, ROWS = 8, Z0 = -30;
+  const CH = 32, COLS = 4, MROWS = 8, ROWS = 14, Z0 = -30;                           // the Market is rows 0-7; the Industrial Hub lies beyond it, rows 8-13
   const DROP = 2.3 * CH, LIGHTS = 5;
   const SEE = 56;                                                                        // beyond this the fog has swallowed a character
   let LOAD = 1.6 * CH, lightsOn = LIGHTS;                                            // how far chunks load around the player, and how many lights are in use (the quality setting turns both down)
   const HALF_X = (COLS - 1) * CH + CH / 2 - 1.2, MIN_Z = Z0 - (ROWS - 1) * CH + 1.2;      // where the player may walk
   const chunks = new Map(), queue = [];
   let root = null, lights = [], lightT = 0, scene = null;
-  const tmpP = new THREE.Vector3();
+  const tmpP = new THREE.Vector3(), FOG_MKT = new THREE.Color(0x070b16), FOG_HUB = new THREE.Color(0x1a0f08); let hubK = -1;
   const taken = new Set(), clearedPacks = new Set();
-  const TOWER = { x: 0, z: Z0 - CH * (ROWS - 3 + 0.5) };                            // the landmark tower's chunk centre (the story's goal)                                                          // scrap already picked up, by key
+  const TOWER = { x: 0, z: Z0 - CH * (MROWS - 3 + 0.5) };                            // the landmark tower's chunk centre (the story's goal)                                                          // scrap already picked up, by key
+
+  const GATE = { x: 0, z: Z0 - CH * (MROWS - 0.5) };                                  // the checkpoint in the Market's far wall, the way into the Hub
+  const FOUNDRY = { x: 0, z: Z0 - CH * (ROWS - 3 + 0.5) + 15 };                         // the plaza in front of the Foundry's shutter (the Hub's landmark)
+  const HUB_Z = Z0 - CH * MROWS;                                                         // the Hub begins here
 
   // ---------- small helpers ----------
   const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -70,8 +74,10 @@ const World = (() => {
   // ---------- one chunk ----------
   function kindOf(cx, r, rnd) {
     if (Math.abs(cx) === COLS || r === ROWS - 1) return 'wall';
+    if (r === MROWS - 1) return cx === 0 ? 'gate' : 'wall';
     if (cx === 0 && r === 0) return 'plaza';
-    if (cx === 0 && r === ROWS - 3) return 'tower';
+    if (cx === 0 && r === MROWS - 3) return 'tower';
+    if (r >= MROWS) { if (cx === 0 && r === ROWS - 3) return 'foundry'; const v = rnd(); return v < 0.4 ? 'factory' : v < 0.65 ? 'tanks' : 'depot'; }
     const v = rnd(); return v < 0.5 ? 'block' : v < 0.78 ? 'market' : 'yard';
   }
 
@@ -93,8 +99,8 @@ const World = (() => {
     const wins = [];                                                          // lit windows to instance: { x, y, z, ry, col }
 
     // Windows over the four faces of a tower: a grid of small lit panes, some off
-    const facade = (x, z, w, d, h, y0) => {
-      const litCols = [0xffc977, 0x6fe8ff, 0xff5fbf, 0xffe2a8, 0x9fffd0];
+    const facade = (x, z, w, d, h, y0, cols) => {
+      const litCols = cols || [0xffc977, 0x6fe8ff, 0xff5fbf, 0xffe2a8, 0x9fffd0];
       for (const f of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
         const along = f[0] === 0 ? w : d, off = (f[0] === 0 ? d : w) / 2 + 0.05;
         for (let a = -along / 2 + 1.2; a < along / 2 - 0.8; a += 1.5) for (let y = y0 + 1.5; y < y0 + h - 1; y += 1.7) {
@@ -159,6 +165,7 @@ const World = (() => {
     // A spot in the streets round a block of size (w, d): the 5 m margin outside it
     const margin = (w, d) => () => { const s = rnd() < 0.5 ? -1 : 1, onX = rnd() < 0.5; return onX ? [X + s * (w / 2 + 1.6 + rnd() * 3), Z + (rnd() - 0.5) * (d + 6)] : [X + (rnd() - 0.5) * (w + 6), Z + s * (d / 2 + 1.6 + rnd() * 3)]; };
 
+    const free = (x, z, rad) => !ch.boxes.some(b => x > b.x - b.hw - rad && x < b.x + b.hw + rad && z > b.z - b.hd - rad && z < b.z + b.hd + rad) && !ch.circles.some(c => Math.hypot(x - c.x, z - c.z) < c.r + rad);
     if (kind === 'wall') {
       const h = 40 + rnd() * 30; tower(X, Z, CH - 0.4, CH - 0.4, h, 1);
     } else if (kind === 'block' || kind === 'tower') {
@@ -195,6 +202,98 @@ const World = (() => {
         for (const sx of [-5.4, 5.4]) box(g, 0.5, 9.6, 0.5, mat(0x1a1d27), sx, 4.8, Z0 - 1.6);
       }
       dropScrap(4, () => [X + (rnd() - 0.5) * (CH - 6), Z + (rnd() - 0.5) * (CH - 6)]);
+    } else if (kind === 'gate') {                                                      // the checkpoint in the Market's far wall: guard blocks either side of a 16 m way through
+      const ORG = 0xff8a2a, steel = mat(0x2a2d33, { roughness: 0.7, metalness: 0.3 });
+      box(g, CH - 1, 0.04, CH - 1, mat(0x151a29, { roughness: 0.8 }), X, 0.02, Z);
+      for (const sx of [-1, 1]) {
+        const bx = X + sx * 13.5; tower(bx, Z, 10, 14, 11, 1);
+        box(g, 10.2, 0.4, 0.1, emis(ORG, 1.4), bx, 3.0, Z + 7.06);                                        // a work-light strip on each guard block
+        ch.signs.push({ x: bx - sx * 3, y: 4, z: Z + 9, c: ORG });
+      }
+      for (const sx of [-7.4, 7.4]) { box(g, 1.0, 9.4, 1.0, steel, X + sx, 4.7, Z); post(X + sx, Z, 0.7); }
+      box(g, 15.8, 1.1, 1.2, steel, X, 9.2, Z);
+      const hz = new THREE.Mesh(new THREE.PlaneGeometry(15, 0.8), new THREE.MeshBasicMaterial({ map: Tex.stripes('#e8a020', '#15120e'), toneMapped: false })); hz.position.set(X, 9.2, Z + 0.62); g.add(hz);
+      const nm = new THREE.Mesh(new THREE.PlaneGeometry(12, 1.8), new THREE.MeshBasicMaterial({ map: Tex.led('INDUSTRIAL HUB', '#ffb04a', 1024, 152, 78), toneMapped: false, color: new THREE.Color(1.7, 1.7, 1.7) }));
+      nm.position.set(X, 11.4, Z + 0.1); g.add(nm); ch.signs.push({ x: X, y: 9, z: Z + 4, c: ORG });
+      const nm2 = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.2), new THREE.MeshBasicMaterial({ map: Tex.led('RESTRICTED', '#ff4a4a', 1024, 200, 44), toneMapped: false, color: new THREE.Color(1.5, 1.5, 1.5) }));
+      nm2.position.set(X, 7.9, Z + 0.62); g.add(nm2);
+      for (const [dx, dy, dz] of [[-9, 8.2, 5], [0, 7.4, 8], [9, 8.4, 4]]) {                        // sentry drones hanging over the gate: a spinning disc and a cyan lens
+        ch.spin.push(tubeSolid(g, 0.75, 0.16, mat(0xd8dee6, { metalness: 0.4, roughness: 0.5 }), X + dx, dy, Z + dz));
+        box(g, 0.34, 0.2, 0.34, emis(0x3ff0ff, 2.2), X + dx, dy - 0.2, Z + dz);
+      }
+      tube(g, 0.4, 0.9, mat(0x2a3b44, { metalness: 0.4 }), X - 11, 0.45, Z + 10); tube(g, 0.3, 0.06, emis(0xff7a2a, 1.6), X - 11, 0.92, Z + 10); post(X - 11, Z + 10, 0.5);     // a lit barrel
+      ch.signs.push({ x: X - 11, y: 1.6, z: Z + 10, c: 0xff7a2a });
+      makeNpc(ch, rnd, X - 9.4, Z + 10.4, -Math.PI / 2, false).hub = true;
+      for (let i = 0; i < 4; i++) clutter(X + (rnd() < 0.5 ? -1 : 1) * (9 + rnd() * 5), Z + (rnd() - 0.5) * 26);
+      dropScrap(3, () => [X + (rnd() - 0.5) * 24, Z + 8 + rnd() * 6]);
+    } else if (kind === 'factory') {                                                    // a low, wide works with stacks, pipe runs and orange lights
+      const ORG = 0xff8a2a, OC = [0xff9a3a, 0xffc977, 0xff7a2a], dark = [0x2b2622, 0x2e2a20, 0x232a2c, 0x30261f];
+      box(g, CH - 1, 0.04, CH - 1, mat(0x13151c, { roughness: 1 }), X, 0.02, Z);
+      const n = 1 + (rnd() < 0.5 ? 1 : 0);
+      for (let k = 0; k < n; k++) {
+        const w = 14 + rnd() * 6, d = 12 + rnd() * 5, h = 8 + rnd() * 8, x = X + (n === 1 ? (rnd() - 0.5) * 4 : (k ? 8 : -8)), z = Z + (rnd() - 0.5) * 4 - (n === 2 ? 3 : 0);
+        const m = mat(dark[Math.floor(rnd() * dark.length)], { roughness: 1 });
+        box(g, w, h, d, m, x, h / 2, z); solid(x, z, w / 2, d / 2); facade(x, z, w, d, h, 0, OC);
+        for (let i = 0; i < Math.floor(w / 2.6); i++) box(g, 0.3, 0.5, d + 0.4, mat(0x1a1b1e), x - w / 2 + 1.3 + i * 2.6, h + 0.25, z);        // roof ribs
+        for (let i = 0; i < 1 + Math.floor(rnd() * 2); i++) {                         // smokestacks, each capped with a glow
+          const px = x - w * 0.3 + i * w * 0.5, pz = z - d * 0.2, sh = 9 + rnd() * 6;
+          tube(g, 0.9, sh, mat(0x1d1b1a), px, h + sh / 2, pz); tube(g, 1.0, 0.3, emis(ORG, 1.8), px, h + sh + 0.1, pz); ch.signs.push({ x: px, y: h + sh, z: pz, c: ORG });
+        }
+        box(g, w, 0.55, 0.55, mat(0x3a3430), x, 5.4, z + d / 2 + 0.7); for (const px of [-0.4, 0.4]) box(g, 0.5, 5.4, 0.5, mat(0x3a3430), x + px * w, 2.7, z + d / 2 + 0.7);   // a pipe run along the front
+        box(g, w + 0.2, 0.3, 0.1, emis(ORG, 1.1), x, 3.0, z + d / 2 + 0.07);
+        ch.signs.push({ x: x, y: 4.2, z: z + d / 2 + 2, c: ORG });
+      }
+      for (let i = 0; i < 6; i++) clutter(X + (rnd() - 0.5) * (CH - 6), Z + (rnd() - 0.5) * (CH - 6));
+      dropScrap(4, () => [X + (rnd() - 0.5) * (CH - 6), Z + (rnd() - 0.5) * (CH - 6)]);
+    } else if (kind === 'tanks') {                                                      // a tank farm: big cylinders with glowing bands, joined by pipe bridges
+      const ORG = 0xff8a2a, pos = [];
+      box(g, CH - 1, 0.04, CH - 1, mat(0x12141b, { roughness: 1 }), X, 0.02, Z);
+      for (let i = 0; i < 4 + Math.floor(rnd() * 2); i++) {
+        const x = X - 10 + (i % 2) * 20 + (rnd() - 0.5) * 3, z = Z - 11 + Math.floor(i / 2) * 11 + (rnd() - 0.5) * 3, rr = 3.2 + rnd() * 1.6, h = 7 + rnd() * 7;
+        if (pos.some(q => Math.hypot(q[0] - x, q[1] - z) < q[2] + rr + 2)) continue; pos.push([x, z, rr]);
+        tube(g, rr, h, mat(0x3a3d44, { metalness: 0.4, roughness: 0.6 }), x, h / 2, z); tube(g, rr * 0.6, 0.5, mat(0x24262c), x, h + 0.25, z); post(x, z, rr + 0.2);
+        for (const by of [0.3, 0.75]) tube(g, rr + 0.06, 0.22, emis(by > 0.5 ? ORG : 0xffb04a, 0.9), x, h * by, z);
+        box(g, 0.3, h, 0.3, mat(0x1c1e22), x + rr * 0.8, h / 2, z + rr * 0.6);                           // a ladder column
+      }
+      for (let i = 0; i + 1 < pos.length; i++) {                                       // pipe bridges overhead, well above head height
+        const a = pos[i], b = pos[i + 1], mx = (a[0] + b[0]) / 2, mz = (a[1] + b[1]) / 2;
+        box(g, Math.abs(a[0] - b[0]) + 0.5, 0.45, 0.45, mat(0x3a3430), mx, 5.2, a[1]); box(g, 0.45, 0.45, Math.abs(a[1] - b[1]) + 0.5, mat(0x3a3430), b[0], 5.2, mz);
+      }
+      if (pos.length) ch.signs.push({ x: pos[0][0], y: 5, z: pos[0][1] + pos[0][2] + 1.5, c: ORG });
+      for (let i = 0; i < 6; i++) { const x = X + (rnd() - 0.5) * (CH - 6), z = Z + (rnd() - 0.5) * (CH - 6); if (!pos.some(q => Math.hypot(q[0] - x, q[1] - z) < q[2] + 2)) clutter(x, z); }
+      dropScrap(4, () => { for (let t = 0; t < 8; t++) { const x = X + (rnd() - 0.5) * (CH - 6), z = Z + (rnd() - 0.5) * (CH - 6); if (!pos.some(q => Math.hypot(q[0] - x, q[1] - z) < q[2] + 1.5)) return [x, z]; } return [X + CH / 2 - 2, Z]; });
+    } else if (kind === 'depot') {                                                      // stacked containers under a gantry crane, with a conveyor
+      const ORG = 0xff8a2a, steel = mat(0x30343b, { metalness: 0.3, roughness: 0.7 }), cols = [0x6b2a24, 0x244a6b, 0x6b5a24, 0x4a3a2c];
+      box(g, CH - 1, 0.04, CH - 1, mat(0x13151c, { roughness: 1 }), X, 0.02, Z);
+      for (let i = 0; i < 5; i++) {
+        const q = rnd() < 0.5, cw = q ? 6.2 : 2.5, cd = q ? 2.5 : 6.2, x = X - 10 + (i % 3) * 10 + (rnd() - 0.5) * 2, z = Z + (i < 3 ? -9 : 6) + (rnd() - 0.5) * 2, c = cols[Math.floor(rnd() * cols.length)];
+        box(g, cw, 2.6, cd, mat(c, { roughness: 0.7, metalness: 0.2 }), x, 1.3, z); solid(x, z, cw / 2, cd / 2);
+        for (let k = 0; k < Math.floor(rnd() * 3); k++) box(g, cw * 0.95, 2.6, cd * 0.95, mat(cols[Math.floor(rnd() * cols.length)], { roughness: 0.7, metalness: 0.2 }), x, 3.9 + k * 2.6, z);
+      }
+      const gz = Z + 0.5;                                                              // the gantry: two legs and a beam across the yard, with a warning lamp
+      for (const sx of [-13, 13]) { box(g, 0.9, 15, 0.9, steel, X + sx, 7.5, gz); post(X + sx, gz, 0.7); }
+      box(g, 27, 1.2, 1.4, steel, X, 15.4, gz); box(g, 2, 1.6, 1.6, mat(0x6b5a24), X + (rnd() - 0.5) * 12, 14.2, gz); box(g, 0.3, 0.3, 0.3, emis(0xff3a3a, 2.2), X + 13, 16.2, gz); ch.signs.push({ x: X + 13, y: 12, z: gz + 2, c: 0xff3a3a });
+      box(g, 2.2, 0.7, 18, mat(0x1f2126), X + 4, 0.35, Z - 1); box(g, 0.12, 0.74, 18, emis(ORG, 0.9), X + 4 + 1.15, 0.36, Z - 1); ch.boxes.push({ x: X + 4, z: Z - 1, hw: 1.1, hd: 9 });
+      ch.signs.push({ x: X - 4, y: 3, z: Z + 12, c: ORG });
+      for (let i = 0; i < 6; i++) { const x = X + (rnd() - 0.5) * (CH - 6), z = Z + (rnd() - 0.5) * (CH - 6); if (free(x, z, 1.6)) clutter(x, z); }
+      dropScrap(4, () => [X + (rnd() - 0.5) * (CH - 6), Z + 12 + (rnd() - 0.5) * 6]);
+    } else if (kind === 'foundry') {                                                    // the Hub's landmark: a furnace works with three chimneys and a sealed shutter door
+      const ORG = 0xff8a2a, w = 26, d = 22, h = 20, bz = Z - 3, front = bz + d / 2, steel = mat(0x2a2d33, { metalness: 0.3, roughness: 0.7 });
+      box(g, CH - 1, 0.04, CH - 1, mat(0x181410, { roughness: 1 }), X, 0.02, Z);
+      box(g, w, h, d, mat(0x2e2824, { roughness: 1 }), X, h / 2, bz); solid(X, bz, w / 2, d / 2); facade(X, bz, w, d, h, 0, [0xff9a3a, 0xffc977, 0xff7a2a]);
+      for (const sx of [-8, 0, 8]) {
+        tube(g, 1.7, 15, mat(0x1d1b1a), X + sx, h + 7.5, bz - 4); tube(g, 1.8, 0.4, emis(ORG, 2.0), X + sx, h + 15.1, bz - 4);
+        ch.spin.push(tubeSolid(g, 2.4, 0.2, emis(0xffb04a, 1.6), X + sx, h + 9, bz - 4));
+      }
+      box(g, 14, 1.4, 0.2, emis(ORG, 2.4), X, 14, front + 0.1);                                           // the furnace glow through a slit
+      const door = new THREE.Mesh(new THREE.BoxGeometry(11, 8.5, 0.5), mat(0x1a1c20, { metalness: 0.5, roughness: 0.5 })); door.position.set(X, 4.25, front + 0.3); g.add(door);
+      for (let i = 0; i < 8; i++) box(g, 11, 0.12, 0.2, steel, X, 0.7 + i * 1.02, front + 0.62);          // shutter slats
+      const hz = new THREE.Mesh(new THREE.PlaneGeometry(11, 0.9), new THREE.MeshBasicMaterial({ map: Tex.stripes('#e8a020', '#15120e'), toneMapped: false })); hz.position.set(X, 8.9, front + 0.62); g.add(hz);
+      const lg = new THREE.Mesh(new THREE.PlaneGeometry(9, 1.7), new THREE.MeshBasicMaterial({ map: Tex.led('NEXUS CORP', '#ffb04a', 768, 144, 60), toneMapped: false, color: new THREE.Color(1.6, 1.6, 1.6) })); lg.position.set(X, 16.5, front + 0.12); g.add(lg);
+      const mk = new THREE.Mesh(new THREE.PlaneGeometry(13, 4), new THREE.MeshBasicMaterial({ map: Tex.stripes('#e8a020', '#15120e'), toneMapped: false, transparent: true, opacity: 0.9 })); mk.rotation.x = -Math.PI / 2; mk.position.set(X, 0.05, front + 3); g.add(mk);   // hazard stripes on the floor before the door
+      for (const [lx, lz] of [[-12, front + 4], [12, front + 4], [-12, front + 12], [12, front + 12]]) { box(g, 0.14, 5, 0.14, mat(0x14171f), lx, 2.5, lz); box(g, 0.6, 0.2, 0.6, emis(ORG, 2.2), lx, 5.1, lz); post(lx, lz, 0.3); ch.signs.push({ x: lx, y: 5, z: lz, c: ORG }); }
+      for (let i = 0; i < 5; i++) { const x = X + (rnd() < 0.5 ? -1 : 1) * (14 + rnd() * 1.5), z = Z + (rnd() - 0.5) * 24; if (free(x, z, 1.2)) clutter(x, z); }
+      dropScrap(3, () => [X + (rnd() - 0.5) * 20, front + 4 + rnd() * 8]);
     } else {                                                                         // yard: containers, crates, barrels and a few fires
       box(g, CH - 1, 0.04, CH - 1, mat(0x141720, { roughness: 1 }), X, 0.02, Z);
       const cols = [0x6b2a24, 0x244a6b, 0x4a6b24, 0x6b5a24, 0x4a2a6b];
@@ -209,7 +308,6 @@ const World = (() => {
     }
     // Lane markings down the middle of the streets either side of the chunk
     if (kind !== 'wall') for (let i = 0; i < 8; i++) box(g, 0.25, 0.02, 2.4, mat(0x3a3f55, { roughness: 1 }), X + CH / 2, 0.012, Z - CH / 2 + 2 + i * 4);
-    const free = (x, z, rad) => !ch.boxes.some(b => x > b.x - b.hw - rad && x < b.x + b.hw + rad && z > b.z - b.hd - rad && z < b.z + b.hd + rad) && !ch.circles.some(c => Math.hypot(x - c.x, z - c.z) < c.r + rad);
     // Street dressing: arches over the cross streets, parked vehicles, steam vents, and cables strung across the street
     if (kind !== 'wall') {
       if (rnd() < 0.45) {
@@ -237,16 +335,16 @@ const World = (() => {
       }
     }
     // A husk patrol: two or three husks standing in the street, which Combat fights (tougher the further from the gate). Gone for good once beaten.
-    if (kind !== 'wall' && kind !== 'plaza' && r >= 1 && rnd() < 0.6 && !clearedPacks.has(ch.key)) {
+    if (kind !== 'wall' && kind !== 'plaza' && kind !== 'gate' && kind !== 'foundry' && r >= 1 && rnd() < 0.6 && !clearedPacks.has(ch.key)) {
       for (let tries = 0; tries < 14; tries++) {
         const px = X + (rnd() - 0.5) * (CH - 10), pz = Z + (rnd() - 0.5) * (CH - 10);
         if (!free(px, pz, 3.2)) continue;
         const n = 2 + (rnd() < 0.5 ? 1 : 0), rigs = [];
         for (let i = 0; i < n; i++) {
-          const rig = Chars.create(i === n - 1 && r >= 2 ? 'brute' : 'husk'), a = i / n * Math.PI * 2 + 0.6;   // the deeper patrols are led by a Brute
+          const rig = Chars.create(i === n - 1 && r >= 2 && (r < MROWS || i > 0) ? 'brute' : 'husk'), a = i / n * Math.PI * 2 + 0.6;   // the deeper patrols are led by a Brute
           rig.root.position.set(px + Math.cos(a) * 1.5, 0, pz + Math.sin(a) * 1.5); rig.root.rotation.y = rnd() * 6.28; g.add(rig.root); rigs.push(rig);
         }
-        ch.pack = Combat.register({ id: 'w' + ch.key, x: px, z: pz, rigs, tier: Math.min(4, r), aggro: true, radius: 8, text: 'Husks! A patrol blocks the street.', onClear: () => clearedPacks.add(ch.key) });
+        ch.pack = Combat.register({ id: 'w' + ch.key, x: px, z: pz, rigs, tier: r >= MROWS ? Math.min(4, r - 5) : Math.min(4, r), aggro: true, radius: 8, text: r >= MROWS ? 'The works are crawling with husks.' : 'Husks! A patrol blocks the street.', onClear: () => clearedPacks.add(ch.key) });
         break;
       }
     }
@@ -279,6 +377,11 @@ const World = (() => {
     const beam = new THREE.Mesh(cyl, bm); beam.scale.set(2.2, 150, 2.2); beam.position.set(TOWER.x, 75, TOWER.z); root.add(beam);
     const bandM = new THREE.MeshBasicMaterial({ color: 0x9ff3ff, fog: false, toneMapped: false });
     for (let i = 0; i < 6; i++) { const b = new THREE.Mesh(cyl, bandM); b.scale.set(3.4 - i * 0.3, 0.5, 3.4 - i * 0.3); b.position.set(TOWER.x, 66 + i * 4.5, TOWER.z); root.add(b); }
+    // The Foundry's beacon: an orange column over the Hub (seen from the Market too), so the second goal is as easy to find as the first
+    const fm = new THREE.MeshBasicMaterial({ color: 0xffa24a, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false });
+    const fb = new THREE.Mesh(cyl, fm); fb.scale.set(2.6, 150, 2.6); fb.position.set(FOUNDRY.x, 75, FOUNDRY.z - 15); root.add(fb);
+    const fbandM = new THREE.MeshBasicMaterial({ color: 0xffb870, fog: false, toneMapped: false });
+    for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(cyl, fbandM); b.scale.set(3.6 - i * 0.4, 0.5, 3.6 - i * 0.4); b.position.set(FOUNDRY.x, 60 + i * 5, FOUNDRY.z - 15); root.add(b); }
     for (let i = 0; i < LIGHTS; i++) { const l = new THREE.PointLight(0xffffff, 0, 12, 1.5); l.position.set(0, 3, -40); scene.add(l); lights.push(l); }
   }
 
@@ -302,6 +405,8 @@ const World = (() => {
         const u = ((t * 0.35 + v.ph + i / v.sprites.length) % 1); sp.position.set(v.x + Math.sin(i * 2 + t) * 0.15, 0.3 + u * 3.2, v.z); sp.scale.setScalar(0.7 + u * 1.8); sp.material.opacity = (1 - u) * 0.22 * Math.min(1, u * 6);
       });
     }
+    const hub = Math.max(0, Math.min(1, (HUB_Z + 10 - p.z) / 24));                              // beyond the gate the air turns the Hub's smoky amber
+    if (hub !== hubK) { hubK = hub; scene.fog.color.lerpColors(FOG_MKT, FOG_HUB, hub); scene.background.copy(scene.fog.color); scene.fog.density = 0.03 + hub * 0.006; }
     lightT -= dt;
     if (lightT <= 0) {
       lightT = 0.3; const all = [];
@@ -352,5 +457,5 @@ const World = (() => {
   const allNpcs = () => { const out = []; for (const ch of chunks.values()) for (const n of ch.npcs) out.push(n); return out; };
   function nearNpc(p, r) { let best = null, bd = r; for (const n of allNpcs()) { const d = Math.hypot(p.x - n.x, p.z - n.z); if (d < bd) { bd = d; best = n; } } return best; }
 
-  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
+  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, GATE, FOUNDRY, HUB_Z, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
 })();
