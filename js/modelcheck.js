@@ -161,13 +161,44 @@ const ModelCheck = (() => {
       paused = true; $('mcPlay').textContent = '▶ Play';
       for (const r of rigs) if (r.rig.root.visible) { if (!r.rig.clip) Chars.play(r.rig, sel, true); r.rig.clip.t = +e.target.value; r.rig.clip.hold = true; }
     });
-    // orbit camera
-    const st = $('mcStage'); let drag = null;
-    st.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; st.setPointerCapture(e.pointerId); });
-    st.addEventListener('pointermove', e => { if (!drag) return; yaw -= (e.clientX - drag.x) * 0.008; pitch = Math.max(-0.2, Math.min(1.3, pitch + (e.clientY - drag.y) * 0.006)); drag = { x: e.clientX, y: e.clientY }; });
-    st.addEventListener('pointerup', () => { drag = null; });
-    st.addEventListener('wheel', e => { e.preventDefault(); dist = Math.max(1.5, Math.min(16, dist * (1 + e.deltaY * 0.001))); }, { passive: false });
-    st.addEventListener('dblclick', () => { yaw = 0.5; pitch = 0.2; fresh = true; layout(); });
+    // Camera: one finger (or the left mouse button) orbits; two fingers pinch to zoom and drag to pan; the wheel zooms; a right or
+    // middle mouse drag, or shift + drag, pans too
+    const st = $('mcStage'), ptr = new Map(); let two = null;
+    const pan = (dx, dy) => {                                          // screen pixels -> a move of the look-at point, in the camera's own right / up
+      const k = dist * 2 * Math.tan(camera.fov * Math.PI / 360) / window.innerHeight;
+      camera.updateMatrixWorld(); const r = tmp.setFromMatrixColumn(camera.matrixWorld, 0), u = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+      target.addScaledVector(r, -dx * k).addScaledVector(u, dy * k); target.y = Math.max(-0.5, Math.min(2.5, target.y));
+    };
+    const pair = () => { const [a, b] = [...ptr.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+    st.addEventListener('contextmenu', e => e.preventDefault());
+    st.addEventListener('pointerdown', e => {
+      ptr.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, btn: e.button, shift: e.shiftKey }); try { st.setPointerCapture(e.pointerId); } catch (err) { /* a synthetic or already-ended pointer */ }
+      two = ptr.size === 2 ? pair() : null;
+    });
+    st.addEventListener('pointermove', e => {
+      const p = ptr.get(e.pointerId); if (!p) return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y;
+      if (ptr.size === 2) {
+        p.x = e.clientX; p.y = e.clientY; const n = pair();
+        if (two) { dist = Math.max(1.0, Math.min(16, dist * two.d / Math.max(n.d, 1))); pan(n.x - two.x, n.y - two.y); }
+        two = n;
+      } else if (ptr.size === 1) {
+        p.x = e.clientX; p.y = e.clientY;
+        if (p.btn === 2 || p.btn === 1 || p.shift) pan(dx, dy);
+        else { yaw -= dx * 0.008; pitch = Math.max(-0.2, Math.min(1.3, pitch + dy * 0.006)); }
+      }
+    });
+    const resetView = () => { yaw = 0.5; pitch = 0.2; fresh = true; layout(); };
+    let lastTap = 0, moved = 0;
+    const lift = e => {
+      const p = ptr.get(e.pointerId); ptr.delete(e.pointerId); two = ptr.size === 2 ? pair() : null;
+      if (e.pointerType === 'touch' && ptr.size === 0 && p && e.type === 'pointerup') {         // a quick second tap resets the view
+        const now = performance.now(); if (now - lastTap < 320 && Math.hypot(e.clientX - p.x0, e.clientY - p.y0) < 20) { resetView(); lastTap = 0; } else lastTap = now;
+      }
+    };
+    st.addEventListener('pointerup', lift); st.addEventListener('pointercancel', lift);
+    st.addEventListener('wheel', e => { e.preventDefault(); dist = Math.max(1.0, Math.min(16, dist * (1 + e.deltaY * 0.001))); }, { passive: false });
+    st.addEventListener('dblclick', resetView);
   }
 
   let wired = false;
