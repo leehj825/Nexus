@@ -10,7 +10,7 @@ const World = (() => {
   const HALF_X = (COLS - 1) * CH + CH / 2 - 1.2, MIN_Z = Z0 - (ROWS - 1) * CH + 1.2;      // where the player may walk
   const chunks = new Map(), queue = [];
   let root = null, lights = [], lightT = 0, scene = null;
-  const taken = new Set();                                                          // scrap already picked up, by key
+  const taken = new Set(), clearedPacks = new Set();                                                          // scrap already picked up, by key
 
   // ---------- small helpers ----------
   const mulberry = a => () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
@@ -185,6 +185,21 @@ const World = (() => {
     }
     // Lane markings down the middle of the streets either side of the chunk
     if (kind !== 'wall') for (let i = 0; i < 8; i++) box(g, 0.25, 0.02, 2.4, mat(0x3a3f55, { roughness: 1 }), X + CH / 2, 0.012, Z - CH / 2 + 2 + i * 4);
+    // A husk patrol: two or three husks standing in the street, which Combat fights (tougher the further from the gate). Gone for good once beaten.
+    const free = (x, z, rad) => !ch.boxes.some(b => x > b.x - b.hw - rad && x < b.x + b.hw + rad && z > b.z - b.hd - rad && z < b.z + b.hd + rad) && !ch.circles.some(c => Math.hypot(x - c.x, z - c.z) < c.r + rad);
+    if (kind !== 'wall' && kind !== 'plaza' && r >= 1 && rnd() < 0.6 && !clearedPacks.has(ch.key)) {
+      for (let tries = 0; tries < 14; tries++) {
+        const px = X + (rnd() - 0.5) * (CH - 10), pz = Z + (rnd() - 0.5) * (CH - 10);
+        if (!free(px, pz, 3.2)) continue;
+        const n = 2 + (rnd() < 0.5 ? 1 : 0), rigs = [];
+        for (let i = 0; i < n; i++) {
+          const rig = Chars.create('husk'), a = i / n * Math.PI * 2 + 0.6;
+          rig.root.position.set(px + Math.cos(a) * 1.5, 0, pz + Math.sin(a) * 1.5); rig.root.rotation.y = rnd() * 6.28; g.add(rig.root); rigs.push(rig);
+        }
+        ch.pack = Combat.register({ id: 'w' + ch.key, x: px, z: pz, rigs, tier: Math.min(4, r), aggro: true, radius: 8, text: 'Husks! A patrol blocks the street.', onClear: () => clearedPacks.add(ch.key) });
+        break;
+      }
+    }
     flush(g);
     // Instance the windows
     if (wins.length) {
@@ -196,6 +211,7 @@ const World = (() => {
   }
 
   function drop(ch) {
+    if (ch.pack) Combat.unregister(ch.pack.id);
     for (const h of ch.scrap) Camp.dropScrap(h);
     root.remove(ch.group);
     ch.group.traverse(o => { if (o.isMesh && o.geometry !== unit && o.geometry !== cyl && !(o.material && o.material.map)) { /* shared materials stay cached */ } if (o.geometry && o.geometry !== unit && o.geometry !== cyl) o.geometry.dispose(); });
@@ -219,7 +235,7 @@ const World = (() => {
     }
     queue.sort((a, b) => { const f = k => { const [cx, r] = k.split(',').map(Number); return Math.hypot(p.x - cx * CH, p.z - (Z0 - CH * (r + 0.5))); }; return f(a) - f(b); });
     if (queue.length) { const [cx, r] = queue.shift().split(',').map(Number); build(cx, r); }
-    for (const ch of [...chunks.values()]) if (Math.max(Math.abs(p.x - ch.X), Math.abs(p.z - ch.Z)) > DROP) drop(ch);
+    if (!Combat.active()) for (const ch of [...chunks.values()]) if (Math.max(Math.abs(p.x - ch.X), Math.abs(p.z - ch.Z)) > DROP) drop(ch);
     for (const ch of chunks.values()) for (const s of ch.spin) s.rotation.y += dt * 0.8;
     lightT -= dt;
     if (lightT <= 0) {
@@ -249,9 +265,21 @@ const World = (() => {
     return { x, z };
   }
 
+  // Is a circle of radius rad at (x, z) in the way of a building or prop (or outside the district)? Used to place battle stages on open ground
+  function blocked(x, z, rad) {
+    if (z > Z0) return false;
+    if (Math.abs(x) > HALF_X || z < MIN_Z) return true;
+    for (const ch of chunks.values()) {
+      if (Math.abs(x - ch.X) > CH || Math.abs(z - ch.Z) > CH) continue;
+      if (ch.boxes.some(b => x > b.x - b.hw - rad && x < b.x + b.hw + rad && z > b.z - b.hd - rad && z < b.z + b.hd + rad)) return true;
+      if (ch.circles.some(c => Math.hypot(x - c.x, z - c.z) < c.r + rad)) return true;
+    }
+    return false;
+  }
+
   // Footprints of the loaded buildings and the chunk grid, for the minimap
   const footprints = () => { const out = []; for (const ch of chunks.values()) for (const b of ch.boxes) out.push(b); return out; };
   const markTaken = key => taken.add(key);
 
-  return { init, update, collide, footprints, markTaken, HALF_X, MIN_Z, Z0, CH, loaded: () => chunks.size };
+  return { init, update, collide, blocked, footprints, markTaken, HALF_X, MIN_Z, Z0, CH, loaded: () => chunks.size };
 })();

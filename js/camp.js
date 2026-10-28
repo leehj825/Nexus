@@ -228,7 +228,7 @@ const Camp = (() => {
 
   return {
     build, update, crew, colliders, SEATS,
-    UPGRADES, buy, damageMult, nearFire, FIRE_R, addScrap, dropScrap, seatAll, afterBattle,
+    UPGRADES, buy, damageMult, nearFire, FIRE_R, addScrap, dropScrap, seatAll, afterBattle, addParts: n => { parts += n; },
     isOwned: id => owned.has(id),
     get parts() { return parts; },
   };
