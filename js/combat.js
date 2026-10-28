@@ -144,22 +144,26 @@ const Combat = (() => {
   function log(text) { ui.log.insertBefore(Object.assign(document.createElement('div'), { textContent: text }), ui.log.firstChild); while (ui.log.childElementCount > 3) ui.log.lastChild.remove(); }
   function popup(u, text, color) { const el = document.createElement('div'); el.className = 'pop'; el.textContent = text; el.style.color = color; $('labels').appendChild(el); pops.push({ el, u, t: 0 }); }
 
-  // A glowing shot that flies from one unit to another; it is cosmetic, the damage lands at once
+  // A glowing bolt that flies from one unit to another with a trail; the damage lands at once, the hit sparks on arrival
   function shot(from, to, color) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: Tex.glow(), color: new THREE.Color(color), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false }));
-    s.scale.set(0.9, 0.9, 1); scene.add(s);
-    shots.push({ s, from: from.rig.root.position.clone().setY(1.2), to: to.rig.root.position.clone().setY(1.2), t: 0 });
+    const a = from.rig.root.position.clone().setY(1.3), b2 = to.rig.root.position.clone().setY(1.2);
+    FX.proj(a, b2, new THREE.Color(color), 0.24, null, from.id === 'ruen' ? 1.0 : 0.65);
   }
+  // Camera shake and the red flash when the crew is hit
+  let shakeA = 0, flashA = 0;
+  const shake = a => { shakeA = Math.max(shakeA, a); };
 
   // ---------------- Damage ----------------
   function kill(u) {
     u.alive = false; u.ready = false; u.rush = null; clearWind(u);
-    Chars.play(u.rig, 'die', true);
+    Chars.play(u.rig, 'die', true); FX.dissolve(u.rig.root.position, u.foe ? 0xff3fb4 : 0x7fe9ff); Sound.sfx('die'); shake(0.3);
     log(u.name + (u.foe ? ' falls.' : ' is down!'));
   }
   function damage(u, dmg) {
     if (!u.alive) return;
     u.hp = Math.max(0, u.hp - dmg); popup(u, '-' + dmg, u.foe ? '#ffffff' : '#ff8a8a');
+    const heavy = dmg >= 22; FX.hit(u.rig.root.position.clone().setY(1.2), u.foe ? 0xffe9a8 : 0xff6a6a, heavy); Sound.sfx(heavy ? 'crit' : 'hit'); shake(heavy ? 0.28 : 0.12);
+    if (!u.foe) { flashA = Math.min(0.6, 0.25 + dmg / 80); }
     if (u.hp <= 0) kill(u); else Chars.play(u.rig, u.hp < u.hpMax * 0.3 ? 'impact2' : 'impact');
   }
   // A husk's attack on a crew member. Kyle may intercept a fatal blow on Ruen or Yuna
@@ -167,7 +171,7 @@ const Combat = (() => {
     const kyle = party.find(p => p.id === 'kyle');
     if (dmg >= u.hp && u.id !== 'kyle' && kyle.alive && kyle.guard > 0 && kyle.atb >= 0.5) {
       kyle.atb = 0; kyle.guard = 0;
-      log('Kyle intercepts the blow meant for ' + u.name + '!');
+      log('Kyle intercepts the blow meant for ' + u.name + '!'); FX.shield(kyle.rig.root.position); Sound.sfx('shield');
       shot(u, kyle, '#ffd27a');
       damage(kyle, Math.round(dmg * 0.6));
       return;
@@ -197,7 +201,7 @@ const Combat = (() => {
       u.rush = { phase: 'out', t: 0, target: t, dmg, clip, home, stand: tp.clone().setY(0).addScaledVector(dir, REACH), struck: false };
       endTurn(u); return;
     }
-    if (clip) Chars.play(u.rig, clip);
+    if (clip) { Chars.play(u.rig, clip); Sound.sfx(clip === 'mgBolt' ? 'bolt' : 'blast'); } else Sound.sfx('blast', { delay: 0.14 });
     shot(u, t, u.color); hitFoe(t, dmg); log(u.name + ' hits the husk for ' + dmg + '.');
     if (clip) busy(Math.min(Chars.clipLength(clip), 1.1));
     endTurn(u);
@@ -221,7 +225,7 @@ const Combat = (() => {
       r.t += dt; face(r.target.rig.root.position);
       const hitAt = Math.max(0.06, ((Mocap.clips[r.clip] && Mocap.clips[r.clip].hit) || 0.3) / SWING);
       if (!r.struck && r.t >= hitAt) {
-        r.struck = true;
+        r.struck = true; Sound.sfx('swing', { pitch: u.id === 'kyle' ? -300 : 200 });
         if (!r.target.alive) r.target = selected() || r.target;
         if (r.target.alive) { hitFoe(r.target, r.dmg); log(u.name + ' hits the husk for ' + r.dmg + '.'); }
       }
@@ -229,11 +233,11 @@ const Combat = (() => {
     } else if (go(r.home)) { u.rush = null; u.rig.root.rotation.y = Math.PI + stage.th; }
   }
   function guard(u) {
-    u.guard = GUARD_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block');
+    u.guard = GUARD_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block'); FX.shield(u.rig.root.position); Sound.sfx('shield');
     log('Kyle raises his guard.'); endTurn(u);
   }
   function brace(u) {
-    u.brace = BRACE_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block');
+    u.brace = BRACE_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block'); FX.shield(u.rig.root.position, 0xffffff); Sound.sfx('shield');
     log('You brace.'); endTurn(u);
   }
   function stagger(u) {
@@ -245,7 +249,7 @@ const Combat = (() => {
     endTurn(u);
   }
   function ruenRig() { return party.find(p => p.id === 'ruen').rig; }
-  function startCast(u) { cast = { t: 0 }; Chars.play(u.rig, 'mgHoly'); log('Ruen begins Data Burst.'); endTurn(u); }
+  function startCast(u) { cast = { t: 0 }; Chars.play(u.rig, 'mgHoly'); FX.charge(u.rig.root.position); Sound.sfx('cast'); log('Ruen begins Data Burst.'); endTurn(u); }
 
   // ---------------- Husk AI ----------------
   function foeAct(f) {
@@ -255,7 +259,7 @@ const Combat = (() => {
       const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.7, 24), new THREE.MeshBasicMaterial({ color: 0xff3a5a, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }));
       ring.rotation.x = -Math.PI / 2; ring.position.set(t.rig.root.position.x, 0.04, t.rig.root.position.z); scene.add(ring);
       f.wind = { t: WIND, target: t, ring, dmg: Math.round(rand(30, 36) * f.dmgMul) };
-      log(f.name + ' winds up on ' + t.name + '!');
+      log(f.name + ' winds up on ' + t.name + '!'); Sound.sfx('growl');
     } else {
       const t = pick(); if (!t) return;
       Chars.play(f.rig, 'brawlPunch'); busy(0.9);
@@ -300,14 +304,14 @@ const Combat = (() => {
     });
     cast = null; target = foes[Math.floor(foes.length / 2)]; menuFor = null;
     ui.log.innerHTML = ''; ui.banner.hidden = true;
-    log(g.text || 'Husks! They have seen you.');
+    log(g.text || 'Husks! They have seen you.'); Sound.sfx('growl'); shake(0.15);
   }
 
   function end(text) {
     phase = 'result'; phaseT = 0;
     cast = null; menuFor = null;
     for (const u of party) u.ready = false;
-    ui.banner.textContent = text; ui.banner.hidden = false;
+    ui.banner.textContent = text; ui.banner.hidden = false; Sound.sfx(text === 'Cleared' ? 'win' : 'lose');
   }
 
   function startLeave() {
@@ -368,6 +372,7 @@ const Combat = (() => {
     blook.copy(stageLook).addScaledVector(view.pan, k);
     bpos.set(Math.sin(az) * Math.cos(el) * r, Math.sin(el) * r, Math.cos(az) * Math.cos(el) * r).add(blook);
     cam.position.lerpVectors(ex.pos, bpos, k);
+    if (shakeA > 0.003) cam.position.add(v.set((Math.random() - 0.5) * shakeA, (Math.random() - 0.5) * shakeA * 0.6, (Math.random() - 0.5) * shakeA));
     v.lerpVectors(ex.look, blook, k);
     cam.lookAt(v);
   }
@@ -414,6 +419,7 @@ const Combat = (() => {
   // ---------------- Per-frame ----------------
   function update(dt, camera) {
     clock += dt; phaseT += dt;
+    shakeA *= Math.exp(-dt * 7); flashA = Math.max(0, flashA - dt * 1.6); const fl = document.getElementById('flash'); if (fl) fl.style.opacity = flashA.toFixed(3);
     const pp = Player.state();
 
     const walking = phase === 'enter' || phase === 'leave' ? 1.6 : 0;      // the units walk while they move into place
@@ -448,8 +454,8 @@ const Combat = (() => {
       if (cast && !wait) {
         cast.t = Math.min(1, cast.t + CAST_RATE * dt);
         if (cast.t >= 1) {
-          Chars.play(ruenRig(), 'mgNova'); busy(1.4);
-          for (const f of foesAlive()) hitFoe(f, 30);
+          Chars.play(ruenRig(), 'mgNova'); busy(1.4); Sound.sfx('nova'); shake(0.4);
+          for (const f of foesAlive()) { FX.nova(f.rig.root.position); hitFoe(f, 30); }
           log('Data Burst!');
           cast = null;
         }

@@ -145,7 +145,7 @@ const Camp = (() => {
       if (s.taken) continue;
       s.mesh.position.y = 0.4 + Math.sin(t * 3 + s.phase) * 0.06;
       s.mesh.rotation.y += dt * 1.5;
-      if (Math.hypot(p.x - s.x, p.z - s.z) < PICK_R) { s.taken = true; s.mesh.visible = false; parts += 1; if (s.key && typeof World !== 'undefined') World.markTaken(s.key); }
+      if (Math.hypot(p.x - s.x, p.z - s.z) < PICK_R) { s.taken = true; s.mesh.visible = false; parts += 1; Sound.sfx('pickup'); if (s.key && typeof World !== 'undefined') World.markTaken(s.key); }
     }
   }
 

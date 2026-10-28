@@ -218,6 +218,10 @@ const ModelCheck = (() => {
   function init() {
     $('btnSettings').addEventListener('click', () => { $('settings').hidden = false; });
     $('settingsClose').addEventListener('click', () => { $('settings').hidden = true; });
+    const sync = () => { $('setMusic').textContent = Sound.music ? 'On' : 'Off'; $('setSfx').textContent = Sound.fx ? 'On' : 'Off'; };
+    $('setMusic').addEventListener('click', () => { Sound.setMusic(!Sound.music); sync(); });
+    $('setSfx').addEventListener('click', () => { Sound.setSfx(!Sound.fx); sync(); });
+    $('btnSettings').addEventListener('click', sync); sync();
     $('openModelCheck').addEventListener('click', () => { $('settings').hidden = true; show(); });
   }
 

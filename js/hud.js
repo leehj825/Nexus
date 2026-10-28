@@ -63,7 +63,8 @@ const HUD = (() => {
   }
 
   function init() {
-    $('btnSound').addEventListener('click', e => e.currentTarget.classList.toggle('muted'));
+    $('btnSound').classList.toggle('muted', Sound.muted);
+    $('btnSound').addEventListener('click', e => { Sound.setMuted(!Sound.muted); e.currentTarget.classList.toggle('muted', Sound.muted); });
     $('btnMap').addEventListener('click', e => e.currentTarget.classList.toggle('on'));
   }
 

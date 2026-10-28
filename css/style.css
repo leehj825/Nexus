@@ -181,3 +181,5 @@ body.cutscene #hud, body.cutscene #labels { display: none; }
 
 #talkBtn.solo { transform: translateX(-50%); }
 #qdist { display: block; margin-top: 2px; color: var(--dim); font-weight: 400; font-size: 12px; }
+
+.flash { position: fixed; inset: 0; z-index: 3; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(255,40,60,0) 45%, rgba(255,40,60,0.75) 100%); }

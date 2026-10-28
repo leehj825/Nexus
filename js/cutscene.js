@@ -168,7 +168,8 @@ const Cutscene = (() => {
       }
       return;
     }
-    shown = Math.min(typed().length, shown + dt * 48);
+    const before = Math.floor(shown / 3); shown = Math.min(typed().length, shown + dt * 48);
+    if (Math.floor(shown / 3) !== before && shown < typed().length && steps[i] && !steps[i].caption) Sound.blip(steps[i].who || 'npc');          // a chirp every few letters, pitched by the speaker
     $('dlgText').textContent = typed().slice(0, Math.floor(shown)); acting(true);
     $('dlgNext').style.visibility = shown >= typed().length ? 'visible' : 'hidden';
   }
@@ -187,7 +188,7 @@ const Cutscene = (() => {
   let stage = 0;
   const QUEST = ['\u25c6 Speak with the crew', '\u25c6 Rest by the fire and feel for the resonance', '\u25c6 Go through the gate into the Neon Market', '\u25c6 Follow the orb up the avenue', '\u25c6 Reach the foot of the tower', '\u25c6 Act 2 complete: the climb to the Spire comes next'];
   function setQuest(n) {
-    const q = $('qtext'); if (q) q.textContent = QUEST[n];
+    const q = $('qtext'); if (q) q.textContent = QUEST[n]; if (n > 0) Sound.sfx('quest');
     const toast = $('toast'); if (toast && n > 0) { toast.textContent = 'Quest updated'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
   }
   const setStage = n => { stage = n; setQuest(n); };

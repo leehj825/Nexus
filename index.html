@@ -62,6 +62,7 @@
   </div>
 </div>
 
+<div id="flash" class="flash"></div>
 <div class="cut-bar top"></div><div class="cut-bar bottom"></div>
 <div id="dlg" class="dlg" hidden>
   <div class="dlg-box">
@@ -76,6 +77,8 @@
   <div class="camp-card" role="dialog" aria-labelledby="setTitle">
     <header><h2 id="setTitle">Settings</h2></header>
     <ul class="camp-list">
+      <li><div><b>Music</b><span>The synthwave score</span></div><button id="setMusic" type="button">On</button></li>
+      <li><div><b>Effects</b><span>Hits, spells, pickups and voices</span></div><button id="setSfx" type="button">On</button></li>
       <li><div><b>Model Check</b><span>Watch every move and pose of every character</span></div><button id="openModelCheck" type="button">Open</button></li>
     </ul>
     <button id="settingsClose" class="camp-close" type="button">Close</button>
@@ -121,6 +124,8 @@
 <script src="js/models.js"></script>
 <script src="js/mocap.js"></script>
 <script src="js/textures.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/fx.js"></script>
 <script src="js/characters.js"></script>
 <script src="js/city.js"></script>
 <script src="js/camp.js"></script>
