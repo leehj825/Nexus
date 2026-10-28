@@ -68,7 +68,7 @@ body.played .prompt { opacity: 0; }
 .engage[hidden] { display: none; }
 .battle { position: absolute; inset: 0; pointer-events: none; }
 .battle[hidden] { display: none; }
-body.battle .hints, body.battle .prompt { display: none; }
+body.in-battle .hints, body.in-battle .prompt { display: none; }
 .log { position: absolute; left: 22px; top: 170px; width: 250px; font-size: 13px; text-shadow: 0 1px 3px #000; }
 .log div { margin-bottom: 5px; opacity: 0.92; }
 .banner { position: absolute; top: 36%; left: 0; right: 0; text-align: center; font-size: 30px; letter-spacing: 0.3em; text-transform: uppercase; color: #ffe9b8; text-shadow: 0 2px 14px #000; }
@@ -155,3 +155,26 @@ body.battle .hints, body.battle .prompt { display: none; }
 .mc-hint { position: absolute; right: 16px; bottom: 12px; font-size: 12px; color: var(--dim); text-shadow: 0 1px 3px #000; }
 body.mcheck #hud, body.mcheck #labels { display: none; }
 @media (max-width: 700px) { .mc-side { top: auto; height: 46%; } }
+
+.vhint { position: absolute; top: 54px; left: 50%; transform: translateX(-50%); max-width: 92vw; text-align: center; font-size: 12px; color: var(--dim); text-shadow: 0 1px 3px #000; pointer-events: none; }
+
+/* Cutscenes: letterbox bars, the dialogue box, and the Talk button beside Camp */
+#talkBtn { transform: translateX(calc(-100% - 8px)); }
+#campBtn { transform: translateX(8px); }
+.cut-bar { position: fixed; left: 0; right: 0; height: 0; background: #000; z-index: 4; transition: height 0.6s ease; pointer-events: none; }
+.cut-bar.top { top: 0; } .cut-bar.bottom { bottom: 0; }
+body.cutscene .cut-bar { height: 8vh; }
+body.cutscene #hud, body.cutscene #labels { display: none; }
+.dlg { position: fixed; inset: 0; z-index: 5; display: flex; align-items: flex-end; justify-content: center; padding: 0 12px calc(8vh + 14px); cursor: pointer; }
+.dlg[hidden] { display: none; }
+.dlg-box { width: min(760px, 100%); padding: 12px 16px 10px; background: rgba(6, 8, 16, 0.82); border: 1px solid rgba(255, 200, 110, 0.35); border-radius: 8px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6); }
+.dlg-head { display: flex; align-items: center; gap: 12px; min-height: 22px; }
+.dlg-head b { font-size: 15px; letter-spacing: 0.14em; text-transform: uppercase; }
+.dlg-head span { margin-left: auto; font-size: 12px; color: var(--dim); }
+.dlg-head button { padding: 3px 10px; background: transparent; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 4px; color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; }
+.dlg-note { margin-top: 4px; font-size: 13px; font-style: italic; color: var(--dim); }
+.dlg-note[hidden] { display: none; }
+.dlg-text { margin-top: 6px; min-height: 3.2em; font-size: 17px; line-height: 1.45; white-space: pre-line; }
+.dlg.caption .dlg-box { background: rgba(0, 0, 0, 0.55); border-color: transparent; text-align: center; }
+.dlg.caption .dlg-text { font-size: 18px; letter-spacing: 0.03em; color: #ead9b2; }
+.dlg-next { text-align: right; font-size: 12px; color: var(--gold); }

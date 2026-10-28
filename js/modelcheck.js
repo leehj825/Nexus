@@ -18,7 +18,7 @@ const ModelCheck = (() => {
     shL: 'torso', elL: 'shL', wrL: 'elL', shR: 'torso', elR: 'shR', wrR: 'elR' };
 
   let scene = null, camera = null, rigs = null, open = false, built = false;
-  let look = 'custom', who = 'all', sel = '@seat', t = 0, paused = false, loop = true, speed = 1, tour = false, tourAt = 0, wire = false, bones = false;
+  let who = 'all', sel = '@seat', t = 0, paused = false, loop = true, speed = 1, tour = false, tourAt = 0, wire = false, bones = false;
   let yaw = 0.5, pitch = 0.2, dist = 5.5, fresh = true;
   const target = new THREE.Vector3(0, 0.9, 0), tmp = new THREE.Vector3();
 
@@ -38,8 +38,8 @@ const ModelCheck = (() => {
   function build() {
     stage();
     rigs = [];
-    for (const [kind, label] of KINDS) for (const lk of Models.hasBuilt(kind) ? ['custom', 'built'] : ['custom']) {
-      const rig = Chars.create(kind, lk); scene.add(rig.root);
+    for (const [kind, label] of KINDS) {
+      const rig = Chars.create(kind); scene.add(rig.root);
       // Drawn as a person's skeleton: the collar bones run from the neck joint out to each shoulder, the spine from the pelvis
       // up through the waist to the neck (in the rig the shoulders hang off the waist joint, which is only how they are driven)
       const pairs = []; for (const k in rig.j) pairs.push([k, k === 'shL' || k === 'shR' ? 'head' : PARENT[k]]);
@@ -50,7 +50,7 @@ const ModelCheck = (() => {
       lines.renderOrder = 10; lines.frustumCulled = false; lines.visible = false; scene.add(lines);
       const dots = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xff4a8a, size: 7, sizeAttenuation: false, depthTest: false }));
       dots.renderOrder = 11; dots.frustumCulled = false; dots.visible = false; scene.add(dots);
-      rigs.push({ kind, label, look: lk, rig, pairs, lines, dots, home: { kind: rig.kind, seatH: rig.seatH } });
+      rigs.push({ kind, label, rig, pairs, lines, dots, home: { kind: rig.kind, seatH: rig.seatH } });
     }
     built = true;
   }
@@ -59,14 +59,10 @@ const ModelCheck = (() => {
   function groupOf(name) { for (const [g, re] of GROUPS) if (re.test(name)) return g; return 'Other'; }
 
   function layout() {
-    const wantLook = r => look === 'compare' || r.look === look || !Models.hasBuilt(r.kind);
-    const shown = rigs.filter(r => (who === 'all' || r.kind === who) && wantLook(r));
+    const shown = rigs.filter(r => who === 'all' || r.kind === who);
     rigs.forEach(r => { r.rig.root.visible = shown.includes(r); r.lines.visible = r.dots.visible = bones && r.rig.root.visible; });
-    // in Compare each character stands twice, the custom model on the left and the box-built one on the right
-    let x = 0; const gap = look === 'compare' ? 1.0 : 1.5, groupGap = look === 'compare' ? 1.8 : 1.5;
-    shown.forEach((r, i) => { const prev = shown[i - 1]; x += i === 0 ? 0 : (prev.kind === r.kind ? gap : groupGap); r.rig.root.position.set(x, 0, 0); r.rig.root.rotation.y = 0; });
-    const mid = shown.length ? x / 2 : 0; shown.forEach(r => r.rig.root.position.x -= mid);
-    if (fresh) { const groups = new Set(shown.map(r => r.kind)).size; dist = groups > 4 ? 10 : groups > 1 ? 7.5 : shown.length > 1 ? 4.8 : 4.2; fresh = false; }
+    shown.forEach((r, i) => { r.rig.root.position.set((i - (shown.length - 1) / 2) * 1.5, 0, 0); r.rig.root.rotation.y = 0; });
+    if (fresh) { dist = shown.length > 4 ? 10 : shown.length > 1 ? 7.5 : 4.2; fresh = false; }
     target.set(0, 0.9, 0);
   }
 
@@ -120,10 +116,6 @@ const ModelCheck = (() => {
       const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.dataset.id = id;
       b.classList.toggle('on', id === active); b.addEventListener('click', () => pick(id)); box.append(b);
     }
-  }
-  function renderLook() {
-    chips($('mcLook'), [['custom', 'Original'], ['built', 'Low-poly'], ['compare', 'Compare']], look, id => { look = id; fresh = true; layout(); start(); renderLook(); });
-    chips($('mcUse'), [['custom', 'Original'], ['built', 'Low-poly']], Models.style, id => { Models.setStyle(id); renderLook(); $('mcUseNote').textContent = 'Reload the page to use ' + (id === 'built' ? 'the low-poly' : 'the original') + ' models in the game.'; });
   }
   function renderWho() { chips($('mcWho'), [['all', 'All'], ...KINDS], who, id => { who = id; fresh = true; layout(); start(); renderWho(); }); }
   function renderList() {
@@ -206,7 +198,7 @@ const ModelCheck = (() => {
     if (!built) build();
     if (!wired) { wirePanel(); wired = true; }
     open = true; $('mcheck').hidden = false; document.body.classList.add('mcheck');
-    layout(); renderLook(); renderWho(); renderList(); start();
+    layout(); renderWho(); renderList(); start();
   }
   function close() { open = false; $('mcheck').hidden = true; document.body.classList.remove('mcheck'); }
 

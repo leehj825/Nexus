@@ -37,9 +37,11 @@
   <div id="pauseTag" class="tag" hidden>Paused</div>
   <div class="prompt">Tap a spot to walk &middot; drag to look</div>
   <button id="engage" class="engage" type="button" hidden>Engage</button>
+  <button id="talkBtn" class="engage" type="button" hidden>Talk</button>
   <button id="campBtn" class="engage" type="button" hidden>Camp</button>
   <div id="toast" class="toast"></div>
   <div id="battle" class="battle" hidden>
+    <div class="vhint">Drag to rotate &middot; wheel or pinch to zoom &middot; two fingers or right-drag to pan &middot; double-tap to reset</div>
     <div id="log" class="log"></div>
     <div id="banner" class="banner" hidden></div>
     <div id="actions" class="actions" hidden></div>
@@ -60,6 +62,16 @@
   </div>
 </div>
 
+<div class="cut-bar top"></div><div class="cut-bar bottom"></div>
+<div id="dlg" class="dlg" hidden>
+  <div class="dlg-box">
+    <div class="dlg-head"><b id="dlgName"></b><span id="dlgCount"></span><button id="dlgSkip" type="button">Skip</button></div>
+    <div id="dlgNote" class="dlg-note" hidden></div>
+    <div id="dlgText" class="dlg-text"></div>
+    <div id="dlgNext" class="dlg-next">&#9654; tap to continue</div>
+  </div>
+</div>
+
 <div id="settings" class="camp" hidden>
   <div class="camp-card" role="dialog" aria-labelledby="setTitle">
     <header><h2 id="setTitle">Settings</h2></header>
@@ -74,7 +86,6 @@
   <div id="mcStage" class="mc-stage"></div>
   <aside class="mc-side">
     <header><h2>Model Check</h2><button id="mcClose" type="button" class="mc-x" aria-label="Close">&times;</button></header>
-    <div class="mc-h">Version</div><div id="mcLook" class="mc-row"></div>
     <div class="mc-h">Character</div><div id="mcWho" class="mc-row"></div>
     <div class="mc-h">Now playing</div>
     <div id="mcName" class="mc-name"></div><div id="mcTime" class="mc-time"></div>
@@ -86,7 +97,6 @@
     <label class="mc-opt"><input id="mcLoop" type="checkbox" checked> Loop</label>
     <label class="mc-opt"><input id="mcBones" type="checkbox"> Show joints</label>
     <label class="mc-opt"><input id="mcWire" type="checkbox"> Wireframe</label>
-    <div class="mc-h">Game uses</div><div id="mcUse" class="mc-row"></div><div id="mcUseNote" class="mc-time"></div>
     <input id="mcFilter" class="mc-filter" type="search" placeholder="Filter moves">
     <div id="mcClips" class="mc-clips"></div>
   </aside>
@@ -108,7 +118,6 @@
 <script src="js/anims_magic.js"></script>
 <script src="js/anims_brawl.js"></script>
 <script src="js/models_data.js"></script>
-<script src="js/models_smooth.js"></script>
 <script src="js/models.js"></script>
 <script src="js/mocap.js"></script>
 <script src="js/textures.js"></script>
@@ -119,6 +128,7 @@
 <script src="js/hud.js"></script>
 <script src="js/combat.js"></script>
 <script src="js/campui.js"></script>
+<script src="js/cutscene.js"></script>
 <script src="js/modelcheck.js"></script>
 <script src="js/main.js"></script>
 </body>

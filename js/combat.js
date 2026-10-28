@@ -56,6 +56,7 @@ const Combat = (() => {
     }
     target = foes[0];
     buildUI();
+    bindView(document.getElementById('game'), camera);
     $('engage').addEventListener('click', start);
     window.addEventListener('keydown', e => { if (e.code === 'KeyE') start(); });
     for (const u of [...party, ...foes]) setHome(u);
@@ -132,9 +133,14 @@ const Combat = (() => {
   function hitFoe(f, dmg) { if (!f.alive) return; damage(f, dmg); }
 
   // ---------------- Commands ----------------
+  // While anyone is attacking, everybody else waits: no gauge fills, no husk acts, no cast ticks, no menu. A run-up and strike holds it
+  // for as long as the fighter is away; a ranged attack or a husk's blow holds it for its animation.
+  let actT = 0;
+  const busy = t => { actT = Math.max(actT, t); };
+  const isBusy = () => actT > 0 || party.some(u => u.rush);
   function endTurn(u) { u.atb = 0; u.ready = false; menuFor = null; }
   // The melee fighters (Jin, Kyle) run up to their target, strike it face to face and run back; the others shoot from where they stand
-  const MELEE = { you: true, kyle: true }, RUN = 6.5, REACH = 1.25;
+  const MELEE = { you: true, kyle: true }, RUN = 12, REACH = 1.25, SWING = 1.8;          // run speed (m/s) and how much faster than normal the blow plays
   function strike(u, dmg, clip = 'brawlPunch') {                     // clip null: the second blow of a combo, the first one's clip plays on
     const t = selected(); if (!t) return;
     dmg = Math.round(dmg * Camp.damageMult(u.id));                   // the camp's weapon upgrades
@@ -146,6 +152,7 @@ const Combat = (() => {
     }
     if (clip) Chars.play(u.rig, clip);
     shot(u, t, u.color); hitFoe(t, dmg); log(u.name + ' hits the husk for ' + dmg + '.');
+    if (clip) busy(Math.min(Chars.clipLength(clip), 1.1));
     endTurn(u);
   }
   // Moves a rushing fighter one frame: out to the target, the blow (damage lands on the clip's hit frame), back to the spot
@@ -162,16 +169,16 @@ const Combat = (() => {
     if (r.phase === 'out') {
       if (!r.target.alive) r.target = selected() || r.target;
       r.stand = r.target.rig.root.position.clone().setY(0).addScaledVector(r.home.clone().sub(r.target.rig.root.position).setY(0).normalize(), REACH);
-      if (go(r.stand)) { r.phase = 'hit'; r.t = 0; face(r.target.rig.root.position); Chars.play(u.rig, r.clip); }
+      if (go(r.stand)) { r.phase = 'hit'; r.t = 0; face(r.target.rig.root.position); Chars.play(u.rig, r.clip, false, SWING); }
     } else if (r.phase === 'hit') {
       r.t += dt; face(r.target.rig.root.position);
-      const hitAt = Math.max(0.1, (Mocap.clips[r.clip] && Mocap.clips[r.clip].hit) || 0.3);
+      const hitAt = Math.max(0.06, ((Mocap.clips[r.clip] && Mocap.clips[r.clip].hit) || 0.3) / SWING);
       if (!r.struck && r.t >= hitAt) {
         r.struck = true;
         if (!r.target.alive) r.target = selected() || r.target;
         if (r.target.alive) { hitFoe(r.target, r.dmg); log(u.name + ' hits the husk for ' + r.dmg + '.'); }
       }
-      if (r.t >= Math.min(Chars.clipLength(r.clip), 1.0)) { r.phase = 'back'; u.rig.clip = null; }
+      if (r.t >= Math.min(Chars.clipLength(r.clip), 1.4) / SWING) { r.phase = 'back'; u.rig.clip = null; }
     } else if (go(r.home)) { u.rush = null; u.rig.root.rotation.y = Math.PI; }
   }
   function guard(u) {
@@ -187,7 +194,7 @@ const Combat = (() => {
     Chars.play(u.rig, 'brawlSwipe');
     t.atb = Math.max(0, t.atb - STAGGER);
     if (t.wind) { t.wind = null; log('Stagger breaks the husk\'s wind-up.'); } else log('Stagger pushes the husk back.');
-    shot(u, t, u.color);
+    shot(u, t, u.color); busy(0.9);
     endTurn(u);
   }
   function ruenRig() { return party.find(p => p.id === 'ruen').rig; }
@@ -204,7 +211,7 @@ const Combat = (() => {
       log(f.name + ' winds up on ' + t.name + '!');
     } else {
       const t = pick(); if (!t) return;
-      Chars.play(f.rig, 'brawlPunch');
+      Chars.play(f.rig, 'brawlPunch'); busy(0.9);
       shot(f, t, HUSK.color); hitParty(t, Math.round(rand(11, 15)));
       log(f.name + ' lashes ' + t.name + '.');
     }
@@ -217,7 +224,7 @@ const Combat = (() => {
     w.ring.material.opacity = 0.4 + k * 0.5;
     if (w.t <= 0) {
       const t = w.target.alive ? w.target : pick();
-      if (t) { Chars.play(f.rig, 'brawlSwipe'); shot(f, t, HUSK.color); hitParty(t, w.dmg); log(f.name + ' crushes ' + t.name + '!'); }
+      if (t) { Chars.play(f.rig, 'brawlSwipe'); busy(1.0); shot(f, t, HUSK.color); hitParty(t, w.dmg); log(f.name + ' crushes ' + t.name + '!'); }
       clearWind(f);
     }
   }
@@ -226,7 +233,7 @@ const Combat = (() => {
   // ---------------- Phases ----------------
   function start() {
     if (phase !== 'explore' || !canEngage()) return;
-    phase = 'enter'; phaseT = 0;
+    phase = 'enter'; phaseT = 0; resetView();
     Player.setFrozen(true);
     for (const u of party) {
       u.rush = null; u.hp = u.hpMax; u.alive = true; u.ready = false; u.atb = rand(0, 0.3); u.guard = 0; u.brace = 0;
@@ -285,15 +292,59 @@ const Combat = (() => {
   function active() { return phase !== 'explore'; }
 
   // The camera: the alley's pose blended toward the battle angle
+  // The battle camera: the preset angle, turned / zoomed / panned by the player (drag to rotate, wheel or pinch to zoom, two fingers or a
+  // right / shift drag to pan, double-tap to reset). The player's changes fade out with the blend, so leaving a battle glides home.
+  const view = { yaw: 0, pitch: 0, zoom: 1, pan: new THREE.Vector3() };
+  const resetView = () => { view.yaw = 0; view.pitch = 0; view.zoom = 1; view.pan.set(0, 0, 0); };
+  const sph = new THREE.Vector3(), bpos = new THREE.Vector3(), blook = new THREE.Vector3();
   function applyCamera(cam) {
     const ex = Player.exploreView(), k = blend();
-    cam.position.lerpVectors(ex.pos, BATTLE.pos, k);
-    v.lerpVectors(ex.look, BATTLE.look, k);
+    sph.copy(BATTLE.pos).sub(BATTLE.look);
+    const r = sph.length() * (1 + (view.zoom - 1) * k), az = Math.atan2(sph.x, sph.z) + view.yaw * k;
+    const el = clamp(Math.asin(sph.y / sph.length()) + view.pitch * k, 0.12, 1.45);
+    blook.copy(BATTLE.look).addScaledVector(view.pan, k);
+    bpos.set(Math.sin(az) * Math.cos(el) * r, Math.sin(el) * r, Math.cos(az) * Math.cos(el) * r).add(blook);
+    cam.position.lerpVectors(ex.pos, bpos, k);
+    v.lerpVectors(ex.look, blook, k);
     cam.lookAt(v);
+  }
+  function bindView(canvas, camera) {
+    const ptr = new Map(); let two = null, lastTap = 0;
+    const pair = () => { const [a, b] = [...ptr.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+    const pan = (dx, dy) => {
+      const kk = camera.position.distanceTo(blook) * 2 * Math.tan(camera.fov * Math.PI / 360) / innerHeight;
+      camera.updateMatrixWorld();
+      const rt = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+      view.pan.addScaledVector(rt, -dx * kk).addScaledVector(up, dy * kk);
+      view.pan.set(clamp(view.pan.x, -8, 8), clamp(view.pan.y, -1.5, 4), clamp(view.pan.z, -8, 8));
+    };
+    canvas.addEventListener('pointerdown', e => {
+      if (phase === 'explore') return;
+      ptr.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, btn: e.button, shift: e.shiftKey });
+      try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* a pointer that already ended */ }
+      two = ptr.size === 2 ? pair() : null;
+    });
+    canvas.addEventListener('pointermove', e => {
+      const p = ptr.get(e.pointerId); if (!p || phase === 'explore') return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+      if (ptr.size === 2) {
+        const n = pair(); if (two) { view.zoom = clamp(view.zoom * two.d / Math.max(n.d, 1), 0.4, 2.2); pan(n.x - two.x, n.y - two.y); } two = n;
+      } else if (p.btn === 2 || p.btn === 1 || p.shift) pan(dx, dy);
+      else { view.yaw -= dx * 0.006; view.pitch = clamp(view.pitch + dy * 0.004, -0.8, 0.9); }
+    });
+    const lift = e => {
+      const p = ptr.get(e.pointerId); ptr.delete(e.pointerId); two = ptr.size === 2 ? pair() : null;
+      if (p && ptr.size === 0 && e.type === 'pointerup' && e.pointerType === 'touch' && Math.hypot(e.clientX - p.x0, e.clientY - p.y0) < 20) {
+        const now = performance.now(); if (now - lastTap < 320) { resetView(); lastTap = 0; } else lastTap = now;
+      }
+    };
+    canvas.addEventListener('pointerup', lift); canvas.addEventListener('pointercancel', lift);
+    canvas.addEventListener('wheel', e => { if (phase === 'explore') return; e.preventDefault(); view.zoom = clamp(view.zoom * (1 + e.deltaY * 0.001), 0.4, 2.2); }, { passive: false });
+    canvas.addEventListener('dblclick', () => { if (phase !== 'explore') resetView(); });
   }
 
   function canEngage() {
-    if (phase !== 'explore') return false;
+    if (phase !== 'explore' || (typeof Cutscene !== 'undefined' && Cutscene.active())) return false;
     const p = Player.state();
     return foes.some(f => f.alive && Math.hypot(p.x - f.home.x, p.z - f.home.z) <= ENCOUNTER_R);
   }
@@ -314,24 +365,27 @@ const Combat = (() => {
     }
 
     if (phase === 'battle') {
+      actT = Math.max(0, actT - dt);
+      const wait = isBusy();
       for (const u of party) {
         if (!u.alive) continue;
         u.guard = Math.max(0, u.guard - dt);
         if (u.brace > 0) { u.brace = Math.max(0, u.brace - dt); if (u.brace === 0) u.rig.idleClip = u.rig.loco.battle; }
         if (u.id === 'kyle' && u.guard === 0 && u.rig.idleClip === 'blockIdle') u.rig.idleClip = u.rig.loco.battle;
+        if (wait) continue;
         u.atb = Math.min(1, u.atb + u.rate * dt);
         if (u.atb >= 1 && !(u.id === 'ruen' && cast)) u.ready = true;
       }
       for (const f of foes) {
-        if (!f.alive) continue;
+        if (!f.alive || wait) continue;
         if (f.wind) { updateWind(f, dt); continue; }
         f.atb = Math.min(1, f.atb + f.rate * dt);
         if (f.atb >= 1) foeAct(f);
       }
-      if (cast) {
+      if (cast && !wait) {
         cast.t = Math.min(1, cast.t + CAST_RATE * dt);
         if (cast.t >= 1) {
-          Chars.play(ruenRig(), 'mgNova');
+          Chars.play(ruenRig(), 'mgNova'); busy(1.4);
           for (const f of foesAlive()) hitFoe(f, 30);
           log('Data Burst!');
           cast = null;
@@ -381,7 +435,7 @@ const Combat = (() => {
   }
   function updateUI(camera) {
     const show = phase !== 'explore';
-    document.body.classList.toggle('battle', show);
+    document.body.classList.toggle('in-battle', show);
     for (const u of [...party, ...foes]) {
       const L = u.label, p = u.rig.root.position;
       const s = screenOf(p, u.foe ? 2.1 : 2.0, camera);
@@ -402,7 +456,7 @@ const Combat = (() => {
       p.el.style.transform = `translate(${s.x}px, ${s.y}px)`;
     }
     // The command menu: the first ready crew member (in order), who is not casting
-    const who = party.find(u => u.alive && u.ready && !(u.id === 'ruen' && cast));
+    const who = isBusy() ? null : party.find(u => u.alive && u.ready && !(u.id === 'ruen' && cast));
     const key = who ? who.id : null;
     if (key !== menuFor) {
       menuFor = key;

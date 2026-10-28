@@ -47,16 +47,10 @@ const Models = (() => {
     return (geos[kind] = g);
   }
 
-  // Which look the characters use: 'custom' (the custom meshes, or the original code-built figures for the Stranger and the Husks) or 'built' (the smooth low-poly versions).
-  // The choice is remembered; the game reads it when it starts, Model Check can show either or both.
-  let style = 'custom';
-  try { const v = localStorage.getItem('nexus.models'); if (v === 'built' || v === 'custom') style = v; } catch (e) { /* storage can be blocked */ }
-  const setStyle = v => { style = v; try { localStorage.setItem('nexus.models', v); } catch (e) { /* ignore */ } };
-  const hasBuilt = kind => typeof NX_SMOOTH !== 'undefined' && !!NX_SMOOTH.meta[kind];
   const has = kind => !!(D && D.meta[kind]);
 
   // Builds the joint hierarchy and the skinned mesh for one character; returns the rig base { root, hips, torso, head, j, hipsRest, armFix }
-  function rig(kind, look = style) {
+  function rig(kind) {
     const m = D.meta[kind], J = m.joints, joints = {};
     const root = new THREE.Group();
     for (const name of D.bones) {
@@ -64,8 +58,7 @@ const Models = (() => {
       g.position.set(w[0] - pw[0], w[1] - pw[1], w[2] - pw[2]); g.name = name;
       (p ? joints[p] : root).add(g); joints[name] = g;
     }
-    if (look === 'built' && hasBuilt(kind)) builtMeshes(kind, joints);
-    else {
+    {
       const mesh = new THREE.SkinnedMesh(geometry(kind), material(kind));
       mesh.frustumCulled = false;
       root.add(mesh); root.updateMatrixWorld(true);
@@ -75,42 +68,5 @@ const Models = (() => {
     for (const n of D.bones) if (n !== 'hips') c.j[n] = joints[n];
     return c;
   }
-  // The built look: for each bone, one closed low-poly surface (NX_SMOOTH) with a flat colour on every triangle
-  let smoothBytes = null, builtMat = null, glowMat = null;
-  const lin = v => Math.pow(v / 255, 2.2);                               // the texture's sRGB to the linear colour the lighting works in
-  const isGlow = (bone, r, g, b) => g > 190 && b > 200 && r < 110 && (bone !== 'head' || (g > 225 && b > 235 && r < 90));   // the cyan lights (a human eye is never that bright)
-  function builtMeshes(kind, joints) {
-    if (!smoothBytes) { const t = atob(NX_SMOOTH.bin); smoothBytes = new Uint8Array(t.length); for (let i = 0; i < t.length; i++) smoothBytes[i] = t.charCodeAt(i); }
-    builtMat = builtMat || new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.05, flatShading: true, side: THREE.DoubleSide });
-    glowMat = glowMat || new THREE.MeshStandardMaterial({ color: 0x0a1418, emissive: 0x3ff0ff, emissiveIntensity: 1.3, roughness: 0.4, flatShading: true });
-    const meta = NX_SMOOTH.meta[kind];
-    for (const bone in meta) {
-      const m = meta[bone], joint = joints[bone]; if (!joint) continue;
-      const base = smoothBytes.buffer.slice(m.offset, m.offset + m.nv * 6 + m.nf * 6 + m.nf * 3);
-      const pq = new Uint16Array(base, 0, m.nv * 3), fi = new Uint16Array(base, m.nv * 6, m.nf * 3), fc = new Uint8Array(base, m.nv * 6 + m.nf * 6, m.nf * 3);
-      for (const glow of [false, true]) {
-        const faces = [];
-        for (let f = 0; f < m.nf; f++) if (isGlow(bone, fc[f * 3], fc[f * 3 + 1], fc[f * 3 + 2]) === glow) faces.push(f);
-        if (!faces.length) continue;
-        const pos = new Float32Array(faces.length * 9), col = new Float32Array(faces.length * 9);
-        faces.forEach((f, n) => {
-          for (let k = 0; k < 3; k++) {
-            const v = fi[f * 3 + k];
-            for (let c = 0; c < 3; c++) { pos[n * 9 + k * 3 + c] = m.pmin[c] + pq[v * 3 + c] / 65535 * m.prange[c]; col[n * 9 + k * 3 + c] = lin(fc[f * 3 + c]); }
-          }
-        });
-        const g = new THREE.BufferGeometry();
-        g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-        g.computeVertexNormals();
-        const mesh = new THREE.Mesh(g, glow ? glowMat : builtMat); mesh.frustumCulled = false; joint.add(mesh);
-      }
-    }
-  }
-  // Swaps a code-built figure's boxes (the Stranger, the Husks) for its low-poly twin on the same joints. joints: { hips, torso, head, ... }
-  function attachBuilt(kind, root, joints) {
-    const gone = []; root.traverse(o => { if (o.isMesh) gone.push(o); });
-    for (const o of gone) { o.parent.remove(o); o.geometry.dispose(); }
-    builtMeshes(kind, joints);
-  }
-  return { has, hasBuilt, attachBuilt, rig, get style() { return style; }, setStyle };
+  return { has, rig };
 })();

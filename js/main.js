@@ -26,6 +26,7 @@
   Combat.init(scene, camera);
   CampUI.init();
   ModelCheck.init();
+  Cutscene.init();
   window.nexus = { state: () => Player.state(), scene, camera };          // read-only hook for debugging and automated checks
 
   function resize() {
@@ -64,11 +65,14 @@
     City.update(t, step);
     Camp.update(t, step);
     Player.update(t, step);
-    if (Combat.active()) Combat.applyCamera(camera); else Player.applyCamera(camera);
+    Cutscene.update(step);
+    if (Cutscene.active()) Cutscene.applyCamera(camera, step || 0.016);
+    else if (Combat.active()) Combat.applyCamera(camera); else Player.applyCamera(camera);
     Combat.update(step, camera);
     composer.render();
     HUD.update(t, Player.state());
     CampUI.update();
+    Cutscene.updateUI(CampUI.isOpen());
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
