@@ -6,7 +6,9 @@
 // planes, and a small pool of real lights follows the nearest signs so the lighting stays cheap however many are loaded.
 const World = (() => {
   const CH = 32, COLS = 4, ROWS = 8, Z0 = -30;
-  const LOAD = 1.6 * CH, DROP = 2.3 * CH, LIGHTS = 5;
+  const DROP = 2.3 * CH, LIGHTS = 5;
+  const SEE = 56;                                                                        // beyond this the fog has swallowed a character
+  let LOAD = 1.6 * CH, lightsOn = LIGHTS;                                            // how far chunks load around the player, and how many lights are in use (the quality setting turns both down)
   const HALF_X = (COLS - 1) * CH + CH / 2 - 1.2, MIN_Z = Z0 - (ROWS - 1) * CH + 1.2;      // where the player may walk
   const chunks = new Map(), queue = [];
   let root = null, lights = [], lightT = 0, scene = null;
@@ -291,6 +293,9 @@ const World = (() => {
     if (!Combat.active()) for (const ch of [...chunks.values()]) if (Math.max(Math.abs(p.x - ch.X), Math.abs(p.z - ch.Z)) > DROP) drop(ch);
     for (const ch of chunks.values()) {
       for (const s of ch.spin) s.rotation.y += dt * 0.8;
+      // Rigs are ~40 meshes each: past the fog's reach they are hidden rather than drawn
+      for (const n of ch.npcs) n.rig.root.visible = Math.hypot(p.x - n.x, p.z - n.z) < SEE;
+      if (ch.pack) for (const r of ch.pack.rigs) r.root.visible = Math.hypot(p.x - r.root.position.x, p.z - r.root.position.z) < SEE;
       if (Math.hypot(p.x - ch.X, p.z - ch.Z) > 48) continue;
       for (const n of ch.npcs) { const d = Math.hypot(p.x - n.x, p.z - n.z); Chars.setLook(n.rig, d < 5 ? tmpP.set(p.x, 1.5, p.z) : null); Chars.update(n.rig, t, dt, 0); }
       for (const v of ch.steam) v.sprites.forEach((sp, i) => {                                   // steam: puffs that rise, grow and fade, each on its own cycle
@@ -302,9 +307,13 @@ const World = (() => {
       lightT = 0.3; const all = [];
       for (const ch of chunks.values()) for (const s of ch.signs) all.push({ s, d: Math.hypot(s.x - p.x, s.z - p.z) });
       all.sort((a, b) => a.d - b.d);
-      lights.forEach((l, i) => { const a = all[i]; if (a && a.d < 30) { l.position.set(a.s.x, a.s.y, a.s.z); l.color.setHex(a.s.c); l.intensity = 1.5; } else l.intensity = 0; });
+      lights.forEach((l, i) => { const a = i < lightsOn ? all[i] : null; if (a && a.d < 30) { l.position.set(a.s.x, a.s.y, a.s.z); l.color.setHex(a.s.c); l.intensity = 1.5; } else l.intensity = 0; });
     }
   }
+
+  // Quality levels 0 (full) to 2 (lean): fewer sign lights and a shorter load radius
+  function setDetail(level) { lightsOn = [LIGHTS, 3, 1][level] ?? LIGHTS; LOAD = [1.6, 1.4, 1.2][level] * CH; lightT = 0; }
+  const chunkRects = () => [...chunks.values()].map(ch => ({ x: ch.X, z: ch.Z, s: CH }));
 
   // Pushes a point out of every nearby box and circle
   function collide(x, z) {
@@ -343,5 +352,5 @@ const World = (() => {
   const allNpcs = () => { const out = []; for (const ch of chunks.values()) for (const n of ch.npcs) out.push(n); return out; };
   function nearNpc(p, r) { let best = null, bd = r; for (const n of allNpcs()) { const d = Math.hypot(p.x - n.x, p.z - n.z); if (d < bd) { bd = d; best = n; } } return best; }
 
-  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, HALF_X, MIN_Z, Z0, CH, loaded: () => chunks.size };
+  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
 })();

@@ -547,5 +547,5 @@ const Combat = (() => {
     ui.actions.hidden = !who || phase !== 'battle';
   }
 
-  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], phase: () => phase, stage: () => stage };
+  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
 })();

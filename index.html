@@ -79,6 +79,8 @@
     <ul class="camp-list">
       <li><div><b>Music</b><span>The synthwave score</span></div><button id="setMusic" type="button">On</button></li>
       <li><div><b>Effects</b><span>Hits, spells, pickups and voices</span></div><button id="setSfx" type="button">On</button></li>
+      <li><div><b>Quality</b><span id="setQualityNote">Auto lowers the detail if the game runs slowly</span></div><button id="setQuality" type="button">Auto</button></li>
+      <li><div><b>Debug</b><span>Frame rate, draw calls, chunk borders, aggro radii, ATB gauges</span></div><button id="setDebug" type="button">Off</button></li>
       <li><div><b>Model Check</b><span>Watch every move and pose of every character</span></div><button id="openModelCheck" type="button">Open</button></li>
     </ul>
     <button id="settingsClose" class="camp-close" type="button">Close</button>
@@ -125,6 +127,7 @@
 <script src="js/mocap.js"></script>
 <script src="js/textures.js"></script>
 <script src="js/sound.js"></script>
+<script src="js/perf.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/characters.js"></script>
 <script src="js/city.js"></script>

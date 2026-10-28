@@ -57,6 +57,9 @@ js/campui.js        the camp panel by the fire: the crafting list, the Camp butt
 js/player.js        the avatar, WASD movement, collisions and the reference camera
 js/hud.js           status, minimap and buttons
 js/combat.js        battle: the ATB encounter (the avatar included), the camera transition, the crew mechanics and husk AI
+js/sound.js         generative synthwave score (explore, market, battle and scene moods) and sound effects, all Web Audio
+js/fx.js            additive-sprite effects: hit sparks, projectiles, novas, shields, dissolves
+js/perf.js          the debug overlay and adaptive quality
 js/main.js          renderer, scene, and the frame loop
 ```
 
@@ -64,10 +67,14 @@ Coordinates: feet at y = 0, the fire at the origin, the alley running along z wi
 
 ## Roadmap
 
-See `Development Roadmap.md` for the full status. In short:
+See `Development Roadmap.md` for the full status, and `Enemies.md` for the enemy designs by story scene. In short:
 
 - **Phase 1, Foundation:** done.
-- **Phase 2, Combat:** the ATB system, all four crew mechanics and melee strikes for Jin and Kyle are in. Next: battles that start anywhere in the world.
-- **Phase 3, World:** the camp and the Neon Market (a 224 m district streamed in chunks) are in, and the crew follow the avatar. Next: enemies and NPCs in the Market.
-- **Phase 4, Story and polish:** the campfire scene and Act 2's resonance scene play with gesturing characters. Next: scenes triggered by place, sound and attack effects.
+- **Phase 2, Combat:** the ATB system, all four crew mechanics, melee strikes for Jin and Kyle, and battles that start anywhere (husk patrols in the Market) are in. Next: more enemy types (see `Enemies.md`).
+- **Phase 3, World:** the camp and the Neon Market (a 224 m district streamed in chunks, with landmarks, NPCs and shops) are in, and the crew follow the avatar.
+- **Phase 4, Story and polish:** the campfire, resonance, arrival, tower and revelation scenes play with gesturing characters, triggered by the place you stand in, with an objective marker on the map. Synthesized music and sound effects and attack effects are in. A debug overlay and adaptive quality are in. Next: the Industrial Hub, Act 3, props for the new models.
 - **Phase 5, Deployment:** not started.
+
+### Debug and quality
+
+Settings (the gear) has **Quality** (Auto, High, Low) and **Debug**. Debug, or the backtick key, or `?debug` in the address, shows frame rate, draw calls, triangles, memory, loaded chunks and the ATB gauges, and draws the chunk borders (cyan), the aggro radius of patrols (red) and the engage radius (yellow) in the world. Auto lowers the pixel ratio, the bloom, the sign lights and the load radius if the frame rate stays under about 38 fps, and raises them again after a long steady 60.

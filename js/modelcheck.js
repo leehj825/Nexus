@@ -221,7 +221,11 @@ const ModelCheck = (() => {
     const sync = () => { $('setMusic').textContent = Sound.music ? 'On' : 'Off'; $('setSfx').textContent = Sound.fx ? 'On' : 'Off'; };
     $('setMusic').addEventListener('click', () => { Sound.setMusic(!Sound.music); sync(); });
     $('setSfx').addEventListener('click', () => { Sound.setSfx(!Sound.fx); sync(); });
-    $('btnSettings').addEventListener('click', sync); sync();
+    const QN = { auto: 'Auto', high: 'High', low: 'Low' };
+    const syncQ = () => { $('setQuality').textContent = QN[Perf.mode()] + (Perf.mode() === 'auto' ? ' (' + Perf.name() + ')' : ''); $('setDebug').textContent = Perf.debug() ? 'On' : 'Off'; };
+    $('setQuality').addEventListener('click', () => { Perf.setMode({ auto: 'high', high: 'low', low: 'auto' }[Perf.mode()]); syncQ(); });
+    $('setDebug').addEventListener('click', () => { Perf.setDebug(!Perf.debug()); syncQ(); });
+    $('btnSettings').addEventListener('click', () => { sync(); syncQ(); }); sync(); syncQ();
     $('openModelCheck').addEventListener('click', () => { $('settings').hidden = true; show(); });
   }
 

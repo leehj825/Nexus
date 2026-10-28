@@ -34,7 +34,7 @@
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
     // Phones get a lower pixel ratio: the bloom is the costly part, and it reads the same at 1.5x
-    const pr = Math.min(window.devicePixelRatio, h > w ? 1.5 : 2);
+    const pr = Math.min(window.devicePixelRatio, h > w ? 1.5 : 2) * (typeof Perf !== "undefined" ? Perf.scale() : 1);   // and the quality level scales it down further
     renderer.setPixelRatio(pr);
     renderer.setSize(w, h);
     composer.setPixelRatio(pr);
@@ -46,6 +46,7 @@
   }
   window.addEventListener('resize', resize);
   resize();
+  Perf.init(renderer, composer, bloom, scene, resize);
 
   let paused = false, t = 0, last = performance.now() / 1000;
   document.getElementById('btnPause').addEventListener('click', () => { paused = !paused; HUD.setPaused(paused); });
@@ -61,8 +62,9 @@
   }
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('button')) Sound.sfx('click'); });
   function frame(ms) {
-    const now = ms / 1000, dt = Math.min(0.05, now - last);
+    const now = ms / 1000, raw = now - last, dt = Math.min(0.05, raw);
     last = now;
+    Perf.begin(raw, paused || ModelCheck.isOpen());
     if (ModelCheck.isOpen()) {                                   // the viewer has the screen: the game stands still behind it
       ModelCheck.update(dt);
       renderPass.scene = ModelCheck.scene; renderPass.camera = ModelCheck.camera;
@@ -84,6 +86,7 @@
     else if (Combat.active()) Combat.applyCamera(camera); else Player.applyCamera(camera);
     Combat.update(step, camera);
     composer.render();
+    Perf.end(raw);
     HUD.update(t, Player.state());
     CampUI.update();
     Cutscene.updateUI(CampUI.isOpen());

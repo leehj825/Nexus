@@ -1,6 +1,6 @@
 # 🗺️ Development Roadmap: Nexus
 
-Status key: ✅ done · 🟡 partly done · ⬜ not started. Last updated after the Neon Market, the crew followers and the Act 2 resonance scene.
+Status key: ✅ done · 🟡 partly done · ⬜ not started. Last updated after fights in the field, the Market's landmarks and NPCs, place-triggered scenes, sound and effects, and the debug overlay with adaptive quality.
 
 ## Phase 1: Foundation & Prototyping ✅
 *   ✅ **Environment Setup:** JavaScript/Three.js project, served as plain static files (no build step). Cloud deployment is still to do (Phase 5).
@@ -15,15 +15,15 @@ Status key: ✅ done · 🟡 partly done · ⬜ not started. Last updated after 
     *   ✅ Kyle's Guard and Intercept.
     *   ✅ Ruen's dual-gauge Data Burst (the cast breaks if she is hit).
     *   ✅ Jin and Kyle run up and strike in melee; Ruen and Yuna attack from range.
-*   🟡 **Enemy AI:** husks attack on their own and telegraph a Crush that Stagger can break. Still to do: targeting that reacts to the crew's state, and more enemy types.
-*   ⬜ **Fighting in the field:** battles only start in the alley, around the fire. They need to start wherever the crew meets enemies, in the Neon Market too.
+*   🟡 **Enemy AI:** husks attack on their own and telegraph a Crush that Stagger can break. Still to do: targeting that reacts to the crew's state, and the new enemy types designed in `Enemies.md` (waiting on models).
+*   ✅ **Fighting in the field:** a battle starts wherever the crew meets a husk group. The stage is turned and moved onto open ground, and patrols in the Market chase when you come close.
 
 ## Phase 3: World Building & Content 🟡
-*   🟡 **Chunk Loading System:** done for the Neon Market, a 224 m district streamed in 32 m chunks that load and unload around the player, with merged geometry per chunk and a small pool of lights that follows the nearest signs. Not yet measured on a real phone.
-*   🟡 **Zone Design:** the alley (the Underbelly) and the Neon Market (market plazas, city blocks, container yards, a landmark tower) exist. Still to do: real landmarks and variety in the Market, the Industrial Hub, and the corrupted look from Story.md.
+*   🟡 **Chunk Loading System:** done for the Neon Market, a 224 m district streamed in 32 m chunks that load and unload around the player, with merged geometry per chunk and a small pool of lights that follows the nearest signs. Characters beyond the fog are hidden. Measured only in a software-rendered browser, not yet on a real phone.
+*   🟡 **Zone Design:** the alley (the Underbelly) and the Neon Market (market plazas, city blocks, container yards, arches, vehicles, a landmark tower with a beacon, an objective marker on the map) exist. Still to do: the Industrial Hub and a stronger corrupted look from Story.md.
 *   ✅ **Camp System:** the fire's safe zone, scrap in the alley and the Market, weapon upgrades, and the crew who sit at the fire, follow you out and walk back.
-*   ⬜ **Enemies in the world:** husk patrols and ambush spots, with loot.
-*   ⬜ **NPCs and shops:** the Market has stalls but nobody trading.
+*   ✅ **Enemies in the world:** husk patrols (tougher further from the gate) that stay gone once beaten, with scrap loot.
+*   ✅ **NPCs and shops:** people at the stalls talk (rumours and quest hints) and vendors open a shop.
 
 ## Phase 4: Narrative Integration & Polish 🟡
 *   🟡 **Story Implementation:**
@@ -31,21 +31,22 @@ Status key: ✅ done · 🟡 partly done · ⬜ not started. Last updated after 
     *   ✅ Characters gesture while they talk (head, torso and arms by mood), listeners turn their heads, Ruen's orb pulses with her voice.
     *   ✅ Act 1 campfire scene "The Discovery".
     *   ✅ Act 2 "The Resonance": Ruen's orb points the way, resonance rings spread from the gate, signs stutter and a hologram glitches.
-    *   ⬜ Scenes that start when you reach a place, not only from the Talk button.
-    *   ⬜ Environmental glitching that follows the story (a corrupted Market, objective lights pointing the way).
-    *   ⬜ Act 2's campfire skits between sectors, and Act 3 (the Spire).
+    *   ✅ Scenes that start when you reach a place: the Market arrival, the tower sighting and the revelation, with an objective marker and distance on the HUD and map.
+    *   🟡 Environmental glitching follows the story (signs fail and holograms glitch in the scenes). Still to do: a lasting corrupted look.
+    *   ⬜ Act 2's campfire skits between sectors, the Industrial Hub, and Act 3 (the Spire).
 *   🟡 **Characters:** the four custom models (Ruen, Kyle, Yuna, Jin) are rigged with the files' skin weights and play the Mixamo-based clips; Model Check (the gear menu) plays every clip and pose and shows joints and wireframe, with touch zoom and pan. Still to do: matching props (Yuna's blasters, Jin's blade, Ruen's orb) to the new models, and custom models for the Stranger and the Husks.
-*   ⬜ **VFX & Audio:** particle effects for attacks (Ruen's data explosions, Kyle's shield impacts), synth-wave music and sound effects.
-*   ⬜ **Debugging:** a "Special Debug Mode" (chunk borders, aggro radii, ATB ticks) for balancing. Model Check is a first step for the models.
+*   ✅ **VFX & Audio:** generative synthwave music that changes with the place and the fight, sound effects for hits, spells, pickups and voices, sparks, projectiles, novas, shield domes and dissolves, screen shake and a damage flash. Music and Effects toggles are in Settings.
+*   ✅ **Debugging:** a debug overlay (frame rate, draw calls, triangles, memory, chunks, ATB gauges) with chunk borders and aggro radii drawn in the world. Model Check covers the models.
+*   ⬜ **Enemies:** the designs are in `Enemies.md`. Waiting on models; placeholder versions can be built in code.
 
 ## Phase 5: Deployment & CI/CD ⬜
 *   ⬜ **Cloud Deployment:** deploy the frontend bundle (a static site) and any backend services.
-*   ⬜ **Testing:** cross-browser and mobile performance, especially the chunk streaming and the larger models (the four custom models add a few MB of data).
+*   🟡 **Testing:** Quality (Auto, High, Low) lowers the pixel ratio, bloom, lights and load radius when the frame rate drops. The page loads about 3.5 MB (about 2 MB gzipped, 1.1 MB of it the models). Still to do: measure on real phones and other browsers.
 *   ⬜ **Launch:** Version 1.0 Release.
 
 ## Next steps (suggested order)
-1. **Fight anywhere:** let battles start where the crew meets enemies, with husk patrols in the Neon Market. This makes the new district playable.
-2. **Make the Market worth exploring:** landmarks and variety, NPCs at the stalls, a map objective pointing to the tower.
-3. **Scenes by place:** trigger story scenes from where you stand, then write Act 2's remaining beats.
-4. **Sound and attack effects:** the biggest gap in game feel.
-5. **Measure on a phone:** frame rate, memory and load time, then trim (model data, lights, chunk radius).
+1. **Enemy models:** send models for the enemies in `Enemies.md` (start with the Husk, the Enforcer and the Sentry Drone). I can build placeholder versions, stats and telegraphs in code first.
+2. **Measure on a phone:** open the game with `?debug` on a real phone, note the frame rate, draw calls and memory, and tell me what you see. Auto quality then gets tuned from real numbers.
+3. **The Industrial Hub:** the next zone, with its own look, enemies (Enforcers, drones, the Loader Mech) and the Act 2 camp skits.
+4. **Props for the new models:** Yuna's blasters, Jin's blade, Ruen's orb, sized to the custom meshes.
+5. **Act 3:** the Corporate Spire and the final fight.
