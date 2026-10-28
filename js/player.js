@@ -183,7 +183,10 @@ const Player = (() => {
     cam.lookAt(look);
   }
 
+  const getState = () => ({ x: pos.x, z: pos.z, heading, yaw, elev, dist });
+  function setState(d) { pos.x = d.x; pos.z = d.z; heading = d.heading; yaw = d.yaw || 0; elev = d.elev || ELEV0; dist = shown = d.dist || DIST0; tgt.set(pos.x, EYE, pos.z); goal = null; marker.visible = false; avatar.root.position.set(pos.x, 0, pos.z); avatar.root.rotation.y = heading; }
+
   function state() { return { x: pos.x, z: pos.z, heading, speed, moving: speed > 0.1 }; }
 
-  return { init, update, applyCamera, state, exploreView, setFrozen, scriptTo, teleport, collidePoint: (x, z) => collide(x, z), rig };
+  return { init, update, applyCamera, state, getState, setState, exploreView, setFrozen, scriptTo, teleport, collidePoint: (x, z) => collide(x, z), rig };
 })();

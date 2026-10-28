@@ -242,7 +242,9 @@ const Cutscene = (() => {
     const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; if (n > 0) Sound.sfx('quest');
     const toast = $('toast'); if (toast && n > 0) { toast.textContent = 'Quest updated'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
   }
-  const setStage = n => { stage = n; setQuest(n); };
+  const setStage = n => { stage = n; setQuest(n); Save.touch(); Save.save(); };
+  // After a load: the story stage is set without the chime or the toast
+  function restore(n) { stage = n; const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; }
   // The alley's husks are beaten and the gate opens: the quest line says so
   function gateOpened() {
     const toast = $('toast'); if (toast) { toast.textContent = 'The gate\'s barrier dissolves'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); }
@@ -320,5 +322,5 @@ const Cutscene = (() => {
     if (!active && !campOpen && !Combat.active() && !Combat.engaging()) checkTriggers();
   }
 
-  return { init, update, updateUI, applyCamera, active: () => active, start, started: () => started, stage: () => stage, objective, nodeTaken, gateOpened, debugStage: n => setStage(n) };
+  return { init, update, updateUI, applyCamera, active: () => active, start, started: () => started, stage: () => stage, objective, nodeTaken, gateOpened, restore, debugStage: n => setStage(n) };
 })();

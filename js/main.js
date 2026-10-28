@@ -29,6 +29,15 @@
   CampUI.init();
   ModelCheck.init();
   Cutscene.init();
+  // Saving: each part of the game registers what it keeps; the world goes first and the player last, so the avatar lands in a loaded world
+  let gateWas = false;
+  Save.init();
+  Save.register('world', World.getState, World.setState);
+  Save.register('combat', Combat.getState, d => { Combat.setState(d); if (d.alley) { City.setGate(true, true); gateWas = true; } });
+  Save.register('camp', Camp.getState, Camp.setState);
+  Save.register('story', () => ({ stage: Cutscene.stage() }), d => Cutscene.restore(d.stage));
+  Save.register('player', Player.getState, d => { Player.setState(d); Camp.restoreCrew(Player.state()); });
+  Title.init(() => {});
   window.nexus = { state: () => Player.state(), scene, camera, renderer };          // read-only hook for debugging and automated checks
 
   function resize() {
@@ -62,7 +71,7 @@
   }
   document.addEventListener('click', e => { if (e.target.closest && e.target.closest('button')) Sound.sfx('click'); });
   // The gate: sealed by a barrier until the alley's husks are beaten, then it dissolves. Bumping into it says why.
-  let gateWas = false, gateHint = 0;
+  let gateHint = 0;
   function gateWatch(dt) {
     const cleared = Combat.alleyCleared();
     if (cleared !== gateWas) { gateWas = cleared; City.setGate(cleared); if (cleared) Cutscene.gateOpened(); }
@@ -99,6 +108,7 @@
     Combat.update(step, camera);
     composer.render();
     Perf.end(raw);
+    Save.update(step);
     HUD.update(t, Player.state());
     CampUI.update();
     Cutscene.updateUI(CampUI.isOpen());

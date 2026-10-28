@@ -521,8 +521,16 @@ const World = (() => {
   // Footprints of the loaded buildings and the chunk grid, for the minimap
   const footprints = () => { const out = []; for (const ch of chunks.values()) for (const b of ch.boxes) out.push(b); return out; };
   const markTaken = key => taken.add(key);
+  // Progress for the save: what was picked up, which patrols and nodes are gone, and the Foundry's state. Setting it rebuilds every loaded chunk.
+  const getState = () => ({ taken: [...taken], packs: [...clearedPacks], nodes: [...nodesTaken], shutter: shutterOpen, bossDown, bossArmed });
+  function setState(d) {
+    taken.clear(); clearedPacks.clear(); nodesTaken.clear();
+    (d.taken || []).forEach(k => taken.add(k)); (d.packs || []).forEach(k => clearedPacks.add(k)); (d.nodes || []).forEach(k => nodesTaken.add(k));
+    shutterOpen = !!d.shutter; bossDown = !!d.bossDown; bossArmed = !!d.bossArmed; doorT = 0;
+    for (const ch of [...chunks.values()]) drop(ch); queue.length = 0;
+  }
   const allNpcs = () => { const out = []; for (const ch of chunks.values()) for (const n of ch.npcs) out.push(n); return out; };
   function nearNpc(p, r) { let best = null, bd = r; for (const n of allNpcs()) { const d = Math.hypot(p.x - n.x, p.z - n.z); if (d < bd) { bd = d; best = n; } } return best; }
 
-  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, GATE, FOUNDRY, HUB_Z, openShutter, armBoss, nextNode, coreAt, nodeCount: () => nodesTaken.size, bossDown: () => bossDown, shutterOpen: () => shutterOpen, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
+  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, GATE, FOUNDRY, HUB_Z, getState, setState, isTaken: k => taken.has(k), openShutter, armBoss, nextNode, coreAt, nodeCount: () => nodesTaken.size, bossDown: () => bossDown, shutterOpen: () => shutterOpen, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
 })();

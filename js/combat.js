@@ -367,6 +367,7 @@ const Combat = (() => {
     }
     aggroCd = 5; cur = null; foes = [];
     Player.setFrozen(false);
+    Save.save();
   }
 
   function blend() {
@@ -567,5 +568,5 @@ const Combat = (() => {
     ui.actions.hidden = !who || phase !== 'battle';
   }
 
-  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, debugClearAlley: () => { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); }, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
+  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone }), setState(d) { if (d.alley && !alleyDone) { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); } }, debugClearAlley: () => { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); }, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
 })();

@@ -252,5 +252,5 @@ const City = (() => {
     }
   }
 
-  return { build, update, colliders, HALF, FAR, setGate: open => { gateGoal = open ? 1 : 0; }, gateOpen: () => gateK >= 0.5, setGlitch, setResonance, glitch: () => glitchK };
+  return { build, update, colliders, HALF, FAR, setGate: (open, instant) => { gateGoal = open ? 1 : 0; if (instant) { gateK = gateGoal; if (portalFace) { portalFace.visible = !open; portalFace.material.opacity = 1 - gateK; portalLight.intensity = 3.0 * (1 - 0.75 * gateK); portalDust.material.opacity = 0.9 * (1 - 0.6 * gateK); } } }, gateOpen: () => gateK >= 0.5, setGlitch, setResonance, glitch: () => glitchK };
 })();

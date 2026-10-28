@@ -102,11 +102,11 @@ const Camp = (() => {
   // The scrap lies on the ground: a small cyan octahedron that bobs and turns until it is picked up
   function scatterScrap(root) {
     const m = new THREE.MeshStandardMaterial({ color: 0x0b2a30, emissive: 0x3ff0ff, emissiveIntensity: 1.4, roughness: 0.4, flatShading: true });
-    for (const [x, z] of SCRAP_AT) {
+    SCRAP_AT.forEach(([x, z], i) => {
       const mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), m);
       mesh.position.set(x, 0.4, z); root.add(mesh);
-      scrap.push({ x, z, mesh, taken: false, phase: Math.random() * Math.PI * 2 });
-    }
+      scrap.push({ x, z, mesh, taken: false, phase: Math.random() * Math.PI * 2, key: 'a' + i });
+    });
   }
 
   function build(scene) {
@@ -240,6 +240,20 @@ const Camp = (() => {
     build, update, crew, colliders, SEATS,
     UPGRADES, buy, damageMult, nearFire, FIRE_R, addScrap, dropScrap, seatAll, gatherAt, release, afterBattle, addParts: n => { parts += n; },
     isOwned: id => owned.has(id),
+    getState: () => ({ parts, owned: [...owned] }),
+    setState(d) {
+      parts = d.parts || 0; owned.clear(); (d.owned || []).forEach(id => owned.add(id));
+      for (const s of scrap) if (s.key && s.key[0] === 'a' && World.isTaken(s.key)) { s.taken = true; s.mesh.visible = false; }       // the alley's scrap that was already picked up
+    },
+    // After a load: the crew sit at the fire if the avatar is near it, otherwise they are following the avatar
+    restoreCrew(av) {
+      seatAll();
+      if (Math.hypot(av.x, av.z) <= LEAVE_R) return;
+      for (const c of crew) if (c.seat) {
+        const f = FORM[c.name] || [0, -2], n = Player.collidePoint(av.x + Math.sin(av.heading) * f[1] + Math.cos(av.heading) * f[0], av.z + Math.cos(av.heading) * f[1] - Math.sin(av.heading) * f[0]);
+        c.mode = 'follow'; c.rig.kind = 'stand'; c.rig.hips.position.y = c.rig.hipsRest; c.rig.root.position.set(n.x, 0, n.z); c.rig.root.rotation.y = av.heading;
+      }
+    },
     get parts() { return parts; },
   };
 })();
