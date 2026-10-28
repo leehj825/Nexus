@@ -41,7 +41,7 @@ Opening `index.html` straight from the file system also works in most browsers.
 
 `android/` wraps the web files in a full-screen WebView (no code is duplicated: the files at the repository root are copied into the APK when it is built). The workflow `.github/workflows/android-debug.yml` builds a debug APK on every push to `main` or a `claude/**` branch that touches the game or `android/`, on pull requests, and on demand (Actions > Android debug APK > Run workflow). Download the APK from the run's **nexus-debug-apk** artifact and install it on a phone (allow installs from unknown sources, or `adb install`).
 
-The debug build opens the game with `?debug`, so the frame-rate, draw-call and memory overlay is on, and the WebView can be inspected from a computer at `chrome://inspect` (USB debugging on). To build it yourself you need JDK 17, the Android SDK (platform 34) and Gradle 8.9: `cd android && gradle assembleDebug`, and the APK lands in `android/app/build/outputs/apk/debug/`. It installs next to a release build as `Nexus (debug)` with the id `io.github.leehj825.nexus.debug`.
+The debug build opens the game with `?debug`, so the frame-rate, draw-call and memory overlay is on, and the WebView can be inspected from a computer at `chrome://inspect` (USB debugging on). To build it yourself you need JDK 17, the Android SDK (platform 34) and Gradle 8.9: `cd android && gradle assembleDebug`, and the APK lands in `android/app/build/outputs/apk/debug/`. It installs next to a release build, under the id `io.github.leehj825.nexus.debug`.
 
 ## Layout
 
