@@ -30,6 +30,10 @@ const HUD = (() => {
       g.globalAlpha = 0.85; g.fillRect(x - 1.5, y - 1.5, 3, 3);
     }
     g.globalAlpha = 1;
+    // The buildings of the Neon Market round the player (they load as they near), as dim blocks
+    g.fillStyle = '#4a3a1a'; g.globalAlpha = 0.9;
+    for (const b of World.footprints()) { const x0 = toX(b.x - b.hw), y0 = toY(b.z - b.hd); if (x0 < MAP && y0 < MAP && x0 + b.hw * 2 * SCALE > 0 && y0 + b.hd * 2 * SCALE > 0) g.fillRect(x0, y0, b.hw * 2 * SCALE, b.hd * 2 * SCALE); }
+    g.globalAlpha = 1;
     // Landmarks: the fire (orange), the gate (blue), the crew (small yellow squares)
     g.fillStyle = '#ff9a3a'; g.fillRect(toX(0) - 3, toY(0) - 3, 6, 6);
     g.fillStyle = '#4aa8ff'; g.beginPath(); g.arc(toX(0), toY(-26), 5, 0, Math.PI * 2); g.fill();
@@ -54,8 +58,11 @@ const HUD = (() => {
     $('btnMap').addEventListener('click', e => e.currentTarget.classList.toggle('on'));
   }
 
+  let zone = '';
   function update(t, p) {
     drawMap(p, t);
+    const z = p.z < World.Z0 - 1 ? 'Neon Market \u00b7 Night' : 'Neon District \u00b7 Night';             // the zone title follows the player through the gate
+    if (z !== zone) { zone = z; const el = document.querySelector('.zone span'); if (el) el.innerHTML = z.replace('\u00b7', '&middot;'); }
   }
 
   return { init, update, setPaused };

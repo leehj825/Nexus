@@ -21,13 +21,14 @@
 
   City.build(scene);
   Camp.build(scene);
+  World.init(scene);
   Player.init(scene, canvas, camera);
   HUD.init();
   Combat.init(scene, camera);
   CampUI.init();
   ModelCheck.init();
   Cutscene.init();
-  window.nexus = { state: () => Player.state(), scene, camera };          // read-only hook for debugging and automated checks
+  window.nexus = { state: () => Player.state(), scene, camera, renderer };          // read-only hook for debugging and automated checks
 
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
@@ -64,6 +65,7 @@
     t += step;
     City.update(t, step);
     Camp.update(t, step);
+    World.update(t, step, Player.state());
     Player.update(t, step);
     Cutscene.update(step);
     if (Cutscene.active()) Cutscene.applyCamera(camera, step || 0.016);

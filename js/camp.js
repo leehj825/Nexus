@@ -129,13 +129,23 @@ const Camp = (() => {
     return root;
   }
 
+  // Scrap that the world's chunks drop in the streets: added to a chunk's group (world coordinates) and removed when it unloads.
+  // key names it, so a part that was picked up does not come back when the chunk loads again.
+  let scrapMat = null;
+  function addScrap(group, x, z, key) {
+    scrapMat = scrapMat || new THREE.MeshStandardMaterial({ color: 0x0b2a30, emissive: 0x3ff0ff, emissiveIntensity: 1.4, roughness: 0.4, flatShading: true });
+    const mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), scrapMat); mesh.position.set(x, 0.4, z); group.add(mesh);
+    const h = { x, z, mesh, taken: false, phase: Math.random() * Math.PI * 2, key, group }; scrap.push(h); return h;
+  }
+  function dropScrap(h) { const i = scrap.indexOf(h); if (i >= 0) scrap.splice(i, 1); h.group.remove(h.mesh); h.mesh.geometry.dispose(); }
+
   // Scrap: spin and bob, and take any that the avatar walks over
   function collectScrap(t, dt, p) {
     for (const s of scrap) {
       if (s.taken) continue;
       s.mesh.position.y = 0.4 + Math.sin(t * 3 + s.phase) * 0.06;
       s.mesh.rotation.y += dt * 1.5;
-      if (Math.hypot(p.x - s.x, p.z - s.z) < PICK_R) { s.taken = true; s.mesh.visible = false; parts += 1; }
+      if (Math.hypot(p.x - s.x, p.z - s.z) < PICK_R) { s.taken = true; s.mesh.visible = false; parts += 1; if (s.key && typeof World !== 'undefined') World.markTaken(s.key); }
     }
   }
 
@@ -175,7 +185,7 @@ const Camp = (() => {
 
   return {
     build, update, crew, colliders, SEATS,
-    UPGRADES, buy, damageMult, nearFire, FIRE_R,
+    UPGRADES, buy, damageMult, nearFire, FIRE_R, addScrap, dropScrap,
     isOwned: id => owned.has(id),
     get parts() { return parts; },
   };

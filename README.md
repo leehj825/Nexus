@@ -46,6 +46,7 @@ vendor/             three.js r128 (core and bloom addons) and its licence
 js/textures.js      canvas-drawn LED signs, portal face, glows, awning stripes
 js/anims.js          motion-capture clips (Mixamo, retargeted to this rig; copied from Deepward), read-only data
 js/mocap.js         plays the clips on the rigs: quaternion slerp between frames, pelvis height and forward shift
+js/world.js         the Neon Market beyond the gate: a 224 m district streamed in 32 m chunks (blocks, market plazas, container yards, a tower), with its own collision, scrap and a small pool of lights that follows the nearest signs
 js/models.js        the custom crew models (js/models_data.js: the custom meshes rigged to the game joints, skinned with the weights from each file)
 js/cutscene.js      the campfire scene and Act 2's resonance scene (the Talk button at the fire plays the next one): camera shots, captions, dialogue and world effects, step by step
 js/modelcheck.js    Model Check (settings gear > Model Check): plays every clip and pose on every character, shows the joints and the wireframe
