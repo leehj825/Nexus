@@ -21,18 +21,20 @@
 
   City.build(scene);
   Camp.build(scene);
+  World.init(scene);
+  FX.init(scene);
   Player.init(scene, canvas, camera);
   HUD.init();
   Combat.init(scene, camera);
   CampUI.init();
   ModelCheck.init();
   Cutscene.init();
-  window.nexus = { state: () => Player.state(), scene, camera };          // read-only hook for debugging and automated checks
+  window.nexus = { state: () => Player.state(), scene, camera, renderer };          // read-only hook for debugging and automated checks
 
   function resize() {
     const w = window.innerWidth, h = window.innerHeight;
     // Phones get a lower pixel ratio: the bloom is the costly part, and it reads the same at 1.5x
-    const pr = Math.min(window.devicePixelRatio, h > w ? 1.5 : 2);
+    const pr = Math.min(window.devicePixelRatio, h > w ? 1.5 : 2) * (typeof Perf !== "undefined" ? Perf.scale() : 1);   // and the quality level scales it down further
     renderer.setPixelRatio(pr);
     renderer.setSize(w, h);
     composer.setPixelRatio(pr);
@@ -44,14 +46,25 @@
   }
   window.addEventListener('resize', resize);
   resize();
+  Perf.init(renderer, composer, bloom, scene, resize);
 
   let paused = false, t = 0, last = performance.now() / 1000;
   document.getElementById('btnPause').addEventListener('click', () => { paused = !paused; HUD.setPaused(paused); });
   window.addEventListener('keydown', e => { if (e.code === 'KeyP') document.getElementById('btnPause').click(); });
 
+  // The score follows the situation; the fire crackles near the camp; glitches crackle too; buttons click
+  let lastMood = '', glitchT = 0;
+  function soundtrack(dt) {
+    const p = Player.state(), m = Cutscene.active() ? 'scene' : Combat.active() ? 'battle' : p.z < World.Z0 - 2 ? 'market' : 'explore';
+    if (m !== lastMood) { lastMood = m; Sound.setMood(m); }
+    Sound.update(dt, p);
+    glitchT -= dt; if (glitchT <= 0 && City.glitch() > 0.25) { Sound.sfx('glitch', { vol: City.glitch() }); glitchT = 0.5 + Math.random() * 1.2; }
+  }
+  document.addEventListener('click', e => { if (e.target.closest && e.target.closest('button')) Sound.sfx('click'); });
   function frame(ms) {
-    const now = ms / 1000, dt = Math.min(0.05, now - last);
+    const now = ms / 1000, raw = now - last, dt = Math.min(0.05, raw);
     last = now;
+    Perf.begin(raw, paused || ModelCheck.isOpen());
     if (ModelCheck.isOpen()) {                                   // the viewer has the screen: the game stands still behind it
       ModelCheck.update(dt);
       renderPass.scene = ModelCheck.scene; renderPass.camera = ModelCheck.camera;
@@ -64,12 +77,16 @@
     t += step;
     City.update(t, step);
     Camp.update(t, step);
+    World.update(t, step, Player.state());
+    FX.update(step);
+    soundtrack(step);
     Player.update(t, step);
     Cutscene.update(step);
     if (Cutscene.active()) Cutscene.applyCamera(camera, step || 0.016);
     else if (Combat.active()) Combat.applyCamera(camera); else Player.applyCamera(camera);
     Combat.update(step, camera);
     composer.render();
+    Perf.end(raw);
     HUD.update(t, Player.state());
     CampUI.update();
     Cutscene.updateUI(CampUI.isOpen());

@@ -417,6 +417,8 @@ const Chars = (() => {
     kyle: { kind: 'seated', seatH: 0.72, seed: 2.1, seat: SEAT_POSE.kyle, extra: () => {} },
     yuna: { kind: 'seated', seatH: 0.62, seed: 4.0, extra: c => blasters(c),
       seat: { torso: [0.08, 0, 0], shL: [-0.5, 0, 0.1], shR: [-0.5, 0, -0.05], elL: [-0.6, 0, 0], elR: [-0.6, 0, 0] } },
+    husk: { kind: 'stand', seed: 5.5, extra: () => {} },
+    brute: { kind: 'stand', seed: 7.2, extra: () => {} },
     player: { kind: 'stand', seed: 0.6, extra: c => addBlade(c, { steelD: std(0x464b54, { roughness: 0.45, metalness: 0.45 }), bladeEdge: lit(0x3ff0ff, 1.6), bladeCore: lit(0xe6feff, 2.4) }) },
   };
   // Yuna's blasters: short pistols held in each hand with the barrel running along the forearm (the grip sits in the fist,
@@ -512,7 +514,7 @@ const Chars = (() => {
   // walks and runs with the plain unarmed locomotion. The crew drop into the magic stance when a fight starts (their
   // strikes are brawling punches and hooks, their skills are casts); the husks keep a loose unarmed idle.
   const UNARMED = { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'mgIdle' };
-  const LOCO = { husk: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' } };
+  const LOCO = { husk: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' }, brute: { idle: 'idleEase', walk: 'walkCalm', run: 'walkCalm', battle: 'idleUnarmed' } };
 
   // Builds one of the crew by name and returns its rig (the root is what the scene adds)
   function create(kind) {
@@ -525,6 +527,24 @@ const Chars = (() => {
   // Plays a one-shot clip on a rig: it runs once and hands back to the idle. hold keeps its last frame (a death, say)
   function play(c, name, hold = false, rate = 1) { c.clip = { name, t: 0, hold, rate }; }               // rate: playback speed (1.7 = 70% faster)
   function clipLength(name) { return Mocap.clips[name] ? Mocap.clips[name].d : 0; }
+
+
+  // ---------------- Creature motion: a layer over the clips for the husks. They are not people: they hunch, hang their arms, shamble with a
+  // roll in the hips and twitch their heads. The clips (mostly walking and brawling) supply the legs and the strikes; this bends them out of human shape.
+  const CREATURE = {
+    husk: { hunch: 0.2, head: 0.12, armsOut: 0.05, armFwd: 0.22, roll: 0.1, lurch: 0.035, twitch: 1, breath: 0.03 },
+    brute: { hunch: 0.14, head: 0.12, armsOut: 0.2, armFwd: 0.1, roll: 0.07, lurch: 0.05, twitch: 0.3, breath: 0.045 },
+  };
+  function creature(c, t, dt, speed) {
+    const k = CREATURE[c.name], ph = (c.walkT || 0) * Math.PI * 2 / 1.03, mv = Math.min(1, speed / 1.5);
+    const u = c.clip ? Math.sin(Math.min(1, c.clip.t / (Mocap.clips[c.clip.name].d || 1)) * Math.PI) : 0;       // 0 -> 1 -> 0 over a played clip
+    const jerk = Math.max(0, Math.sin(t * 0.9 + c.seed) * Math.sin(t * 2.3 + c.seed * 2) - 0.55) * 2.2 * k.twitch;           // an occasional snap of the head
+    addRot(c.torso, k.hunch + Math.sin(t * 1.7 + c.seed) * k.breath + u * 0.25, 0, Math.sin(ph) * k.roll * mv);
+    addRot(c.head, k.head - u * 0.1 + jerk * 0.3, Math.sin(t * 0.6 + c.seed) * 0.25 * k.twitch + jerk * 0.5, Math.sin(ph + 0.8) * -k.roll * mv + jerk * 0.15);
+    addRot(c.j.shL, -k.armFwd, 0, k.armsOut); addRot(c.j.shR, -k.armFwd, 0, -k.armsOut);
+    addRot(c.j.elL, -0.12 - Math.sin(t * 1.3 + c.seed) * 0.05, 0, 0); addRot(c.j.elR, -0.12 - Math.sin(t * 1.3 + c.seed + 1) * 0.05, 0, 0);
+    c.hips.position.x += Math.sin(ph) * k.lurch * mv;
+  }
 
   // Poses one character for time t. speed (m/s) drives the walk cycle of standing figures
   // Poses one character at time t. Standing figures use motion capture: a clip played on purpose (play) first, then the
@@ -555,6 +575,7 @@ const Chars = (() => {
       }
     }
     if (c.armFix) undoAPose(c);
+    if (CREATURE[c.name] && c.armFix) creature(c, t, dt, speed);
     if (c.talkMood || c.talkAmp > 0.01 || c.lookPt || c.lookAmp > 0.01) gesture(c, t, dt);
     if (c.name === 'ruen') {                                                     // the orb floats over her left palm, specks circling it
       c.root.updateMatrixWorld(true);

@@ -1,4 +1,4 @@
-// Nexus - battle: an ATB (active time battle) encounter with the crew against husks from the alley.
+// Nexus - battle: an ATB (active time battle) encounter with the crew against a group of husks: the three in the alley, or a patrol met in the Neon Market.
 // Phases: explore -> enter (the camera eases to the battle angle, the crew stand, the husks come forward) -> battle -> result -> leave.
 // Every combatant fills an ATB gauge in real time. A full gauge makes a crew member ready; the player picks the command from the
 // menu. Husks act on their own when full, and a few wind up a telegraphed Crush that can be broken with a Stagger.
@@ -12,6 +12,14 @@ const Combat = (() => {
   const SPOT = { you: [-0.9, -2.6], ruen: [-2.6, -0.7], kyle: [0.6, -1.5], yuna: [2.6, -0.5] };     // the far side of the fire, facing the husks
   const FOE_SPOT = [[-2.8, -5.8], [0.0, -6.8], [2.8, -5.8]];
   const FOE_HOME = [[-2.6, -13.5], [0.2, -14.5], [2.6, -13.5]];
+  const FOE_SPOTS = { 3: FOE_SPOT, 2: [[-1.6, -6.2], [1.6, -6.2]], 1: [[0, -6.2]] };
+  // The stage: local battle coordinates (the fire at the origin, the foes toward -z) placed in the world. The alley keeps the identity
+  // stage; a fight met out in the world turns and moves it so the crew, the foes and the camera all land on open ground.
+  const stage = { ox: 0, oz: 0, th: 0 };
+  const W = (lx, lz) => ({ x: stage.ox + lx * Math.cos(stage.th) + lz * Math.sin(stage.th), z: stage.oz - lx * Math.sin(stage.th) + lz * Math.cos(stage.th) });
+  const stagePos = new THREE.Vector3().copy(BATTLE.pos), stageLook = new THREE.Vector3().copy(BATTLE.look);
+  const groups = new Map();                                        // every husk group that can be fought: { id, x, z, rigs, tier, aggro, onClear }
+  let cur = null, aggroCd = 4;
   const PARTY = {
     you: { name: 'You', hp: 110, rate: 0.12, color: '#ffffff' },
     ruen: { name: 'Ruen', hp: 90, rate: 0.13, color: '#c9a0ff' },
@@ -20,6 +28,7 @@ const Combat = (() => {
   };
   const ORDER = ['you', 'ruen', 'kyle', 'yuna'];
   const HUSK = { name: 'Husk', hp: 60, rate: 0.09, color: '#ff5a7a' };
+  const BRUTE = { name: 'Husk Brute', hp: 130, rate: 0.065, color: '#ff8a4a' };       // big and slow: no light attacks, only the telegraphed Crush, which hits hard
   const COMMANDS = {
     you: [{ label: 'Strike', run: u => strike(u, 16, 'brawlPunch') }, { label: 'Brace', run: u => brace(u) }],
     ruen: [{ label: 'Data Bolt', run: u => strike(u, 22, 'mgBolt') }, { label: 'Data Burst', run: u => startCast(u) }],
@@ -33,7 +42,7 @@ const Combat = (() => {
   const rand = (a, b) => a + Math.random() * (b - a);
 
   let scene = null, phase = 'explore', phaseT = 0, clock = 0;
-  let party = [], foes = [], target = null, cast = null, shots = [], pops = [], menuFor = null;
+  let party = [], foes = [], altFoes = [], target = null, cast = null, shots = [], pops = [], menuFor = null;
   let explore = null;                                              // the exploration camera pose, read from the player each frame
   let ui = null;
   const v = new THREE.Vector3();
@@ -48,18 +57,57 @@ const Combat = (() => {
       u.label = makeLabel(u.name, u.color, null);
       party.push(u);
     }
+    const alleyRigs = [];
     for (let i = 0; i < 3; i++) {
-      const rig = Chars.create('husk'); rig.root.position.set(FOE_HOME[i][0], 0, FOE_HOME[i][1]); scene.add(rig.root);
-      const f = { id: 'husk' + i, name: HUSK.name, rig, hp: HUSK.hp, hpMax: HUSK.hp, rate: HUSK.rate, atb: 0, alive: true, foe: true, wind: null, home: { x: FOE_HOME[i][0], z: FOE_HOME[i][1], ry: 0 }, spot: FOE_SPOT[i] };
-      f.label = makeLabel(HUSK.name, HUSK.color, f);
-      foes.push(f);
+      const rig = Chars.create('husk'); rig.root.position.set(FOE_HOME[i][0], 0, FOE_HOME[i][1]); scene.add(rig.root); alleyRigs.push(rig);
     }
-    target = foes[0];
+    register({ id: 'alley', x: 0, z: -14, rigs: alleyRigs, tier: 0, aggro: false, persistent: true, text: 'An ambush from the alley!' });
+    target = null;
     buildUI();
     bindView(document.getElementById('game'), camera);
     $('engage').addEventListener('click', start);
     window.addEventListener('keydown', e => { if (e.code === 'KeyE') start(); });
-    for (const u of [...party, ...foes]) setHome(u);
+    for (const u of party) setHome(u);
+  }
+
+  // ---------------- Husk groups ----------------
+  function register(g) { g.foes = null; g.cleared = false; groups.set(g.id, g); return g; }
+  function unregister(id) { const g = groups.get(id); if (g && g.foes) for (const f of g.foes) f.label.el.remove(); groups.delete(id); }
+  // Foe records for a group's husks (made the first time it is fought)
+  function foesOf(g) {
+    if (g.foes) return g.foes;
+    g.foes = g.rigs.map((rig, i) => {
+      const B = rig.name === 'brute', K = B ? BRUTE : HUSK, hp = Math.round(K.hp * (1 + 0.22 * g.tier));
+      const f = { id: g.id + ':' + i, name: K.name, brute: B, color: K.color, rig, hp, hpMax: hp, dmgMul: 1 + 0.14 * g.tier, rate: K.rate * (1 + 0.05 * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
+      f.label = makeLabel(K.name, K.color, f); return f;
+    });
+    return g.foes;
+  }
+  const groupDist = (g, p) => { let d = 1e9; for (const r of g.rigs) d = Math.min(d, Math.hypot(p.x - r.root.position.x, p.z - r.root.position.z)); return d; };
+  function nearestGroup() {
+    const p = Player.state(); let best = null, bd = 1e9;
+    for (const g of groups.values()) { if (g.cleared) continue; const d = groupDist(g, p); if (d < (g.radius || ENCOUNTER_R) && d < bd) { best = g; bd = d; } }
+    return best;
+  }
+  // Picks the stage for a fight with group g: the way the foes lie from the crew, turned in steps of 45 degrees until the crew's spots, the
+  // foes' spots and the camera's ground point are all clear of buildings and props
+  function placeStage(g) {
+    if (g.id === 'alley') { stage.ox = 0; stage.oz = 0; stage.th = 0; }
+    else {
+      const p = Player.state(), n = g.rigs.length, c = g.rigs.reduce((a, r) => ({ x: a.x + r.root.position.x / n, z: a.z + r.root.position.z / n }), { x: 0, z: 0 });
+      const th0 = Math.atan2(c.x - p.x > 0 ? -(c.x - p.x) : -(c.x - p.x), -(c.z - p.z)); let best = null;
+      for (const k of [0, 1, -1, 2, -2, 3, -3, 4]) {
+        const th = th0 + k * Math.PI / 4, ox = c.x + 6.3 * Math.sin(th), oz = c.z + 6.3 * Math.cos(th);
+        stage.ox = ox; stage.oz = oz; stage.th = th;
+        const pts = [[0.2, 7.4, 1.5], ...Object.values(SPOT).map(q => [q[0], q[1], 0.9]), ...(FOE_SPOTS[n] || FOE_SPOTS[3]).map(q => [q[0], q[1], 0.9])];
+        const blocked = pts.filter(q => { const w = W(q[0], q[1]); return World.blocked(w.x, w.z, q[2]); }).length;
+        if (!best || blocked < best.blocked) best = { th, ox, oz, blocked };
+        if (!blocked) break;
+      }
+      stage.ox = best.ox; stage.oz = best.oz; stage.th = best.th;
+    }
+    const cp = W(BATTLE.pos.x, BATTLE.pos.z), cl = W(BATTLE.look.x, BATTLE.look.z);
+    stagePos.set(cp.x, BATTLE.pos.y, cp.z); stageLook.set(cl.x, BATTLE.look.y, cl.z);
   }
 
   function setHome(u) { u.rig.root.position.set(u.home.x, 0, u.home.z); u.rig.root.rotation.set(0, u.home.ry, 0); }
@@ -97,22 +145,26 @@ const Combat = (() => {
   function log(text) { ui.log.insertBefore(Object.assign(document.createElement('div'), { textContent: text }), ui.log.firstChild); while (ui.log.childElementCount > 3) ui.log.lastChild.remove(); }
   function popup(u, text, color) { const el = document.createElement('div'); el.className = 'pop'; el.textContent = text; el.style.color = color; $('labels').appendChild(el); pops.push({ el, u, t: 0 }); }
 
-  // A glowing shot that flies from one unit to another; it is cosmetic, the damage lands at once
+  // A glowing bolt that flies from one unit to another with a trail; the damage lands at once, the hit sparks on arrival
   function shot(from, to, color) {
-    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: Tex.glow(), color: new THREE.Color(color), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, toneMapped: false }));
-    s.scale.set(0.9, 0.9, 1); scene.add(s);
-    shots.push({ s, from: from.rig.root.position.clone().setY(1.2), to: to.rig.root.position.clone().setY(1.2), t: 0 });
+    const a = from.rig.root.position.clone().setY(1.3), b2 = to.rig.root.position.clone().setY(1.2);
+    FX.proj(a, b2, new THREE.Color(color), 0.24, null, from.id === 'ruen' ? 1.0 : 0.65);
   }
+  // Camera shake and the red flash when the crew is hit
+  let shakeA = 0, flashA = 0;
+  const shake = a => { shakeA = Math.max(shakeA, a); };
 
   // ---------------- Damage ----------------
   function kill(u) {
     u.alive = false; u.ready = false; u.rush = null; clearWind(u);
-    Chars.play(u.rig, 'die', true);
+    Chars.play(u.rig, 'die', true); FX.dissolve(u.rig.root.position, u.foe ? 0xff3fb4 : 0x7fe9ff); Sound.sfx('die'); shake(0.3);
     log(u.name + (u.foe ? ' falls.' : ' is down!'));
   }
   function damage(u, dmg) {
     if (!u.alive) return;
     u.hp = Math.max(0, u.hp - dmg); popup(u, '-' + dmg, u.foe ? '#ffffff' : '#ff8a8a');
+    const heavy = dmg >= 22; FX.hit(u.rig.root.position.clone().setY(1.2), u.foe ? 0xffe9a8 : 0xff6a6a, heavy); Sound.sfx(heavy ? 'crit' : 'hit'); shake(heavy ? 0.28 : 0.12);
+    if (!u.foe) { flashA = Math.min(0.6, 0.25 + dmg / 80); }
     if (u.hp <= 0) kill(u); else Chars.play(u.rig, u.hp < u.hpMax * 0.3 ? 'impact2' : 'impact');
   }
   // A husk's attack on a crew member. Kyle may intercept a fatal blow on Ruen or Yuna
@@ -120,7 +172,7 @@ const Combat = (() => {
     const kyle = party.find(p => p.id === 'kyle');
     if (dmg >= u.hp && u.id !== 'kyle' && kyle.alive && kyle.guard > 0 && kyle.atb >= 0.5) {
       kyle.atb = 0; kyle.guard = 0;
-      log('Kyle intercepts the blow meant for ' + u.name + '!');
+      log('Kyle intercepts the blow meant for ' + u.name + '!'); FX.shield(kyle.rig.root.position); Sound.sfx('shield');
       shot(u, kyle, '#ffd27a');
       damage(kyle, Math.round(dmg * 0.6));
       return;
@@ -145,12 +197,12 @@ const Combat = (() => {
     const t = selected(); if (!t) return;
     dmg = Math.round(dmg * Camp.damageMult(u.id));                   // the camp's weapon upgrades
     if (MELEE[u.id] && clip) {
-      const home = new THREE.Vector3(SPOT[u.id][0], 0, SPOT[u.id][1]), tp = t.rig.root.position;
+      const home = u.to.clone(), tp = t.rig.root.position;
       const dir = home.clone().sub(tp).setY(0).normalize();
       u.rush = { phase: 'out', t: 0, target: t, dmg, clip, home, stand: tp.clone().setY(0).addScaledVector(dir, REACH), struck: false };
       endTurn(u); return;
     }
-    if (clip) Chars.play(u.rig, clip);
+    if (clip) { Chars.play(u.rig, clip); Sound.sfx(clip === 'mgBolt' ? 'bolt' : 'blast'); } else Sound.sfx('blast', { delay: 0.14 });
     shot(u, t, u.color); hitFoe(t, dmg); log(u.name + ' hits the husk for ' + dmg + '.');
     if (clip) busy(Math.min(Chars.clipLength(clip), 1.1));
     endTurn(u);
@@ -174,19 +226,19 @@ const Combat = (() => {
       r.t += dt; face(r.target.rig.root.position);
       const hitAt = Math.max(0.06, ((Mocap.clips[r.clip] && Mocap.clips[r.clip].hit) || 0.3) / SWING);
       if (!r.struck && r.t >= hitAt) {
-        r.struck = true;
+        r.struck = true; Sound.sfx('swing', { pitch: u.id === 'kyle' ? -300 : 200 });
         if (!r.target.alive) r.target = selected() || r.target;
         if (r.target.alive) { hitFoe(r.target, r.dmg); log(u.name + ' hits the husk for ' + r.dmg + '.'); }
       }
       if (r.t >= Math.min(Chars.clipLength(r.clip), 1.4) / SWING) { r.phase = 'back'; u.rig.clip = null; }
-    } else if (go(r.home)) { u.rush = null; u.rig.root.rotation.y = Math.PI; }
+    } else if (go(r.home)) { u.rush = null; u.rig.root.rotation.y = Math.PI + stage.th; }
   }
   function guard(u) {
-    u.guard = GUARD_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block');
+    u.guard = GUARD_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block'); FX.shield(u.rig.root.position); Sound.sfx('shield');
     log('Kyle raises his guard.'); endTurn(u);
   }
   function brace(u) {
-    u.brace = BRACE_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block');
+    u.brace = BRACE_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block'); FX.shield(u.rig.root.position, 0xffffff); Sound.sfx('shield');
     log('You brace.'); endTurn(u);
   }
   function stagger(u) {
@@ -198,21 +250,21 @@ const Combat = (() => {
     endTurn(u);
   }
   function ruenRig() { return party.find(p => p.id === 'ruen').rig; }
-  function startCast(u) { cast = { t: 0 }; Chars.play(u.rig, 'mgHoly'); log('Ruen begins Data Burst.'); endTurn(u); }
+  function startCast(u) { cast = { t: 0 }; Chars.play(u.rig, 'mgHoly'); FX.charge(u.rig.root.position); Sound.sfx('cast'); log('Ruen begins Data Burst.'); endTurn(u); }
 
   // ---------------- Husk AI ----------------
   function foeAct(f) {
     f.atb = 0;
-    if (Math.random() < 0.35) {
+    if (f.brute || Math.random() < 0.35) {
       const t = pick(); if (!t) return;
       const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.7, 24), new THREE.MeshBasicMaterial({ color: 0xff3a5a, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }));
       ring.rotation.x = -Math.PI / 2; ring.position.set(t.rig.root.position.x, 0.04, t.rig.root.position.z); scene.add(ring);
-      f.wind = { t: WIND, target: t, ring, dmg: Math.round(rand(30, 36)) };
-      log(f.name + ' winds up on ' + t.name + '!');
+      f.wind = { t: WIND, target: t, ring, dmg: Math.round((f.brute ? rand(38, 46) : rand(30, 36)) * f.dmgMul) };
+      log(f.name + ' winds up on ' + t.name + '!'); Sound.sfx('growl');
     } else {
       const t = pick(); if (!t) return;
       Chars.play(f.rig, 'brawlPunch'); busy(0.9);
-      shot(f, t, HUSK.color); hitParty(t, Math.round(rand(11, 15)));
+      shot(f, t, f.color || HUSK.color); hitParty(t, Math.round(rand(11, 15) * f.dmgMul));
       log(f.name + ' lashes ' + t.name + '.');
     }
   }
@@ -224,7 +276,7 @@ const Combat = (() => {
     w.ring.material.opacity = 0.4 + k * 0.5;
     if (w.t <= 0) {
       const t = w.target.alive ? w.target : pick();
-      if (t) { Chars.play(f.rig, 'brawlSwipe'); busy(1.0); shot(f, t, HUSK.color); hitParty(t, w.dmg); log(f.name + ' crushes ' + t.name + '!'); }
+      if (t) { Chars.play(f.rig, 'brawlSwipe', false, f.brute ? 0.8 : 1); busy(f.brute ? 1.3 : 1.0); shot(f, t, f.color || HUSK.color); hitParty(t, w.dmg); log(f.name + ' crushes ' + t.name + '!'); }
       clearWind(f);
     }
   }
@@ -232,32 +284,35 @@ const Combat = (() => {
 
   // ---------------- Phases ----------------
   function start() {
-    if (phase !== 'explore' || !canEngage()) return;
+    if (phase !== 'explore') return;
+    const g = nearestGroup(); if (!g || (typeof Cutscene !== 'undefined' && Cutscene.active())) return;
+    cur = g; foes = foesOf(g); placeStage(g);
     phase = 'enter'; phaseT = 0; resetView();
     Player.setFrozen(true);
     for (const u of party) {
       u.rush = null; u.hp = u.hpMax; u.alive = true; u.ready = false; u.atb = rand(0, 0.3); u.guard = 0; u.brace = 0;
       u.home = { x: u.rig.root.position.x, z: u.rig.root.position.z, ry: u.rig.root.rotation.y };   // where the avatar stands now
       u.rig.combat = true; u.rig.kind = 'stand'; u.rig.clip = null; u.rig.idleClip = u.rig.loco.battle;
-      u.from = u.rig.root.position.clone(); u.rig.root.rotation.set(0, Math.PI, 0);
-      u.to = new THREE.Vector3(SPOT[u.id][0], 0, SPOT[u.id][1]);
+      u.from = u.rig.root.position.clone(); u.rig.root.rotation.set(0, Math.PI + stage.th, 0);
+      const sp = W(SPOT[u.id][0], SPOT[u.id][1]); u.to = new THREE.Vector3(sp.x, 0, sp.z);
     }
-    for (const f of foes) {
+    const spots = FOE_SPOTS[foes.length] || FOE_SPOT;
+    foes.forEach((f, i) => {
       f.hp = f.hpMax; f.alive = true; f.atb = rand(0, 0.2); f.rig.combat = true; f.wind = null;
       f.rig.clip = null; f.rig.idleClip = f.rig.loco.battle;
-      f.from = f.rig.root.position.clone(); f.to = new THREE.Vector3(f.spot[0], 0, f.spot[1]);
-      f.rig.root.rotation.set(0, 0, 0);
-    }
-    cast = null; target = foes[1]; menuFor = null;
+      f.from = f.rig.root.position.clone(); const sp = W(spots[i][0], spots[i][1]); f.to = new THREE.Vector3(sp.x, 0, sp.z);
+      f.rig.root.rotation.set(0, stage.th, 0);
+    });
+    cast = null; target = foes[Math.floor(foes.length / 2)]; menuFor = null;
     ui.log.innerHTML = ''; ui.banner.hidden = true;
-    log('An ambush from the alley!');
+    log(g.text || 'Husks! They have seen you.'); Sound.sfx('growl'); shake(0.15);
   }
 
   function end(text) {
     phase = 'result'; phaseT = 0;
     cast = null; menuFor = null;
     for (const u of party) u.ready = false;
-    ui.banner.textContent = text; ui.banner.hidden = false;
+    ui.banner.textContent = text; ui.banner.hidden = false; Sound.sfx(text === 'Cleared' ? 'win' : 'lose');
   }
 
   function startLeave() {
@@ -271,14 +326,27 @@ const Combat = (() => {
     phase = 'explore'; phaseT = 0;
     for (const u of party) {
       u.rush = null; u.rig.combat = false; u.rig.clip = null; u.rig.idleClip = u.rig.loco.idle;
-      if (u.id !== 'you') u.rig.kind = 'seated';
+      if (u.id !== 'you') Camp.afterBattle(u.rig);
       u.rig.root.rotation.set(0, u.home.ry, 0); u.rig.root.position.y = 0;
       u.rig.root.position.set(u.home.x, 0, u.home.z);
     }
+    const won = foes.every(f => !f.alive);
     for (const f of foes) {
-      f.rig.combat = false; f.rig.clip = null; f.alive = true; f.hp = f.hpMax;
+      f.rig.combat = false; f.rig.clip = null;
       f.rig.root.rotation.set(0, 0, 0); f.rig.root.position.set(f.home.x, 0, f.home.z);
+      if (!(won && !cur.persistent)) { f.alive = true; f.hp = f.hpMax; }
     }
+    if (won && cur) {
+      const loot = 1 + Math.floor(cur.tier / 2) + (cur.id === 'alley' ? 0 : 1);
+      if (cur.persistent) Camp.addParts(1);
+      else {                                                                  // a patrol is gone for good: remove it, drop its loot
+        Camp.addParts(loot); cur.cleared = true;
+        for (const f of foes) { scene.remove(f.rig.root); if (f.rig.root.parent) f.rig.root.parent.remove(f.rig.root); f.label.el.remove(); }
+        if (cur.onClear) cur.onClear(cur);
+        groups.delete(cur.id);
+      }
+    }
+    aggroCd = 5; cur = null; foes = [];
     Player.setFrozen(false);
   }
 
@@ -299,12 +367,13 @@ const Combat = (() => {
   const sph = new THREE.Vector3(), bpos = new THREE.Vector3(), blook = new THREE.Vector3();
   function applyCamera(cam) {
     const ex = Player.exploreView(), k = blend();
-    sph.copy(BATTLE.pos).sub(BATTLE.look);
+    sph.copy(stagePos).sub(stageLook);
     const r = sph.length() * (1 + (view.zoom - 1) * k), az = Math.atan2(sph.x, sph.z) + view.yaw * k;
     const el = clamp(Math.asin(sph.y / sph.length()) + view.pitch * k, 0.12, 1.45);
-    blook.copy(BATTLE.look).addScaledVector(view.pan, k);
+    blook.copy(stageLook).addScaledVector(view.pan, k);
     bpos.set(Math.sin(az) * Math.cos(el) * r, Math.sin(el) * r, Math.cos(az) * Math.cos(el) * r).add(blook);
     cam.position.lerpVectors(ex.pos, bpos, k);
+    if (shakeA > 0.003) cam.position.add(v.set((Math.random() - 0.5) * shakeA, (Math.random() - 0.5) * shakeA * 0.6, (Math.random() - 0.5) * shakeA));
     v.lerpVectors(ex.look, blook, k);
     cam.lookAt(v);
   }
@@ -345,13 +414,14 @@ const Combat = (() => {
 
   function canEngage() {
     if (phase !== 'explore' || (typeof Cutscene !== 'undefined' && Cutscene.active())) return false;
-    const p = Player.state();
-    return foes.some(f => f.alive && Math.hypot(p.x - f.home.x, p.z - f.home.z) <= ENCOUNTER_R);
+    return !!nearestGroup();
   }
 
   // ---------------- Per-frame ----------------
   function update(dt, camera) {
     clock += dt; phaseT += dt;
+    shakeA *= Math.exp(-dt * 7); flashA = Math.max(0, flashA - dt * 1.6); const fl = document.getElementById('flash'); if (fl) fl.style.opacity = flashA.toFixed(3);
+    const pp = Player.state();
 
     const walking = phase === 'enter' || phase === 'leave' ? 1.6 : 0;      // the units walk while they move into place
     if (phase === 'enter' || phase === 'leave') {
@@ -385,8 +455,8 @@ const Combat = (() => {
       if (cast && !wait) {
         cast.t = Math.min(1, cast.t + CAST_RATE * dt);
         if (cast.t >= 1) {
-          Chars.play(ruenRig(), 'mgNova'); busy(1.4);
-          for (const f of foesAlive()) hitFoe(f, 30);
+          Chars.play(ruenRig(), 'mgNova'); busy(1.4); Sound.sfx('nova'); shake(0.4);
+          for (const f of foesAlive()) { FX.nova(f.rig.root.position); hitFoe(f, 30); }
           log('Data Burst!');
           cast = null;
         }
@@ -397,12 +467,17 @@ const Combat = (() => {
 
     if (phase === 'result' && phaseT >= RESULT_WAIT) startLeave();
 
-    if (phase === 'explore') ui.engage.hidden = !canEngage();
+    if (phase === 'explore') {
+      aggroCd = Math.max(0, aggroCd - dt);
+      const g = nearestGroup(); ui.engage.hidden = !g;
+      if (g && g.aggro && aggroCd === 0 && groupDist(g, pp) < 4.4 && !(typeof Cutscene !== 'undefined' && Cutscene.active())) start();      // a patrol that has seen you
+    }
     else ui.engage.hidden = true;
     ui.battle.hidden = phase === 'explore';
 
     // Idle motion for everyone not under the crew's own pose
     for (const f of foes) Chars.update(f.rig, clock, dt, walking);
+    for (const g of groups.values()) if (g !== cur && groupDist(g, pp) < 45) for (const r of g.rigs) Chars.update(r, clock, dt, 0);          // groups not in the fight stand idle
     for (const u of party) if (u.rig.combat) { if (u.rush) updateRush(u, dt); Chars.update(u.rig, clock, dt, u.rush ? u.speed : walking); }
 
     updateShots(dt);
@@ -473,5 +548,5 @@ const Combat = (() => {
     ui.actions.hidden = !who || phase !== 'battle';
   }
 
-  return { init, update, applyCamera, active, start, canEngage, phase: () => phase };
+  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
 })();

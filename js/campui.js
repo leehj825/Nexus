@@ -4,7 +4,7 @@
 const CampUI = (() => {
   const $ = id => document.getElementById(id);
   const panel = $('camp'), list = $('campList'), btn = $('campBtn'), toast = $('toast');
-  let open = false, shown = '', seen = 0, toastTimer = 0;
+  let shop = false, open = false, shown = '', seen = 0, toastTimer = 0;
 
   // Everything the list shows, as one string, so the list is only rebuilt when something in it changes
   const stateKey = () => Camp.parts + '|' + Camp.UPGRADES.map(u => (Camp.isOwned(u.id) ? 1 : 0)).join('');
@@ -34,7 +34,7 @@ const CampUI = (() => {
   }
 
   function setOpen(on) {
-    open = on;
+    open = on; if (!on) shop = false;
     panel.hidden = !on;
     Player.setFrozen(on);
     if (on) render();
@@ -59,7 +59,7 @@ const CampUI = (() => {
   // Each frame: show the button only at the fire outside a battle, keep the counters and list current, toast new scrap
   function update() {
     const near = Camp.nearFire(Player.state()) && !Combat.active() && !Cutscene.active();
-    if (open && !near) setOpen(false);
+    if (open && !near && !shop) setOpen(false);
     btn.hidden = !near || open;
     $('parts').textContent = Camp.parts;
     if (Camp.parts > seen) showToast('+' + (Camp.parts - seen) + ' scrap');
@@ -67,5 +67,5 @@ const CampUI = (() => {
     if (open && stateKey() !== shown) render();
   }
 
-  return { init, update, isOpen: () => open };
+  return { init, update, isOpen: () => open, openShop: () => { shop = true; setOpen(true); } };
 })();

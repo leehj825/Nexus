@@ -30,6 +30,19 @@ const HUD = (() => {
       g.globalAlpha = 0.85; g.fillRect(x - 1.5, y - 1.5, 3, 3);
     }
     g.globalAlpha = 1;
+    // The buildings of the Neon Market round the player (they load as they near), as dim blocks
+    g.fillStyle = '#4a3a1a'; g.globalAlpha = 0.9;
+    for (const b of World.footprints()) { const x0 = toX(b.x - b.hw), y0 = toY(b.z - b.hd); if (x0 < MAP && y0 < MAP && x0 + b.hw * 2 * SCALE > 0 && y0 + b.hd * 2 * SCALE > 0) g.fillRect(x0, y0, b.hw * 2 * SCALE, b.hd * 2 * SCALE); }
+    g.globalAlpha = 1;
+    // People in the Market (small cyan dots) and the story objective (a gold diamond, pinned to the rim when it is off the map)
+    g.fillStyle = '#7ff7ff'; for (const n of World.npcs()) g.fillRect(toX(n.x) - 2, toY(n.z) - 2, 4, 4);
+    const ob = Cutscene.objective();
+    if (ob) {
+      let ox = toX(ob.x), oy = toY(ob.z); const dx = ox - cx, dy = oy - cy, dd = Math.hypot(dx, dy), lim = MAP / 2 - 12;
+      if (dd > lim) { ox = cx + dx / dd * lim; oy = cy + dy / dd * lim; }
+      g.fillStyle = '#ffd24a'; g.beginPath(); g.moveTo(ox, oy - 7); g.lineTo(ox + 6, oy); g.lineTo(ox, oy + 7); g.lineTo(ox - 6, oy); g.closePath(); g.fill();
+      const qd = document.getElementById('qdist'); if (qd) qd.textContent = Math.round(Math.hypot(p.x - ob.x, p.z - ob.z)) + ' m to ' + ob.label;
+    } else { const qd = document.getElementById('qdist'); if (qd && qd.textContent) qd.textContent = ''; }
     // Landmarks: the fire (orange), the gate (blue), the crew (small yellow squares)
     g.fillStyle = '#ff9a3a'; g.fillRect(toX(0) - 3, toY(0) - 3, 6, 6);
     g.fillStyle = '#4aa8ff'; g.beginPath(); g.arc(toX(0), toY(-26), 5, 0, Math.PI * 2); g.fill();
@@ -50,12 +63,16 @@ const HUD = (() => {
   }
 
   function init() {
-    $('btnSound').addEventListener('click', e => e.currentTarget.classList.toggle('muted'));
+    $('btnSound').classList.toggle('muted', Sound.muted);
+    $('btnSound').addEventListener('click', e => { Sound.setMuted(!Sound.muted); e.currentTarget.classList.toggle('muted', Sound.muted); });
     $('btnMap').addEventListener('click', e => e.currentTarget.classList.toggle('on'));
   }
 
+  let zone = '';
   function update(t, p) {
     drawMap(p, t);
+    const z = p.z < World.Z0 - 1 ? 'Neon Market \u00b7 Night' : 'Neon District \u00b7 Night';             // the zone title follows the player through the gate
+    if (z !== zone) { zone = z; const el = document.querySelector('.zone span'); if (el) el.innerHTML = z.replace('\u00b7', '&middot;'); }
   }
 
   return { init, update, setPaused };

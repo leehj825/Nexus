@@ -5,7 +5,7 @@
 // or let the tour run through every move in turn. Drag to orbit, wheel to zoom, double-click to reset the camera.
 const ModelCheck = (() => {
   const $ = id => document.getElementById(id);
-  const KINDS = [['ruen', 'Ruen'], ['kyle', 'Kyle'], ['yuna', 'Yuna'], ['player', 'Jin'], ['stranger', 'Stranger'], ['husk', 'Husk']];
+  const KINDS = [['ruen', 'Ruen'], ['kyle', 'Kyle'], ['yuna', 'Yuna'], ['player', 'Jin'], ['stranger', 'Stranger'], ['husk', 'Husk'], ['brute', 'Husk Brute']];
   const SPECIAL = [['@seat', 'Seated pose'], ['@walk', 'Walk (locomotion)'], ['@run', 'Run (locomotion)']];
   // The clips, grouped for the list: first matching rule wins
   const GROUPS = [
@@ -218,6 +218,14 @@ const ModelCheck = (() => {
   function init() {
     $('btnSettings').addEventListener('click', () => { $('settings').hidden = false; });
     $('settingsClose').addEventListener('click', () => { $('settings').hidden = true; });
+    const sync = () => { $('setMusic').textContent = Sound.music ? 'On' : 'Off'; $('setSfx').textContent = Sound.fx ? 'On' : 'Off'; };
+    $('setMusic').addEventListener('click', () => { Sound.setMusic(!Sound.music); sync(); });
+    $('setSfx').addEventListener('click', () => { Sound.setSfx(!Sound.fx); sync(); });
+    const QN = { auto: 'Auto', high: 'High', low: 'Low' };
+    const syncQ = () => { $('setQuality').textContent = QN[Perf.mode()] + (Perf.mode() === 'auto' ? ' (' + Perf.name() + ')' : ''); $('setDebug').textContent = Perf.debug() ? 'On' : 'Off'; };
+    $('setQuality').addEventListener('click', () => { Perf.setMode({ auto: 'high', high: 'low', low: 'auto' }[Perf.mode()]); syncQ(); });
+    $('setDebug').addEventListener('click', () => { Perf.setDebug(!Perf.debug()); syncQ(); });
+    $('btnSettings').addEventListener('click', () => { sync(); syncQ(); }); sync(); syncQ();
     $('openModelCheck').addEventListener('click', () => { $('settings').hidden = true; show(); });
   }
 

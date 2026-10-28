@@ -118,7 +118,7 @@ const Camp = (() => {
       const rig = Chars.create(s.who);
       rig.seatH = s.h;
       seat(root, s, rig);
-      crew.push({ name: s.who, rig });
+      crew.push({ name: s.who, rig, mode: 'seated', seat: s });
     }
     // The bystander on the right of the stall, standing a little apart from the fire
     const stranger = Chars.create('stranger');
@@ -129,13 +129,23 @@ const Camp = (() => {
     return root;
   }
 
+  // Scrap that the world's chunks drop in the streets: added to a chunk's group (world coordinates) and removed when it unloads.
+  // key names it, so a part that was picked up does not come back when the chunk loads again.
+  let scrapMat = null;
+  function addScrap(group, x, z, key) {
+    scrapMat = scrapMat || new THREE.MeshStandardMaterial({ color: 0x0b2a30, emissive: 0x3ff0ff, emissiveIntensity: 1.4, roughness: 0.4, flatShading: true });
+    const mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), scrapMat); mesh.position.set(x, 0.4, z); group.add(mesh);
+    const h = { x, z, mesh, taken: false, phase: Math.random() * Math.PI * 2, key, group }; scrap.push(h); return h;
+  }
+  function dropScrap(h) { const i = scrap.indexOf(h); if (i >= 0) scrap.splice(i, 1); h.group.remove(h.mesh); h.mesh.geometry.dispose(); }
+
   // Scrap: spin and bob, and take any that the avatar walks over
   function collectScrap(t, dt, p) {
     for (const s of scrap) {
       if (s.taken) continue;
       s.mesh.position.y = 0.4 + Math.sin(t * 3 + s.phase) * 0.06;
       s.mesh.rotation.y += dt * 1.5;
-      if (Math.hypot(p.x - s.x, p.z - s.z) < PICK_R) { s.taken = true; s.mesh.visible = false; parts += 1; }
+      if (Math.hypot(p.x - s.x, p.z - s.z) < PICK_R) { s.taken = true; s.mesh.visible = false; parts += 1; Sound.sfx('pickup'); if (s.key && typeof World !== 'undefined') World.markTaken(s.key); }
     }
   }
 
@@ -151,6 +161,58 @@ const Camp = (() => {
     return UPGRADES.some(u => u.who === who && owned.has(u.id)) ? UPGRADE_MULT : 1;
   }
   const nearFire = p => Math.hypot(p.x, p.z) < FIRE_R;
+
+  // ---------------- The crew follow the avatar once it leaves the camp ----------------
+  // seated -> follow (the avatar is more than LEAVE_R from the fire) -> returning (it is back within BACK_R) -> seated again at their seat.
+  // Followers keep a loose formation behind and beside the avatar, walking or running to keep up, and are kept out of walls like the avatar.
+  const LEAVE_R = 9, BACK_R = 5, FORM = { ruen: [0.0, -2.4], kyle: [-1.5, -1.5], yuna: [1.5, -1.5] };
+  const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
+  function stepTo(c, tx, tz, dt, run) {
+    const p = c.rig.root.position, dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz);
+    let v = 0;
+    if (d > 0.25) {
+      v = Math.min(run ? 4.4 : 2.3, 0.6 + d * 1.6); const k = Math.min(1, v * dt / d);
+      const n = Player.collidePoint(p.x + dx * k, p.z + dz * k); p.x = n.x; p.z = n.z;
+      const want = Math.atan2(dx, dz); c.rig.root.rotation.y += wrap(want - c.rig.root.rotation.y) * Math.min(1, dt * 9);
+    }
+    return { v, d };
+  }
+  function crewMove(c, dt, av) {
+    const rig = c.rig; if (rig.combat || c.name === 'stranger') return null;
+    if (c.mode === 'scene') return 0;
+    const away = Math.hypot(av.x, av.z), busy = Cutscene.active();
+    if (c.mode === 'seated' && away > LEAVE_R && !busy) { c.mode = 'follow'; rig.kind = 'stand'; rig.hips.position.y = rig.hipsRest; }
+    else if (c.mode === 'follow' && away < BACK_R) c.mode = 'returning';
+    else if (c.mode === 'returning' && away > LEAVE_R) c.mode = 'follow';
+    if (c.mode === 'follow') {
+      const f = FORM[c.name] || [0, -2], h = av.heading, sx = Math.sin(h), sz = Math.cos(h), rx = Math.cos(h), rz = -Math.sin(h);
+      const tx = av.x + sx * f[1] + rx * f[0], tz = av.z + sz * f[1] + rz * f[0];
+      const r = stepTo(c, tx, tz, dt, Math.hypot(tx - rig.root.position.x, tz - rig.root.position.z) > 3.5 || av.speed > 3.2);
+      if (r.v === 0) rig.root.rotation.y += wrap(h - rig.root.rotation.y) * Math.min(1, dt * 4);     // standing still: face where the avatar faces
+      return r.v;
+    }
+    if (c.mode === 'returning') {
+      const r = stepTo(c, c.seat.x, c.seat.z, dt, false);
+      if (r.d <= 1.15) { c.mode = 'seated'; rig.kind = 'seated'; rig.root.position.set(c.seat.x, 0, c.seat.z); faceFire(rig.root, c.seat.x, c.seat.z); rig.seatH = c.seat.h; return 0; }   // the seat's own collider holds them just short, so close enough sits
+      return r.v;
+    }
+    return 0;
+  }
+  // A place scene: the crew gather round (x, z), standing and facing `facing`; held in 'scene' mode until the scene ends
+  function gatherAt(x, z, facing) {
+    const off = { ruen: [-1.8, 1.5], kyle: [1.8, 1.5], yuna: [0, 3.0] };
+    for (const c of crew) if (off[c.name]) {
+      c.mode = 'scene'; c.rig.kind = 'stand'; c.rig.hips.position.y = c.rig.hipsRest;
+      const n = Player.collidePoint(x + off[c.name][0], z + off[c.name][1]); c.rig.root.position.set(n.x, 0, n.z); c.rig.root.rotation.y = facing;
+    }
+  }
+  function release() { for (const c of crew) if (c.mode === 'scene') c.mode = 'follow'; }
+  // Seats everyone at once (a cutscene at the fire starts with the crew where the story expects them)
+  function seatAll() {
+    for (const c of crew) if (c.seat) { c.mode = 'seated'; c.rig.kind = 'seated'; c.rig.root.position.set(c.seat.x, 0, c.seat.z); faceFire(c.rig.root, c.seat.x, c.seat.z); c.rig.seatH = c.seat.h; }
+  }
+  // After a battle: a crew member goes back to being seated or following, as they were
+  function afterBattle(rig) { const c = crew.find(q => q.rig === rig); if (c) rig.kind = c.mode === 'seated' ? 'seated' : 'stand'; }
 
   // Flicker the flames and the light, rise the embers, and pose the crew
   function update(t, dt) {
@@ -170,12 +232,13 @@ const Camp = (() => {
       if (pos[i * 3 + 1] > 4.4) respawn(pos, vel, life, i, false);
     }
     embers.geometry.attributes.position.needsUpdate = true;
-    for (const c of crew) if (!c.rig.combat) Chars.update(c.rig, t, dt, 0);   // Combat poses the crew during a battle
+    const av = Player.state();
+    for (const c of crew) if (!c.rig.combat) Chars.update(c.rig, t, dt, crewMove(c, dt, av) || 0);   // Combat poses the crew during a battle
   }
 
   return {
     build, update, crew, colliders, SEATS,
-    UPGRADES, buy, damageMult, nearFire, FIRE_R,
+    UPGRADES, buy, damageMult, nearFire, FIRE_R, addScrap, dropScrap, seatAll, gatherAt, release, afterBattle, addParts: n => { parts += n; },
     isOwned: id => owned.has(id),
     get parts() { return parts; },
   };

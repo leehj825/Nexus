@@ -247,5 +247,5 @@ const City = (() => {
     }
   }
 
-  return { build, update, colliders, HALF, FAR, setGlitch, setResonance };
+  return { build, update, colliders, HALF, FAR, setGlitch, setResonance, glitch: () => glitchK };
 })();

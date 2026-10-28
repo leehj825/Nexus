@@ -81,15 +81,18 @@ const Player = (() => {
     marker.position.set(goal.x, 0.03, goal.z); marker.visible = true;
   }
 
-  // Keeps the avatar inside the alley and out of the props
+  // Keeps the avatar inside the alley (or the world beyond its gate) and out of the props. The alley is narrower than the world, and
+  // the gate between them is a doorway: the allowed half-width closes in toward it and opens out again on the far side.
   function collide(x, z) {
-    const b = City.HALF - 0.9;
-    x = clamp(x, -b, b);
-    z = clamp(z, City.FAR + 4, 9);
+    const b = City.HALF - 0.9, gz = City.FAR, gate = 3.2;
+    const half = z > gz + 6 ? b : z > gz + 2 ? b + (gate - b) * (gz + 6 - z) / 4 : z > gz - 4.5 ? gate : z > gz - 8 ? gate + (World.HALF_X - gate) * (gz - 4.5 - z) / 3.5 : World.HALF_X;
+    x = clamp(x, -half, half);
+    z = clamp(z, World.MIN_Z, 9);
     for (const c of [...Camp.colliders, ...City.colliders]) {
       const dx = x - c.x, dz = z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.35;
       if (d < min && d > 0.0001) { x = c.x + dx / d * min; z = c.z + dz / d * min; }
     }
+    if (z < gz + 8) { const w = World.collide(x, z); x = w.x; z = w.z; }
     return { x, z };
   }
 
@@ -104,11 +107,13 @@ const Player = (() => {
   // A scripted walk (cutscenes): the avatar walks to (x, z) on its own, then turns to face `heading`. Pass null to hand control back.
   let script = null;
   function scriptTo(x, z, h) { script = x === null ? null : { x, z, h }; if (script) { goal = null; marker.visible = false; } }
+  function teleport(x, z) { pos.x = x; pos.z = z; goal = null; marker.visible = false; }     // for scripted placement and debugging
   function setFrozen(on) { frozen = on; if (on) { goal = null; marker.visible = false; for (const k in keys) keys[k] = false; } }
 
   function update(t, dt) {
     // Camera: the reference pose, eased toward the avatar's walk, turned by the look yaw around the look point
-    look.set(LOOK.x + (pos.x - START.x) * FOLLOW, LOOK.y, LOOK.z + (pos.z - START.z) * FOLLOW);
+    const away = Math.hypot(pos.x - START.x, pos.z - START.z), fol = FOLLOW + (1 - FOLLOW) * clamp((away - 6) / 14, 0, 1);      // the alley keeps its framing; out in the world the camera follows fully
+    look.set(LOOK.x + (pos.x - START.x) * fol, LOOK.y, LOOK.z + (pos.z - START.z) * fol);
     const ox = CAM.x - LOOK.x, oz = CAM.z - LOOK.z;
     camPos.set(look.x + ox * Math.cos(yaw) + oz * Math.sin(yaw), CAM.y - pitch * 2.5, look.z - ox * Math.sin(yaw) + oz * Math.cos(yaw));
 
@@ -155,5 +160,5 @@ const Player = (() => {
 
   function state() { return { x: pos.x, z: pos.z, heading, speed, moving: speed > 0.1 }; }
 
-  return { init, update, applyCamera, state, exploreView, setFrozen, scriptTo, rig };
+  return { init, update, applyCamera, state, exploreView, setFrozen, scriptTo, teleport, collidePoint: (x, z) => collide(x, z), rig };
 })();

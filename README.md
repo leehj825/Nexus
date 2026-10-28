@@ -46,6 +46,7 @@ vendor/             three.js r128 (core and bloom addons) and its licence
 js/textures.js      canvas-drawn LED signs, portal face, glows, awning stripes
 js/anims.js          motion-capture clips (Mixamo, retargeted to this rig; copied from Deepward), read-only data
 js/mocap.js         plays the clips on the rigs: quaternion slerp between frames, pelvis height and forward shift
+js/world.js         the Neon Market beyond the gate: a 224 m district streamed in 32 m chunks (blocks, market plazas, container yards, a tower), with its own collision, scrap and a small pool of lights that follows the nearest signs
 js/models.js        the custom crew models (js/models_data.js: the custom meshes rigged to the game joints, skinned with the weights from each file)
 js/cutscene.js      the campfire scene and Act 2's resonance scene (the Talk button at the fire plays the next one): camera shots, captions, dialogue and world effects, step by step
 js/modelcheck.js    Model Check (settings gear > Model Check): plays every clip and pose on every character, shows the joints and the wireframe
@@ -56,6 +57,9 @@ js/campui.js        the camp panel by the fire: the crafting list, the Camp butt
 js/player.js        the avatar, WASD movement, collisions and the reference camera
 js/hud.js           status, minimap and buttons
 js/combat.js        battle: the ATB encounter (the avatar included), the camera transition, the crew mechanics and husk AI
+js/sound.js         generative synthwave score (explore, market, battle and scene moods) and sound effects, all Web Audio
+js/fx.js            additive-sprite effects: hit sparks, projectiles, novas, shields, dissolves
+js/perf.js          the debug overlay and adaptive quality
 js/main.js          renderer, scene, and the frame loop
 ```
 
@@ -63,6 +67,14 @@ Coordinates: feet at y = 0, the fire at the origin, the alley running along z wi
 
 ## Roadmap
 
-- **Phase 1, Foundation:** done. Flat-shaded low-poly pipeline with neon lights and bloom; WASD, tap-to-walk and a high-angle camera.
-- **Phase 2, Combat:** in progress. Battle encounters from the alley (press E or tap Engage near the husks), with the camera transition to the battle angle, the ATB gauges, Ruen's dual-gauge Data Burst, Kyle's Guard and Intercept, Yuna's fast gauge and Stagger, and husk AI with telegraphed Crush attacks.
-- **Phase 3, World:** in progress. Done: the camp's safe-zone panel. Scrap in the alley pays for weapon upgrades (Data-Orb Core, Kinetic Gauntlet, Tuned Blasters, each +25% damage in battle). Next: chunk loading and the first two zones.
+See `Development Roadmap.md` for the full status, and `Enemies.md` for the enemy designs by story scene. In short:
+
+- **Phase 1, Foundation:** done.
+- **Phase 2, Combat:** the ATB system, all four crew mechanics, melee strikes for Jin and Kyle, and battles that start anywhere (husk patrols in the Market) are in. Next: more enemy types (see `Enemies.md`).
+- **Phase 3, World:** the camp and the Neon Market (a 224 m district streamed in chunks, with landmarks, NPCs and shops) are in, and the crew follow the avatar.
+- **Phase 4, Story and polish:** the campfire, resonance, arrival, tower and revelation scenes play with gesturing characters, triggered by the place you stand in, with an objective marker on the map. Synthesized music and sound effects and attack effects are in. A debug overlay and adaptive quality are in. Next: the Industrial Hub, Act 3, props for the new models.
+- **Phase 5, Deployment:** not started.
+
+### Debug and quality
+
+Settings (the gear) has **Quality** (Auto, High, Low) and **Debug**. Debug, or the backtick key, or `?debug` in the address, shows frame rate, draw calls, triangles, memory, loaded chunks and the ATB gauges, and draws the chunk borders (cyan), the aggro radius of patrols (red) and the engage radius (yellow) in the world. Auto lowers the pixel ratio, the bloom, the sign lights and the load radius if the frame rate stays under about 38 fps, and raises them again after a long steady 60.
