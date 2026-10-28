@@ -309,7 +309,7 @@ const Combat = (() => {
     phase = 'enter'; phaseT = 0; resetView();
     Player.setFrozen(true);
     for (const u of party) {
-      u.rush = null; u.hp = u.hpMax; u.alive = true; u.ready = false; u.atb = rand(0, 0.3); u.guard = 0; u.brace = 0;
+      u.rush = null; u.alive = u.hp > 0; u.ready = false; u.atb = rand(0, 0.3); u.guard = 0; u.brace = 0;
       u.home = { x: u.rig.root.position.x, z: u.rig.root.position.z, ry: u.rig.root.rotation.y };   // where the avatar stands now
       u.rig.combat = true; u.rig.kind = 'stand'; u.rig.clip = null; u.rig.idleClip = u.rig.loco.battle;
       u.from = u.rig.root.position.clone(); u.rig.root.rotation.set(0, Math.PI + stage.th, 0);
@@ -334,6 +334,9 @@ const Combat = (() => {
     ui.banner.textContent = text; ui.banner.hidden = false; Sound.sfx(text === 'Cleared' ? 'win' : 'lose');
   }
 
+  // Rest: everyone back to full health, the fallen included
+  function restAll() { for (const u of party) { u.hp = u.hpMax; u.alive = true; } }
+
   function startLeave() {
     phase = 'leave'; phaseT = 0; ui.banner.hidden = true;
     for (const u of [...party, ...foes]) { clearWind(u); u.rush = null; u.from = u.rig.root.position.clone(); }
@@ -349,7 +352,8 @@ const Combat = (() => {
       u.rig.root.rotation.set(0, u.home.ry, 0); u.rig.root.position.y = 0;
       u.rig.root.position.set(u.home.x, 0, u.home.z);
     }
-    const won = foes.every(f => !f.alive);
+    const won = foes.every(f => !f.alive), lost = party.every(u => !u.alive);
+    for (const u of party) u.hp = u.hp <= 0 ? (won ? Math.round(u.hpMax * 0.3) : 0) : Math.min(u.hpMax, u.hp + (won ? Math.round(u.hpMax * 0.3) : 0));       // a win patches everyone up a little and gets the fallen on their feet
     for (const f of foes) {
       f.rig.combat = false; f.rig.clip = null;
       f.rig.root.rotation.set(0, 0, 0); f.rig.root.position.set(f.home.x, 0, f.home.z);
@@ -367,7 +371,7 @@ const Combat = (() => {
     }
     aggroCd = 5; cur = null; foes = [];
     Player.setFrozen(false);
-    Save.save();
+    if (lost) { Camp.wake(); log('The crew come to at camp.'); } else Save.save();
   }
 
   function blend() {
@@ -568,5 +572,7 @@ const Combat = (() => {
     ui.actions.hidden = !who || phase !== 'battle';
   }
 
-  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone }), setState(d) { if (d.alley && !alleyDone) { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); } }, debugClearAlley: () => { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); }, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
+  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone, hp: party.map(u => [u.id, Math.round(u.hp)]) }), restAll, partyInfo: () => party.map(u => ({ id: u.id, name: u.name, hp: u.hp, hpMax: u.hpMax })), setState(d) {
+    for (const [id, hp] of d.hp || []) { const u = party.find(q => q.id === id); if (u) { u.hp = hp; u.alive = hp > 0; } }
+     if (d.alley && !alleyDone) { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); } }, debugClearAlley: () => { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); }, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
 })();

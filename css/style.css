@@ -195,3 +195,9 @@ body.cutscene #hud, body.cutscene #labels { display: none; }
 .title-box button:hover { border-color: var(--gold); }
 .title-box button[hidden], .title-info[hidden] { display: none; }
 .title-info { margin: -4px 0 14px; color: var(--dim); font-size: 12px; }
+
+.fade { position: fixed; inset: 0; z-index: 25; background: #000; opacity: 0; pointer-events: none; transition: opacity 0.4s; }
+.fade.on { opacity: 1; pointer-events: auto; }
+
+.camp-sub { margin: 14px 0 6px; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.camp-sub[hidden] { display: none; }

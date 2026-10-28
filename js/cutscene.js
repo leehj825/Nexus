@@ -128,6 +128,45 @@ const Cutscene = (() => {
     { shot: 'who', who: 'jin', mood: 'firm', fx: { aim: false, glitch: 0, resonance: 0.4 }, text: 'Then that is our road. We rest, we gather ourselves, and then we ride it to the top.' },
     { shot: 'point', look: [World.FOUNDRY.x, 18, World.FOUNDRY.z - 22], caption: 'The lift to the Corporate Spire waits in the dark.\n\nEnd of Act 2. Act 3, the Spire, comes next.' },
   ];
+  // ---------------- Camp skits: one short scene the first time the crew rest at each camp. Finishing one deepens the bonds it names ----------------
+  const SKITS = {
+    market: {
+      bonds: [['ruen', 'kyle', 2], ['ruen', 'yuna', 1]],
+      steps: [
+        { shot: 'wide', caption: 'Neon Market \u00b7 The plaza camp\nA barrel of burning scrap between two dead stalls. For the first time since the alley, nobody is running.' },
+        { shot: 'who', who: 'ruen', mood: 'worry', note: 'Watching the empty stalls.', text: 'Those husks. Mox said they used to be somebody\'s neighbours. What if I know one of them and can\'t tell?' },
+        { shot: 'who', who: 'kyle', mood: 'nod', text: 'Then you remember them as they were. That\'s all any of us can do. And you keep walking, because stopping doesn\'t bring them back.' },
+        { shot: 'who', who: 'yuna', mood: 'firm', note: 'Checking a magazine, not looking up.', text: 'It\'s also all they\'d want, Ruen. Nobody wants to be mourned in the street while the thing that did it is still running.' },
+        { shot: 'who', who: 'ruen', mood: 'nod', text: '...You two are terrible at comforting people, you know. Thank you.' },
+        { shot: 'who', who: 'jin', mood: 'firm', text: 'Rest while it\'s quiet. We climb at first light.' },
+      ],
+    },
+    hub: {
+      bonds: [['you', 'yuna', 2], ['kyle', 'yuna', 1]],
+      steps: [
+        { shot: 'wide', caption: 'The Hub checkpoint\nThe gate drones hang silent overhead. Their lenses follow the crew without ever quite landing on them.' },
+        { shot: 'who', who: 'yuna', mood: 'think', note: 'Looking up at the nearest drone.', text: 'I used to work on those. Sector patrols, two years of them, before I knew what the logs were hiding.' },
+        { shot: 'who', who: 'jin', mood: 'alert', text: 'You never told us that.' },
+        { shot: 'who', who: 'yuna', mood: 'firm', text: 'You never asked. And I didn\'t want to be the one who spent every night wondering what I helped build.' },
+        { shot: 'who', who: 'kyle', mood: 'nod', text: 'Then you know how they think. That makes you the most useful person here.' },
+        { shot: 'who', who: 'jin', mood: 'nod', text: 'It does. Whatever you carry, you don\'t carry it alone. That goes for all of us.' },
+        { shot: 'who', who: 'yuna', mood: 'talk', text: '...Fine. But if the drones wake, I\'m choosing which one to shoot first.' },
+      ],
+    },
+    foundry: {
+      bonds: [['you', 'kyle', 2], ['you', 'ruen', 1]],
+      steps: [
+        { shot: 'wide', caption: 'The Foundry plaza\nThe furnace breathes behind the wall. The crew take a last quiet breath before whatever waits inside.' },
+        { shot: 'who', who: 'kyle', mood: 'think', note: 'Tightening a strap on his gauntlet.', text: 'Back in the old days we planned for the job. Now we plan for whatever the job turns into.' },
+        { shot: 'who', who: 'jin', mood: 'nod', text: 'It never turned into this before. But I\'d still pick the same four people.' },
+        { shot: 'who', who: 'kyle', mood: 'firm', text: 'So would I. Whatever comes out of that door, you take the lead and I\'ll hold the line. Same as always.' },
+        { shot: 'who', who: 'ruen', mood: 'alert', note: 'Her orb glowing steadily.', text: 'It\'s strong in there. But I feel steady. I feel... like I\'m not the only one holding the rope.' },
+        { shot: 'who', who: 'jin', mood: 'firm', text: 'You aren\'t. Let\'s go.' },
+      ],
+    },
+  };
+  const bondUp = list => { if (typeof Growth !== 'undefined') for (const [a, b, n] of list) Growth.addBond(a, b, n); };
+
   const moodOf = st => st.mood || 'talk';
   const typed = () => steps && steps[i] ? (steps[i].text || steps[i].caption || steps[i].note || '') : '';
 
@@ -293,13 +332,16 @@ const Cutscene = (() => {
   // What the interact button does right now: the story at the fire, or a chat with someone close by
   function interactable() {
     const p = Player.state();
-    if (Camp.nearFire(p)) return { kind: 'story', label: LABEL[Math.min(stage, 2)] };
+    const camp = Camp.nearCamp(p);
+    if (camp === 'fire') return { kind: 'story', label: LABEL[Math.min(stage, 2)] };
+    if (camp && SKITS[camp] && !Camp.skitSeen(camp)) return { kind: 'skit', id: camp, label: 'Talk' };
     const n = World.nearNpc(p, 2.8); return n ? { kind: 'npc', npc: n, label: n.shop ? 'Trade \u00b7 ' + n.name : 'Talk \u00b7 ' + n.name } : null;
   }
   function start() {
     if (active || Combat.active()) return;
     const it = interactable(); if (!it) return;
     if (it.kind === 'npc') return chat(it.npc);
+    if (it.kind === 'skit') { Camp.markSkit(it.id); Camp.rest(it.id); return begin(SKITS[it.id].steps, () => { bondUp(SKITS[it.id].bonds); Save.save(); }, { anchor: 'here' }); }
     if (stage === 0) begin(CAMPFIRE, () => setStage(1));
     else begin(RESONANCE, () => { if (stage < 2) setStage(2); });
   }

@@ -160,7 +160,39 @@ const Camp = (() => {
   function damageMult(who) {
     return UPGRADES.some(u => u.who === who && owned.has(u.id)) ? UPGRADE_MULT : 1;
   }
-  const nearFire = p => Math.hypot(p.x, p.z) < FIRE_R;
+  // Camps: the alley's fire and the ones in the districts (World.SITES). Found by walking up to them; resting there heals the crew and saves.
+  const found = new Set(['fire']), skits = new Set(); let lastCamp = 'fire';
+  const SITE_R = 3.6;
+  const siteList = () => [{ id: 'fire', name: 'The Underbelly fire', x: 0, z: 0 }, ...Object.entries(World.SITES).map(([id, s]) => ({ id, name: s.name, x: s.x, z: s.z }))];
+  function nearCamp(p) {
+    if (Math.hypot(p.x, p.z) < FIRE_R) return 'fire';
+    for (const s of siteList()) if (s.id !== 'fire' && Math.hypot(p.x - s.x, p.z - s.z) < SITE_R) return s.id;
+    return null;
+  }
+  const nearFire = p => nearCamp(p) !== null;
+  const discover = id => { if (!found.has(id)) { found.add(id); return true; } return false; };
+  // Where the crew stand when they arrive at a camp (travel, or waking after a defeat)
+  const campSpot = id => { const s = siteList().find(q => q.id === id); return id === 'fire' ? { x: -2.4, z: 2.4 } : { x: s.x, z: s.z + 3.0 }; };
+  let fadeEl = null;
+  function fadeThen(cb) {                                          // a short fade to black and back around a jump
+    if (!fadeEl) { fadeEl = document.createElement('div'); fadeEl.className = 'fade'; document.body.appendChild(fadeEl); }
+    fadeEl.classList.add('on');
+    setTimeout(() => { cb(); setTimeout(() => fadeEl.classList.remove('on'), 150); }, 450);
+  }
+  function arriveAt(id) {
+    const sp = campSpot(id), n = Player.collidePoint(sp.x, sp.z);
+    Player.teleport(n.x, n.z); Player.faceTowards(id === 'fire' ? 0 : siteList().find(q => q.id === id).x, id === 'fire' ? 0 : siteList().find(q => q.id === id).z);
+    Camp.restoreCrew(Player.state());
+  }
+  // Resting at a camp (opening its menu): the crew are healed, the camp becomes the place they wake at, and the game saves
+  function rest(id) {
+    if (!id) return;
+    discover(id); lastCamp = id; Combat.restAll(); Save.save();
+    const toast = document.getElementById('toast'); if (toast) { toast.textContent = 'The crew rest. Everyone is back on their feet.'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+    Sound.sfx('quest');
+  }
+  function travel(id) { if (!found.has(id)) return; lastCamp = id; fadeThen(() => { arriveAt(id); Save.save(); }); }
+  function wake() { fadeThen(() => { arriveAt(lastCamp); Combat.restAll(); Save.save(); }); }
 
   // ---------------- The crew follow the avatar once it leaves the camp ----------------
   // seated -> follow (the avatar is more than LEAVE_R from the fire) -> returning (it is back within BACK_R) -> seated again at their seat.
@@ -238,11 +270,13 @@ const Camp = (() => {
 
   return {
     build, update, crew, colliders, SEATS,
-    UPGRADES, buy, damageMult, nearFire, FIRE_R, addScrap, dropScrap, seatAll, gatherAt, release, afterBattle, addParts: n => { parts += n; },
+    UPGRADES, buy, damageMult, nearFire, nearCamp, rest, siteList, discover, travel, wake, fadeThen, FIRE_R,
+    found: () => [...found], lastCamp: () => lastCamp, setLast: id => { lastCamp = id; }, skitSeen: id => skits.has(id), markSkit: id => skits.add(id), addScrap, dropScrap, seatAll, gatherAt, release, afterBattle, addParts: n => { parts += n; },
     isOwned: id => owned.has(id),
-    getState: () => ({ parts, owned: [...owned] }),
+    getState: () => ({ parts, owned: [...owned], found: [...found], last: lastCamp, skits: [...skits] }),
     setState(d) {
       parts = d.parts || 0; owned.clear(); (d.owned || []).forEach(id => owned.add(id));
+      found.clear(); found.add('fire'); (d.found || []).forEach(id => found.add(id)); lastCamp = d.last || 'fire'; skits.clear(); (d.skits || []).forEach(id => skits.add(id));
       for (const s of scrap) if (s.key && s.key[0] === 'a' && World.isTaken(s.key)) { s.taken = true; s.mesh.visible = false; }       // the alley's scrap that was already picked up
     },
     // After a load: the crew sit at the fire if the avatar is near it, otherwise they are following the avatar

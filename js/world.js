@@ -122,6 +122,16 @@ const World = (() => {
     };
     const solid = (x, z, hw, hd) => ch.boxes.push({ x, z, hw, hd });
     const post = (x, z, rr) => ch.circles.push({ x, z, r: rr });
+    // A camp: a burning barrel with a ring of stones and two seats. The crew rest here, craft, and can travel between camps.
+    const campProp = (x, z, id) => {
+      tube(g, 0.45, 1.0, mat(0x2a3b44, { metalness: 0.4 }), x, 0.5, z); post(x, z, 0.65);
+      for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; box(g, 0.32, 0.2, 0.32, mat(0x2a2d33), x + Math.cos(a) * 0.85, 0.1, z + Math.sin(a) * 0.85, a); }
+      for (const sx of [-1, 1]) box(g, 0.5, 0.45, 1.6, mat(0x3a2f26), x + sx * 1.9, 0.22, z + 0.2);
+      ch.flames = ch.flames || [];
+      for (let i = 0; i < 3; i++) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.22 - i * 0.04, 0.7 + i * 0.1, 5), emis(i ? 0xffc36a : 0xff7a2a, 2.2)); f.position.set(x + (i - 1) * 0.12, 1.3, z + (i % 2 ? 0.08 : -0.08)); g.add(f); ch.flames.push({ m: f, base: 1.3, ph: i * 1.9 }); }
+      ch.signs.push({ x, y: 1.8, z, c: 0xff8a3a });
+      ch.camp = { id, x, z };
+    };
 
     // A tall building: a main mass and sometimes a setback above it, with windows, a neon trim at street level and rooftop clutter
     const tower = (x, z, w, d, h, signs = 2) => {
@@ -196,6 +206,7 @@ const World = (() => {
         if (rnd() < 0.55 && ch.npcs.length < 3) makeNpc(ch, rnd, sx, sz - face * 1.15, face > 0 ? 0 : Math.PI, true);          // a vendor behind the counter
       }
       for (let i = 0; i < 5; i++) clutter(X + (rnd() - 0.5) * (CH - 6), Z + (rnd() - 0.5) * (CH - 6));
+      if (kind === 'plaza') campProp(X + 7, Z + 0.5, 'market');
       if (kind === 'plaza') {                                                       // the gate square: a holo-pillar in the middle, and the market's name over the way in
         tube(g, 0.5, 7, emis(0x3ff0ff, 1.1), X, 3.5, Z); post(X, Z, 0.9);
         for (let i = 0; i < 3; i++) { const t = new THREE.Mesh(new THREE.TorusGeometry(1.0 + i * 0.35, 0.05, 6, 28), emis(i % 2 ? 0xff3fb4 : 0x3ff0ff, 1.6)); t.rotation.x = Math.PI / 2; t.position.set(X, 1.6 + i * 1.8, Z); g.add(t); ch.spin.push(t); }
@@ -223,9 +234,8 @@ const World = (() => {
         ch.spin.push(tubeSolid(g, 0.75, 0.16, mat(0xd8dee6, { metalness: 0.4, roughness: 0.5 }), X + dx, dy, Z + dz));
         box(g, 0.34, 0.2, 0.34, emis(0x3ff0ff, 2.2), X + dx, dy - 0.2, Z + dz);
       }
-      tube(g, 0.4, 0.9, mat(0x2a3b44, { metalness: 0.4 }), X - 11, 0.45, Z + 10); tube(g, 0.3, 0.06, emis(0xff7a2a, 1.6), X - 11, 0.92, Z + 10); post(X - 11, Z + 10, 0.5);     // a lit barrel
-      ch.signs.push({ x: X - 11, y: 1.6, z: Z + 10, c: 0xff7a2a });
-      makeNpc(ch, rnd, X - 9.4, Z + 10.4, -Math.PI / 2, false).hub = true;
+      campProp(X - 11, Z + 10, 'hub');                                                       // the Hub's camp, by the checkpoint
+      makeNpc(ch, rnd, X - 14.2, Z + 10.4, Math.PI / 2, false).hub = true;
       for (let i = 0; i < 4; i++) clutter(X + (rnd() < 0.5 ? -1 : 1) * (9 + rnd() * 5), Z + (rnd() - 0.5) * 26);
       dropScrap(3, () => [X + (rnd() - 0.5) * 24, Z + 8 + rnd() * 6]);
     } else if (kind === 'factory') {                                                    // a low, wide works with stacks, pipe runs and orange lights
@@ -317,6 +327,7 @@ const World = (() => {
         const rig = Chars.create('loader'); rig.root.position.set(X, 0, bz - 3); rig.root.rotation.y = 0; g.add(rig.root);
         ch.pack = Combat.register({ id: 'boss', x: X, z: bz - 3, rigs: [rig], tier: 0, aggro: bossArmed, aggroR: 13, radius: 10, boss: true, text: 'The Loader Mech lurches to life!', onClear: () => { bossDown = true; } });
       }
+      campProp(X - 8, Z + 15, 'foundry');
       ch.hall = { x: X, z: bz, hw: w / 2 - 1.2, hd: d / 2 - 1.2, front };
       dropScrap(3, () => [X + (rnd() - 0.5) * 20, front + 4 + rnd() * 8]);
     } else {                                                                         // yard: containers, crates, barrels and a few fires
@@ -435,6 +446,7 @@ const World = (() => {
     if (!Combat.active()) for (const ch of [...chunks.values()]) if (Math.max(Math.abs(p.x - ch.X), Math.abs(p.z - ch.Z)) > DROP) drop(ch);
     for (const ch of chunks.values()) {
       for (const s of ch.spin) s.rotation.y += dt * 0.8;
+      if (ch.flames) for (const f of ch.flames) { const k = 0.85 + 0.25 * Math.sin(t * 9 + f.ph) * Math.sin(t * 4.3 + f.ph * 0.7); f.m.scale.set(1, k, 1); f.m.position.y = f.base + (k - 1) * 0.2; }
       if (ch.node) {                                                                    // access nodes show once the story asks for them, and are picked up by walking close
         const on = typeof Cutscene !== 'undefined' && Cutscene.stage() >= 8 && !nodesTaken.has(ch.key);
         ch.node.group.visible = on;
@@ -481,6 +493,8 @@ const World = (() => {
     }
     return best;
   }
+  // The camps out in the districts (the alley's fire is in camp.js): where they are, known from the grid even when their chunk is not loaded
+  const SITES = { market: { name: 'Market plaza', x: 7, z: Z0 - CH * 0.5 + 0.5 }, hub: { name: 'Hub checkpoint', x: -11, z: GATE.z + 10 }, foundry: { name: 'Foundry plaza', x: -8, z: FOUNDRY.z } };
   const coreAt = () => { for (const ch of chunks.values()) if (ch.core) return ch.core; return null; };
 
   // Quality levels 0 (full) to 2 (lean): fewer sign lights and a shorter load radius
@@ -532,5 +546,5 @@ const World = (() => {
   const allNpcs = () => { const out = []; for (const ch of chunks.values()) for (const n of ch.npcs) out.push(n); return out; };
   function nearNpc(p, r) { let best = null, bd = r; for (const n of allNpcs()) { const d = Math.hypot(p.x - n.x, p.z - n.z); if (d < bd) { bd = d; best = n; } } return best; }
 
-  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, GATE, FOUNDRY, HUB_Z, getState, setState, isTaken: k => taken.has(k), openShutter, armBoss, nextNode, coreAt, nodeCount: () => nodesTaken.size, bossDown: () => bossDown, shutterOpen: () => shutterOpen, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
+  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, GATE, FOUNDRY, HUB_Z, SITES, getState, setState, isTaken: k => taken.has(k), openShutter, armBoss, nextNode, coreAt, nodeCount: () => nodesTaken.size, bossDown: () => bossDown, shutterOpen: () => shutterOpen, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
 })();

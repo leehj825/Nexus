@@ -7,7 +7,7 @@ const CampUI = (() => {
   let shop = false, open = false, shown = '', seen = 0, toastTimer = 0;
 
   // Everything the list shows, as one string, so the list is only rebuilt when something in it changes
-  const stateKey = () => Camp.parts + '|' + Camp.UPGRADES.map(u => (Camp.isOwned(u.id) ? 1 : 0)).join('');
+  const stateKey = () => Camp.found().join(',') + '|' + Camp.parts + '|' + Camp.UPGRADES.map(u => (Camp.isOwned(u.id) ? 1 : 0)).join('');
 
   function render() {
     list.textContent = '';
@@ -29,11 +29,22 @@ const CampUI = (() => {
       li.append(info, buy);
       list.append(li);
     }
+    // Fast travel: any camp that has been found, from where the crew are standing now
+    const here = Camp.nearCamp(Player.state()), tl = $('campTravel'); tl.textContent = '';
+    const dest = Camp.siteList().filter(s => Camp.found().includes(s.id) && s.id !== here);
+    $('campTravelH').hidden = tl.hidden = !dest.length || shop;
+    for (const s of dest) {
+      const li = document.createElement('li'), info = document.createElement('div'), nm = document.createElement('b'), go = document.createElement('button');
+      nm.textContent = s.name; info.append(nm); go.type = 'button'; go.textContent = 'Go';
+      go.addEventListener('click', () => { setOpen(false); Camp.travel(s.id); });
+      li.append(info, go); tl.append(li);
+    }
     shown = stateKey();
     $('campParts').textContent = Camp.parts;
   }
 
   function setOpen(on) {
+    if (on && !open) Camp.rest(Camp.nearCamp(Player.state()));          // opening the camp is resting: the crew are healed and the game saves
     open = on; if (!on) shop = false;
     panel.hidden = !on;
     Player.setFrozen(on);

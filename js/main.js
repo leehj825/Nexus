@@ -109,6 +109,8 @@
     composer.render();
     Perf.end(raw);
     Save.update(step);
+    const site = Camp.nearCamp(Player.state());
+    if (site && !Combat.active() && Camp.discover(site)) { const toast = document.getElementById('toast'), s = Camp.siteList().find(q => q.id === site); if (toast) { toast.textContent = 'Camp found: ' + s.name; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); } Sound.sfx('quest'); }
     HUD.update(t, Player.state());
     CampUI.update();
     Cutscene.updateUI(CampUI.isOpen());
