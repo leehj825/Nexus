@@ -26,6 +26,7 @@ const Cutscene = (() => {
     { shot: 'gate', caption: 'The crew douses the light and shoulders their gear. Ahead, the alley climbs toward the glow of the upper city.' },
   ];
 
+  const JIN_SPOT = [-1.0, 1.7];                                                  // where Jin stands for the scene (the others are seated round the fire)
   let steps = null, i = 0, shown = 0, active = false, ending = 0, t = 0, onDone = null, started = false;
   const pos = new THREE.Vector3(), look = new THREE.Vector3(), goalP = new THREE.Vector3(), goalL = new THREE.Vector3(), tmp = new THREE.Vector3();
   const moodOf = st => st.mood || 'talk';
@@ -36,7 +37,7 @@ const Cutscene = (() => {
     if (st.shot === 'who') {
       const c = Camp.crew.find(q => q.name === st.who), p = c ? c.rig.root.position : tmp.set(Player.state().x, 0, Player.state().z);
       const sx = p.x, sz = p.z, h = c ? 1.15 : 1.4, d = Math.hypot(sx, sz) || 1, fx = -sx / d, fz = -sz / d, rx = -fz, rz = fx;
-      goalP.set(sx + fx * 2.5 + rx * 1.3, h + 0.7, sz + fz * 2.5 + rz * 1.3);
+      goalP.set(sx - fx * 0.3 + rx * 2.5, h + 0.55, sz - fz * 0.3 + rz * 2.5);
       goalL.set(sx, h, sz);
     } else if (st.shot === 'fire') { goalP.set(1.6, 1.0, 3.6); goalL.set(0, 1.5, -0.5); }
     else if (st.shot === 'gate') { goalP.set(0.4, 2.4, 3.2); goalL.set(0, 2.0, -26); }
@@ -70,6 +71,7 @@ const Cutscene = (() => {
   function begin(list, done) {
     steps = list; i = 0; ending = 0; active = true; onDone = done || null; t = 0;
     Player.setFrozen(true);
+    Player.scriptTo(JIN_SPOT[0], JIN_SPOT[1], Math.atan2(-JIN_SPOT[0], -JIN_SPOT[1]));          // Jin takes his place by the fire, facing it
     const ex = Player.exploreView(); pos.copy(ex.pos); look.copy(ex.look);       // start the glide from where the camera is
     document.body.classList.add('cutscene'); $('dlg').hidden = false; show();
   }
@@ -90,7 +92,7 @@ const Cutscene = (() => {
     if (ending) {
       ending -= dt;
       if (ending <= 0) {
-        active = false; ending = 0; document.body.classList.remove('cutscene-out'); Player.setFrozen(false);
+        Player.scriptTo(null); active = false; ending = 0; document.body.classList.remove('cutscene-out'); Player.setFrozen(false);
         const done = onDone; onDone = null; if (done) done();
       }
       return;
