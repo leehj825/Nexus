@@ -38,7 +38,7 @@ const ModelCheck = (() => {
   function build() {
     stage();
     rigs = [];
-    for (const [kind, label] of KINDS) for (const lk of Models.has(kind) && Models.hasBuilt(kind) ? ['custom', 'built', ...(Models.hasShapes(kind) ? ['shapes'] : [])] : ['custom']) {
+    for (const [kind, label] of KINDS) for (const lk of Models.hasBuilt(kind) ? ['custom', 'built'] : ['custom']) {
       const rig = Chars.create(kind, lk); scene.add(rig.root);
       // Drawn as a person's skeleton: the collar bones run from the neck joint out to each shoulder, the spine from the pelvis
       // up through the waist to the neck (in the rig the shoulders hang off the waist joint, which is only how they are driven)
@@ -59,7 +59,7 @@ const ModelCheck = (() => {
   function groupOf(name) { for (const [g, re] of GROUPS) if (re.test(name)) return g; return 'Other'; }
 
   function layout() {
-    const wantLook = r => look === 'compare' || r.look === look || !(Models.has(r.kind) && Models.hasBuilt(r.kind));
+    const wantLook = r => look === 'compare' || r.look === look || !Models.hasBuilt(r.kind);
     const shown = rigs.filter(r => (who === 'all' || r.kind === who) && wantLook(r));
     rigs.forEach(r => { r.rig.root.visible = shown.includes(r); r.lines.visible = r.dots.visible = bones && r.rig.root.visible; });
     // in Compare each character stands twice, the custom model on the left and the box-built one on the right
@@ -122,8 +122,8 @@ const ModelCheck = (() => {
     }
   }
   function renderLook() {
-    chips($('mcLook'), [['custom', 'Custom'], ['built', 'Built'], ['shapes', 'Shapes'], ['compare', 'Compare all']], look, id => { look = id; fresh = true; layout(); start(); renderLook(); });
-    chips($('mcUse'), [['custom', 'Custom'], ['built', 'Built'], ['shapes', 'Shapes']], Models.style, id => { Models.setStyle(id); renderLook(); $('mcUseNote').textContent = 'Reload the page to use ' + (id === 'built' ? 'the box-built' : id === 'shapes' ? 'the shape-built' : 'the custom') + ' models in the game.'; });
+    chips($('mcLook'), [['custom', 'Original'], ['built', 'Low-poly'], ['compare', 'Compare']], look, id => { look = id; fresh = true; layout(); start(); renderLook(); });
+    chips($('mcUse'), [['custom', 'Original'], ['built', 'Low-poly']], Models.style, id => { Models.setStyle(id); renderLook(); $('mcUseNote').textContent = 'Reload the page to use ' + (id === 'built' ? 'the low-poly' : 'the original') + ' models in the game.'; });
   }
   function renderWho() { chips($('mcWho'), [['all', 'All'], ...KINDS], who, id => { who = id; fresh = true; layout(); start(); renderWho(); }); }
   function renderList() {

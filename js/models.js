@@ -47,12 +47,12 @@ const Models = (() => {
     return (geos[kind] = g);
   }
 
-  // Which look the characters use: 'custom' (the custom meshes, cut into rigid parts) or 'built' (the same models rebuilt from boxes).
+  // Which look the characters use: 'custom' (the custom meshes, or the original code-built figures for the Stranger and the Husks) or 'built' (the smooth low-poly versions).
   // The choice is remembered; the game reads it when it starts, Model Check can show either or both.
   let style = 'custom';
-  try { const v = localStorage.getItem('nexus.models'); if (v === 'built' || v === 'custom' || v === 'shapes') style = v; } catch (e) { /* storage can be blocked */ }
+  try { const v = localStorage.getItem('nexus.models'); if (v === 'built' || v === 'custom') style = v; } catch (e) { /* storage can be blocked */ }
   const setStyle = v => { style = v; try { localStorage.setItem('nexus.models', v); } catch (e) { /* ignore */ } };
-  const hasBuilt = kind => typeof NX_BUILT !== 'undefined' && !!NX_BUILT[kind];
+  const hasBuilt = kind => typeof NX_SMOOTH !== 'undefined' && !!NX_SMOOTH.meta[kind];
   const has = kind => !!(D && D.meta[kind]);
 
   // Builds the joint hierarchy and the skinned mesh for one character; returns the rig base { root, hips, torso, head, j, hipsRest, armFix }
@@ -64,8 +64,7 @@ const Models = (() => {
       g.position.set(w[0] - pw[0], w[1] - pw[1], w[2] - pw[2]); g.name = name;
       (p ? joints[p] : root).add(g); joints[name] = g;
     }
-    if (look === 'shapes' && hasShapes(kind)) shapeMeshes(kind, joints);
-    else if (look === 'built' && hasBuilt(kind)) builtMeshes(kind, joints);
+    if (look === 'built' && hasBuilt(kind)) builtMeshes(kind, joints);
     else {
       const mesh = new THREE.SkinnedMesh(geometry(kind), material(kind));
       mesh.frustumCulled = false;
@@ -76,84 +75,42 @@ const Models = (() => {
     for (const n of D.bones) if (n !== 'hips') c.j[n] = joints[n];
     return c;
   }
-  // The built look: for each bone, its boxes merged into one flat-shaded mesh (vertex colours), plus a second mesh for the glowing ones
-  const mixM = new THREE.Matrix4(), qq = new THREE.Quaternion(), vp = new THREE.Vector3(), vs = new THREE.Vector3();
-  let builtMat = null, glowMat = null;
+  // The built look: for each bone, one closed low-poly surface (NX_SMOOTH) with a flat colour on every triangle
+  let smoothBytes = null, builtMat = null, glowMat = null;
   const lin = v => Math.pow(v / 255, 2.2);                               // the texture's sRGB to the linear colour the lighting works in
+  const isGlow = (bone, r, g, b) => g > 190 && b > 200 && r < 110 && (bone !== 'head' || (g > 225 && b > 235 && r < 90));   // the cyan lights (a human eye is never that bright)
   function builtMeshes(kind, joints) {
-    builtMat = builtMat || new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.05, flatShading: true });
-    glowMat = glowMat || new THREE.MeshStandardMaterial({ color: 0x0a1418, emissive: 0x3ff0ff, emissiveIntensity: 1.3, roughness: 0.4, flatShading: true });   // vertex colours do not tint the emissive, so the glow is one cyan
-    const unit = new THREE.BoxGeometry(1, 1, 1);
-    const up = unit.attributes.position.array, un = unit.attributes.normal.array, ui = unit.index.array, nvU = up.length / 3;
-    for (const bone in NX_BUILT[kind]) {
-      const joint = joints[bone] || null; if (!joint) continue;
+    if (!smoothBytes) { const t = atob(NX_SMOOTH.bin); smoothBytes = new Uint8Array(t.length); for (let i = 0; i < t.length; i++) smoothBytes[i] = t.charCodeAt(i); }
+    builtMat = builtMat || new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.05, flatShading: true, side: THREE.DoubleSide });
+    glowMat = glowMat || new THREE.MeshStandardMaterial({ color: 0x0a1418, emissive: 0x3ff0ff, emissiveIntensity: 1.3, roughness: 0.4, flatShading: true });
+    const meta = NX_SMOOTH.meta[kind];
+    for (const bone in meta) {
+      const m = meta[bone], joint = joints[bone]; if (!joint) continue;
+      const base = smoothBytes.buffer.slice(m.offset, m.offset + m.nv * 6 + m.nf * 6 + m.nf * 3);
+      const pq = new Uint16Array(base, 0, m.nv * 3), fi = new Uint16Array(base, m.nv * 6, m.nf * 3), fc = new Uint8Array(base, m.nv * 6 + m.nf * 6, m.nf * 3);
       for (const glow of [false, true]) {
-        const list = NX_BUILT[kind][bone].filter(b => (b[11] > 160 && b[12] > 170 && b[10] < 140) === glow);
-        if (!list.length) continue;
-        const pos = new Float32Array(list.length * nvU * 3), nor = new Float32Array(list.length * nvU * 3), col = new Float32Array(list.length * nvU * 3);
-        const idx = new Uint32Array(list.length * ui.length); const nm = new THREE.Matrix3();
-        list.forEach((b, n) => {
-          qq.set(b[6], b[7], b[8], b[9]); vp.set(b[0], b[1], b[2]); vs.set(b[3], b[4], b[5]); mixM.compose(vp, qq, vs);
-          nm.getNormalMatrix(mixM);
-          for (let v = 0; v < nvU; v++) {
-            vp.set(up[v * 3], up[v * 3 + 1], up[v * 3 + 2]).applyMatrix4(mixM);
-            const o = (n * nvU + v) * 3; pos[o] = vp.x; pos[o + 1] = vp.y; pos[o + 2] = vp.z;
-            vp.set(un[v * 3], un[v * 3 + 1], un[v * 3 + 2]).applyMatrix3(nm).normalize(); nor[o] = vp.x; nor[o + 1] = vp.y; nor[o + 2] = vp.z;
-            col[o] = lin(b[10]); col[o + 1] = lin(b[11]); col[o + 2] = lin(b[12]);
+        const faces = [];
+        for (let f = 0; f < m.nf; f++) if (isGlow(bone, fc[f * 3], fc[f * 3 + 1], fc[f * 3 + 2]) === glow) faces.push(f);
+        if (!faces.length) continue;
+        const pos = new Float32Array(faces.length * 9), col = new Float32Array(faces.length * 9);
+        faces.forEach((f, n) => {
+          for (let k = 0; k < 3; k++) {
+            const v = fi[f * 3 + k];
+            for (let c = 0; c < 3; c++) { pos[n * 9 + k * 3 + c] = m.pmin[c] + pq[v * 3 + c] / 65535 * m.prange[c]; col[n * 9 + k * 3 + c] = lin(fc[f * 3 + c]); }
           }
-          for (let k = 0; k < ui.length; k++) idx[n * ui.length + k] = ui[k] + n * nvU;
         });
         const g = new THREE.BufferGeometry();
-        g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-        g.setIndex(new THREE.BufferAttribute(idx, 1));
+        g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+        g.computeVertexNormals();
         const mesh = new THREE.Mesh(g, glow ? glowMat : builtMat); mesh.frustumCulled = false; joint.add(mesh);
       }
     }
   }
-  // The shapes look: for each bone, large primitives (0 box, 1 cylinder, 2 triangular prism; a plane is a thin box), each with one flat colour,
-  // merged into one mesh per joint. NX_PRIMS[kind][bone] = [[type, cx, cy, cz, sx, sy, sz, qx, qy, qz, qw, r, g, b], ...]
-  let shapeMat = null, shapeGlow = null, protoGeo = null;
-  function protos() {
-    if (protoGeo) return protoGeo;
-    const box = new THREE.BoxGeometry(1, 1, 1), cyl = new THREE.CylinderGeometry(0.5, 0.5, 1, 14).rotateX(Math.PI / 2);   // axis along z
-    // right triangle in x,y (right angle at -0.5,-0.5) extruded along z
-    const tri = new THREE.BufferGeometry(), a = [-0.5, -0.5], b = [0.5, -0.5], c = [-0.5, 0.5], z = 0.5, v = [];
-    const quad = (p, q, r, s2) => v.push(...p, ...q, ...r, ...p, ...r, ...s2);
-    v.push(a[0], a[1], z, b[0], b[1], z, c[0], c[1], z, a[0], a[1], -z, c[0], c[1], -z, b[0], b[1], -z);
-    quad([a[0], a[1], -z], [b[0], b[1], -z], [b[0], b[1], z], [a[0], a[1], z]);
-    quad([b[0], b[1], -z], [c[0], c[1], -z], [c[0], c[1], z], [b[0], b[1], z]);
-    quad([c[0], c[1], -z], [a[0], a[1], -z], [a[0], a[1], z], [c[0], c[1], z]);
-    tri.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
-    const ng = g => g.index ? g.toNonIndexed() : g;
-    protoGeo = [ng(box), ng(cyl), tri];
-    return protoGeo;
+  // Swaps a code-built figure's boxes (the Stranger, the Husks) for its low-poly twin on the same joints. joints: { hips, torso, head, ... }
+  function attachBuilt(kind, root, joints) {
+    const gone = []; root.traverse(o => { if (o.isMesh) gone.push(o); });
+    for (const o of gone) { o.parent.remove(o); o.geometry.dispose(); }
+    builtMeshes(kind, joints);
   }
-  const sm = new THREE.Matrix4(), sq = new THREE.Quaternion(), sp = new THREE.Vector3(), ss = new THREE.Vector3(), sn = new THREE.Matrix3(), cA = new THREE.Vector3(), cB = new THREE.Vector3(), cC = new THREE.Vector3(), e1 = new THREE.Vector3(), e2 = new THREE.Vector3();
-  function shapeMeshes(kind, joints) {
-    shapeMat = shapeMat || new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, metalness: 0.05, flatShading: true });
-    shapeGlow = shapeGlow || new THREE.MeshStandardMaterial({ color: 0x0a1418, emissive: 0x3ff0ff, emissiveIntensity: 1.3, roughness: 0.4, flatShading: true });
-    const P = protos();
-    for (const bone in NX_PRIMS[kind]) {
-      const joint = joints[bone]; if (!joint) continue;
-      for (const glow of [false, true]) {
-        const list = NX_PRIMS[kind][bone].filter(b => (b[12] > 190 && b[13] > 200 && b[11] < 110 && bone !== 'head') === glow);
-        if (!list.length) continue;
-        let nv = 0; for (const b of list) nv += P[b[0]].attributes.position.count;
-        const pos = new Float32Array(nv * 3), col = new Float32Array(nv * 3); let o = 0;
-        for (const b of list) {
-          sq.set(b[7], b[8], b[9], b[10]); sp.set(b[1], b[2], b[3]); ss.set(b[4], b[5], b[6]); sm.compose(sp, sq, ss);
-          const src = P[b[0]].attributes.position.array, cr = lin(b[11]), cg = lin(b[12]), cb = lin(b[13]);
-          for (let i = 0; i < src.length; i += 3) {
-            sp.set(src[i], src[i + 1], src[i + 2]).applyMatrix4(sm);
-            pos[o] = sp.x; pos[o + 1] = sp.y; pos[o + 2] = sp.z; col[o] = cr; col[o + 1] = cg; col[o + 2] = cb; o += 3;
-          }
-        }
-        const g = new THREE.BufferGeometry();
-        g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.computeVertexNormals();
-        const mesh = new THREE.Mesh(g, glow ? shapeGlow : shapeMat); mesh.frustumCulled = false; joint.add(mesh);
-      }
-    }
-  }
-  const hasShapes = kind => typeof NX_PRIMS !== 'undefined' && !!NX_PRIMS[kind];
-  return { has, hasBuilt, hasShapes, rig, get style() { return style; }, setStyle };
+  return { has, hasBuilt, attachBuilt, rig, get style() { return style; }, setStyle };
 })();

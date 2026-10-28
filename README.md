@@ -46,7 +46,7 @@ vendor/             three.js r128 (core and bloom addons) and its licence
 js/textures.js      canvas-drawn LED signs, portal face, glows, awning stripes
 js/anims.js          motion-capture clips (Mixamo, retargeted to this rig; copied from Deepward), read-only data
 js/mocap.js         plays the clips on the rigs: quaternion slerp between frames, pelvis height and forward shift
-js/models.js        the custom crew models (js/models_data.js: the four custom meshes cut into rigid body parts) and their box-built twins (js/models_built.js: each part voxelised into coloured boxes) and shape-built twins (js/models_prims.js: large boxes, cylinders and prisms); Model Check compares them
+js/models.js        the custom crew models (js/models_data.js: the custom meshes rigged to the game joints) and their low-poly twins (js/models_smooth.js, also the Stranger and the Husks); Model Check compares them
 js/characters.js    the crew: joint hierarchy of Groups with primitive meshes; standing figures play mocap, seated ones are posed by hand
 js/city.js          the alley: blocks, signs, cables, props, the gate and portal
 js/camp.js          the fire, embers, seats and the crew placed around it; the scrap pickups and the weapon upgrades
