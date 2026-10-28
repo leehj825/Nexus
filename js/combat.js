@@ -28,6 +28,7 @@ const Combat = (() => {
   };
   const ORDER = ['you', 'ruen', 'kyle', 'yuna'];
   const HUSK = { name: 'Husk', hp: 60, rate: 0.09, color: '#ff5a7a' };
+  const BRUTE = { name: 'Husk Brute', hp: 130, rate: 0.065, color: '#ff8a4a' };       // big and slow: no light attacks, only the telegraphed Crush, which hits hard
   const COMMANDS = {
     you: [{ label: 'Strike', run: u => strike(u, 16, 'brawlPunch') }, { label: 'Brace', run: u => brace(u) }],
     ruen: [{ label: 'Data Bolt', run: u => strike(u, 22, 'mgBolt') }, { label: 'Data Burst', run: u => startCast(u) }],
@@ -76,9 +77,9 @@ const Combat = (() => {
   function foesOf(g) {
     if (g.foes) return g.foes;
     g.foes = g.rigs.map((rig, i) => {
-      const hp = Math.round(HUSK.hp * (1 + 0.22 * g.tier));
-      const f = { id: g.id + ':' + i, name: HUSK.name, rig, hp, hpMax: hp, dmgMul: 1 + 0.14 * g.tier, rate: HUSK.rate * (1 + 0.05 * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
-      f.label = makeLabel(HUSK.name, HUSK.color, f); return f;
+      const B = rig.name === 'brute', K = B ? BRUTE : HUSK, hp = Math.round(K.hp * (1 + 0.22 * g.tier));
+      const f = { id: g.id + ':' + i, name: K.name, brute: B, color: K.color, rig, hp, hpMax: hp, dmgMul: 1 + 0.14 * g.tier, rate: K.rate * (1 + 0.05 * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
+      f.label = makeLabel(K.name, K.color, f); return f;
     });
     return g.foes;
   }
@@ -254,16 +255,16 @@ const Combat = (() => {
   // ---------------- Husk AI ----------------
   function foeAct(f) {
     f.atb = 0;
-    if (Math.random() < 0.35) {
+    if (f.brute || Math.random() < 0.35) {
       const t = pick(); if (!t) return;
       const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.7, 24), new THREE.MeshBasicMaterial({ color: 0xff3a5a, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }));
       ring.rotation.x = -Math.PI / 2; ring.position.set(t.rig.root.position.x, 0.04, t.rig.root.position.z); scene.add(ring);
-      f.wind = { t: WIND, target: t, ring, dmg: Math.round(rand(30, 36) * f.dmgMul) };
+      f.wind = { t: WIND, target: t, ring, dmg: Math.round((f.brute ? rand(38, 46) : rand(30, 36)) * f.dmgMul) };
       log(f.name + ' winds up on ' + t.name + '!'); Sound.sfx('growl');
     } else {
       const t = pick(); if (!t) return;
       Chars.play(f.rig, 'brawlPunch'); busy(0.9);
-      shot(f, t, HUSK.color); hitParty(t, Math.round(rand(11, 15) * f.dmgMul));
+      shot(f, t, f.color || HUSK.color); hitParty(t, Math.round(rand(11, 15) * f.dmgMul));
       log(f.name + ' lashes ' + t.name + '.');
     }
   }
@@ -275,7 +276,7 @@ const Combat = (() => {
     w.ring.material.opacity = 0.4 + k * 0.5;
     if (w.t <= 0) {
       const t = w.target.alive ? w.target : pick();
-      if (t) { Chars.play(f.rig, 'brawlSwipe'); busy(1.0); shot(f, t, HUSK.color); hitParty(t, w.dmg); log(f.name + ' crushes ' + t.name + '!'); }
+      if (t) { Chars.play(f.rig, 'brawlSwipe', false, f.brute ? 0.8 : 1); busy(f.brute ? 1.3 : 1.0); shot(f, t, f.color || HUSK.color); hitParty(t, w.dmg); log(f.name + ' crushes ' + t.name + '!'); }
       clearWind(f);
     }
   }

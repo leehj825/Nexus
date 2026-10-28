@@ -2,7 +2,7 @@
 
 Enemy designs per place in the story, written so you can model them. Each entry gives the look, the size, how it fights in the ATB system and what the model needs. Names are working titles.
 
-**Where things stand:** the game has one enemy, the **Husk**, a stand-in. It is built from the same procedural parts as the crew (hunched, hooded, cyan eyes, claws) and appears in the alley and the Neon Market, a little tougher the further from the gate. Everything below the Husk is new design.
+**Where things stand:** the game has two enemies with custom models, the **Husk** and the **Husk Brute**. They appear in the alley and the Neon Market, a little tougher the further from the gate, and the deeper Market patrols are led by a Brute. They move with the crew's Mixamo clips plus a creature layer in code (hunched back, hanging arms, a shamble with a roll in the hips, head twitches). Everything below them is new design.
 
 ## Model notes (for all enemies)
 
@@ -18,12 +18,11 @@ Enemy designs per place in the story, written so you can model them. Each entry 
 
 Theme: the city's leftovers. Dark, wet, the first sign that something is wrong with the grid.
 
-### Husk (exists, needs a real model)
+### Husk (in the game, custom model)
 * **Who:** people the Core's pulse emptied out. The Market's rumour calls them "somebody's neighbours". They wander, they do not hunt, until you come close.
 * **Look:** human, hunched, 1.6 m. Tattered dark hood and rags, grey-blue skin, cyan eyes, a magenta glitch seam glowing through the chest, claws on the hands, bone spines on the back.
 * **Behaviour:** slow, comes in groups of 2 to 3. Lashes, and sometimes winds up a Crush.
 * **Stats (current):** 60 HP, slow gauge, light hit 11 to 15, Crush 30 to 36.
-* **Model needs:** humanoid skeleton, shambling `walk`, claw `attack`, a `heavy` that rears back and slams.
 
 ### Scrap Rat (new, small)
 * **Who:** vermin wired up by a scavenger crew long ago, now chewed through with glitch.
@@ -36,9 +35,9 @@ Theme: the city's leftovers. Dark, wet, the first sign that something is wrong w
 
 Theme: the first corrupted district. Holograms and signs turn on the people who made them.
 
-### Husk Patrol (exists, variants wanted)
+### Husk Patrol (in the game, variants wanted)
 * **Husk Vendor:** a Husk in a stall apron with a still-lit price-tag hologram flickering over its head. Same stats as a Husk, but it drops Scrap.
-* **Husk Brute:** a Husk with its arms swollen into slabs of fused crates and scrap. 2.2 m, slow, 120 HP. Only a Crush (30 to 36 damage), no light hit. Rewards using Stagger.
+* **Husk Brute (in the game, custom model):** a Husk with its arms swollen into slabs of fused crates and scrap. 2.1 m, slow, 130 HP. Only the telegraphed Crush (38 to 46 damage), no light hit. Rewards using Stagger. Leads the patrols from the second row of the Market on.
 
 ### Glitch Wraith (new)
 * **Who:** a hologram that broke out of its projector. It is the "holograms glitch into monstrous shapes" beat in Story.md, so the first time you see one it should come out of a billboard.

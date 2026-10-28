@@ -243,7 +243,7 @@ const World = (() => {
         if (!free(px, pz, 3.2)) continue;
         const n = 2 + (rnd() < 0.5 ? 1 : 0), rigs = [];
         for (let i = 0; i < n; i++) {
-          const rig = Chars.create('husk'), a = i / n * Math.PI * 2 + 0.6;
+          const rig = Chars.create(i === n - 1 && r >= 2 ? 'brute' : 'husk'), a = i / n * Math.PI * 2 + 0.6;   // the deeper patrols are led by a Brute
           rig.root.position.set(px + Math.cos(a) * 1.5, 0, pz + Math.sin(a) * 1.5); rig.root.rotation.y = rnd() * 6.28; g.add(rig.root); rigs.push(rig);
         }
         ch.pack = Combat.register({ id: 'w' + ch.key, x: px, z: pz, rigs, tier: Math.min(4, r), aggro: true, radius: 8, text: 'Husks! A patrol blocks the street.', onClear: () => clearedPacks.add(ch.key) });
