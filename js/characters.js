@@ -441,8 +441,8 @@ const Chars = (() => {
       }
     }
   }
-  function modelRig(kind, look) {
-    const c = Models.rig(kind, look), s = MODEL_SETUP[kind];
+  function modelRig(kind) {
+    const c = Models.rig(kind), s = MODEL_SETUP[kind];
     c.kind = s.kind; c.seed = s.seed; if (s.seatH) c.seatH = s.seatH; if (s.seat) c.seatPose = s.seat;
     s.extra(c);
     return c;
@@ -470,10 +470,8 @@ const Chars = (() => {
   const LOCO = { husk: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' } };
 
   // Builds one of the crew by name and returns its rig (the root is what the scene adds)
-  function create(kind, look) {
-    const lk = look || Models.style;
-    const c = Models.has(kind) ? modelRig(kind, lk) : kinds[kind](); c.name = kind;
-    if (!Models.has(kind) && lk === 'built' && Models.hasBuilt(kind)) Models.attachBuilt(kind, c.root, { hips: c.hips, ...c.j });   // the Stranger and the Husks: same joints, low-poly body
+  function create(kind) {
+    const c = Models.has(kind) ? modelRig(kind) : kinds[kind](); c.name = kind;
     c.walk = 0; c.speed = 0;
     c.mocap = true; c.loco = LOCO[kind] || UNARMED; c.idleClip = c.loco.idle;   // standing figures use the clips; idleClip is what they do when still
     return c;
