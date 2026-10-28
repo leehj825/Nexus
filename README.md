@@ -29,13 +29,21 @@ Opening `index.html` straight from the file system also works in most browsers.
 
 | Input | Action |
 | --- | --- |
-| Click the scene | Lock the mouse for look |
-| Mouse | Look around (while locked) |
-| W A S D | Walk |
+| Drag (mouse or finger) | Turn the camera all the way round Jin and tilt it |
+| Wheel or pinch | Zoom the camera in and out |
+| Arrow keys | Turn and tilt the camera |
+| Click or tap the ground | Walk there |
+| W A S D | Walk (relative to the camera) |
 | Shift | Run |
 | C | Open the camp (near the fire) |
 | P | Pause |
 | Esc | Release the mouse |
+
+## Android debug APK
+
+`android/` wraps the web files in a full-screen WebView (no code is duplicated: the files at the repository root are copied into the APK when it is built). The workflow `.github/workflows/android-debug.yml` builds a debug APK on every push to `main` or a `claude/**` branch that touches the game or `android/`, on pull requests, and on demand (Actions > Android debug APK > Run workflow). Download the APK from the run's **nexus-debug-apk** artifact and install it on a phone (allow installs from unknown sources, or `adb install`).
+
+The debug build opens the game with `?debug`, so the frame-rate, draw-call and memory overlay is on, and the WebView can be inspected from a computer at `chrome://inspect` (USB debugging on). To build it yourself you need JDK 17, the Android SDK (platform 34) and Gradle 8.9: `cd android && gradle assembleDebug`, and the APK lands in `android/app/build/outputs/apk/debug/`. It installs next to a release build, under the id `io.github.leehj825.nexus.debug`.
 
 ## Layout
 
@@ -71,8 +79,8 @@ See `Development Roadmap.md` for the full status, and `Enemies.md` for the enemy
 
 - **Phase 1, Foundation:** done.
 - **Phase 2, Combat:** the ATB system, all four crew mechanics, melee strikes for Jin and Kyle, and battles that start anywhere (husk patrols in the Market) are in. Next: more enemy types (see `Enemies.md`).
-- **Phase 3, World:** the camp and the Neon Market (a 224 m district streamed in chunks, with landmarks, NPCs and shops) are in, and the crew follow the avatar.
-- **Phase 4, Story and polish:** the campfire, resonance, arrival, tower and revelation scenes play with gesturing characters, triggered by the place you stand in, with an objective marker on the map. Synthesized music and sound effects and attack effects are in. A debug overlay and adaptive quality are in. Next: the Industrial Hub, Act 3, props for the new models.
+- **Phase 3, World:** the camp, the Neon Market (a 224 m district streamed in chunks, with landmarks, NPCs and shops) and the Industrial Hub beyond its gate are in, and the crew follow the avatar.
+- **Phase 4, Story and polish:** the campfire, resonance, arrival, tower, revelation, Hub gate, Foundry, skit, shutter, Loader Mech and Data Core scenes play with gesturing characters, triggered by the place you stand in, with an objective marker on the map. Synthesized music and sound effects and attack effects are in. A debug overlay and adaptive quality are in. Next: Act 3, props for the new models.
 - **Phase 5, Deployment:** not started.
 
 ### Debug and quality

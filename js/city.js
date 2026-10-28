@@ -17,7 +17,7 @@ const City = (() => {
   // Colliders are circles on the ground; buzzers are signs that flicker; the portal drifts
   const colliders = [];
   const buzzers = [];
-  let portalDust = null, portalGlow = null;
+  let portalDust = null, portalGlow = null, portalFace = null, portalLight = null, gateK = 0, gateGoal = 0;      // the portal is a sealed barrier until the alley's ambush is beaten: gateK 0 sealed .. 1 open
   let glitchK = 0, resonK = 0, holo = null, rings = [], ringT = 0;
 
   // Blocks along both walls: each shows a grid of windows, some lit in warm, cyan and pink
@@ -152,10 +152,10 @@ const City = (() => {
     box(root, 6.6, 1.4, 2.0, mat(0x1a1f2e), 0, 0.7, FAR + 1.5);            // a dais in front of the portal
     for (const x of [-3.5, 3.5]) box(root, 0.5, 4.8, 0.5, emis(0x2a7bff, 0.9), x, 2.4, FAR + 2.4);
     const face = new THREE.Mesh(new THREE.PlaneGeometry(6.0, 6.0), new THREE.MeshBasicMaterial({ map: Tex.portal(), toneMapped: false, color: new THREE.Color(1.6, 1.6, 1.6) }));
-    face.position.set(0, 4.4, FAR + 0.3); root.add(face);
+    face.material.transparent = true; face.position.set(0, 4.4, FAR + 0.3); root.add(face); portalFace = face;
     portalGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: Tex.glow(), color: 0x2a7bff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.7 }));
     portalGlow.position.set(0, 4.4, FAR + 0.6); portalGlow.scale.set(13, 13, 1); root.add(portalGlow);
-    const light = new THREE.PointLight(0x2a7bff, 3.0, 26, 1.4); light.position.set(0, 4.0, FAR + 4); root.add(light);
+    const light = new THREE.PointLight(0x2a7bff, 3.0, 26, 1.4); light.position.set(0, 4.0, FAR + 4); root.add(light); portalLight = light;
     // Particles: square blue pixels drifting up in front of the frame
     const N = 160, pos = new Float32Array(N * 3), vel = new Float32Array(N * 3);
     for (let i = 0; i < N; i++) { pos[i * 3] = (rnd() - 0.5) * 6; pos[i * 3 + 1] = 1 + rnd() * 6; pos[i * 3 + 2] = FAR + 1 + rnd() * 1.4; vel[i * 3 + 1] = 0.2 + rnd() * 0.4; }
@@ -235,6 +235,11 @@ const City = (() => {
       b.halo.material.opacity = 0.6 * k;
       b.light.intensity = b.base * (0.9 + 0.1 * Math.sin(t * 2 + b.phase)) * k;
     }
+    if (gateK !== gateGoal) {                                                       // the barrier dissolves, and the doorway opens onto the Market
+      gateK += Math.sign(gateGoal - gateK) * Math.min(Math.abs(gateGoal - gateK), dt * 0.45);
+      portalFace.material.opacity = 1 - gateK; portalFace.visible = gateK < 0.995;
+      portalLight.intensity = 3.0 * (1 - 0.75 * gateK); portalDust.material.opacity = 0.9 * (1 - 0.6 * gateK);
+    }
     if (portalDust) {
       const { pos, vel } = portalDust.userData;
       for (let i = 0; i < pos.length / 3; i++) {
@@ -243,9 +248,9 @@ const City = (() => {
         if (pos[i * 3 + 1] > 7.5) { pos[i * 3 + 1] = 0.6; pos[i * 3] = (rnd() - 0.5) * 6; }
       }
       portalDust.geometry.attributes.position.needsUpdate = true;
-      portalGlow.material.opacity = 0.62 + Math.sin(t * 2.1) * 0.08;
+      portalGlow.material.opacity = (0.62 + Math.sin(t * 2.1) * 0.08) * (1 - 0.7 * gateK);
     }
   }
 
-  return { build, update, colliders, HALF, FAR, setGlitch, setResonance, glitch: () => glitchK };
+  return { build, update, colliders, HALF, FAR, setGate: (open, instant) => { gateGoal = open ? 1 : 0; if (instant) { gateK = gateGoal; if (portalFace) { portalFace.visible = !open; portalFace.material.opacity = 1 - gateK; portalLight.intensity = 3.0 * (1 - 0.75 * gateK); portalDust.material.opacity = 0.9 * (1 - 0.6 * gateK); } } }, gateOpen: () => gateK >= 0.5, setGlitch, setResonance, glitch: () => glitchK };
 })();

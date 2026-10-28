@@ -225,6 +225,7 @@ const ModelCheck = (() => {
     const syncQ = () => { $('setQuality').textContent = QN[Perf.mode()] + (Perf.mode() === 'auto' ? ' (' + Perf.name() + ')' : ''); $('setDebug').textContent = Perf.debug() ? 'On' : 'Off'; };
     $('setQuality').addEventListener('click', () => { Perf.setMode({ auto: 'high', high: 'low', low: 'auto' }[Perf.mode()]); syncQ(); });
     $('setDebug').addEventListener('click', () => { Perf.setDebug(!Perf.debug()); syncQ(); });
+    $('setSave').addEventListener('click', () => { const ok = Save.save(); $('setSave').textContent = ok ? 'Saved' : 'Not now'; setTimeout(() => { $('setSave').textContent = 'Save now'; }, 1500); });
     $('btnSettings').addEventListener('click', () => { sync(); syncQ(); }); sync(); syncQ();
     $('openModelCheck').addEventListener('click', () => { $('settings').hidden = true; show(); });
   }

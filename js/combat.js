@@ -19,7 +19,7 @@ const Combat = (() => {
   const W = (lx, lz) => ({ x: stage.ox + lx * Math.cos(stage.th) + lz * Math.sin(stage.th), z: stage.oz - lx * Math.sin(stage.th) + lz * Math.cos(stage.th) });
   const stagePos = new THREE.Vector3().copy(BATTLE.pos), stageLook = new THREE.Vector3().copy(BATTLE.look);
   const groups = new Map();                                        // every husk group that can be fought: { id, x, z, rigs, tier, aggro, onClear }
-  let cur = null, aggroCd = 4;
+  let cur = null, aggroCd = 4, alleyDone = false;                    // the husks that hold the alley's gate: beaten once, gone for good
   const PARTY = {
     you: { name: 'You', hp: 110, rate: 0.12, color: '#ffffff' },
     ruen: { name: 'Ruen', hp: 90, rate: 0.13, color: '#c9a0ff' },
@@ -28,7 +28,8 @@ const Combat = (() => {
   };
   const ORDER = ['you', 'ruen', 'kyle', 'yuna'];
   const HUSK = { name: 'Husk', hp: 60, rate: 0.09, color: '#ff5a7a' };
-  const BRUTE = { name: 'Husk Brute', hp: 130, rate: 0.065, color: '#ff8a4a' };       // big and slow: no light attacks, only the telegraphed Crush, which hits hard
+  const BOSS = { name: 'Loader Mech', hp: 440, rate: 0.07, color: '#ffd24a' };            // the Foundry's guardian: a sweep that hits everyone, crushes, and a shard volley once it is half broken
+  const BRUTE = { name: 'Husk Brute', hp: 110, rate: 0.065, color: '#ff8a4a' };       // big and slow: no light attacks, only the telegraphed Crush, which hits hard
   const COMMANDS = {
     you: [{ label: 'Strike', run: u => strike(u, 16, 'brawlPunch') }, { label: 'Brace', run: u => brace(u) }],
     ruen: [{ label: 'Data Bolt', run: u => strike(u, 22, 'mgBolt') }, { label: 'Data Burst', run: u => startCast(u) }],
@@ -61,7 +62,7 @@ const Combat = (() => {
     for (let i = 0; i < 3; i++) {
       const rig = Chars.create('husk'); rig.root.position.set(FOE_HOME[i][0], 0, FOE_HOME[i][1]); scene.add(rig.root); alleyRigs.push(rig);
     }
-    register({ id: 'alley', x: 0, z: -14, rigs: alleyRigs, tier: 0, aggro: false, persistent: true, text: 'An ambush from the alley!' });
+    register({ id: 'alley', x: 0, z: -14, rigs: alleyRigs, tier: 0, aggro: true, aggroR: 7.5, radius: 9, text: 'An ambush from the alley!', onClear: () => { alleyDone = true; } });
     target = null;
     buildUI();
     bindView(document.getElementById('game'), camera);
@@ -77,8 +78,8 @@ const Combat = (() => {
   function foesOf(g) {
     if (g.foes) return g.foes;
     g.foes = g.rigs.map((rig, i) => {
-      const B = rig.name === 'brute', K = B ? BRUTE : HUSK, hp = Math.round(K.hp * (1 + 0.22 * g.tier));
-      const f = { id: g.id + ':' + i, name: K.name, brute: B, color: K.color, rig, hp, hpMax: hp, dmgMul: 1 + 0.14 * g.tier, rate: K.rate * (1 + 0.05 * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
+      const BS = rig.name === 'loader', B = rig.name === 'brute' || BS, K = BS ? BOSS : B ? BRUTE : HUSK, hp = Math.round(K.hp * (1 + 0.22 * g.tier));
+      const f = { id: g.id + ':' + i, name: K.name, brute: B, boss: BS, turn: 0, phase2: false, color: K.color, rig, hp, hpMax: hp, dmgMul: 1 + 0.14 * g.tier, rate: K.rate * (1 + 0.05 * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
       f.label = makeLabel(K.name, K.color, f); return f;
     });
     return g.foes;
@@ -253,13 +254,31 @@ const Combat = (() => {
   function startCast(u) { cast = { t: 0 }; Chars.play(u.rig, 'mgHoly'); FX.charge(u.rig.root.position); Sound.sfx('cast'); log('Ruen begins Data Burst.'); endTurn(u); }
 
   // ---------------- Husk AI ----------------
+  function bossAct(f) {
+    f.turn++;
+    if (!f.phase2 && f.hp < f.hpMax * 0.5) { f.phase2 = true; f.rate *= 1.35; log('The Loader Mech\'s glitch takes over!'); Sound.sfx('growl'); shake(0.35); FX.nova(f.rig.root.position); }
+    const all = party.filter(u => u.alive); if (!all.length) return;
+    const sweep = f.phase2 ? f.turn % 2 === 0 : f.turn % 3 === 0;
+    if (sweep) {                                                      // the sweep (or, broken, the shard volley) hits everyone at once
+      Chars.play(f.rig, 'brawlSwipe', false, 0.9); busy(1.5);
+      for (const u of all) { shot(f, u, f.color); hitParty(u, Math.round((f.phase2 ? rand(11, 15) : rand(12, 16)) * f.dmgMul)); }
+      log(f.phase2 ? 'Scrap shards rain on the crew!' : 'The Loader Mech sweeps its arm across the crew!');
+    } else {
+      const t = pick(); if (!t) return;
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.7, 24), new THREE.MeshBasicMaterial({ color: 0xff3a5a, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }));
+      ring.rotation.x = -Math.PI / 2; ring.position.set(t.rig.root.position.x, 0.04, t.rig.root.position.z); scene.add(ring);
+      f.wind = { t: WIND, target: t, ring, dmg: Math.round(rand(30, 38) * f.dmgMul) };
+      log(f.name + ' winds up on ' + t.name + '!'); Sound.sfx('growl');
+    }
+  }
   function foeAct(f) {
     f.atb = 0;
+    if (f.boss) return bossAct(f);
     if (f.brute || Math.random() < 0.35) {
       const t = pick(); if (!t) return;
       const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.7, 24), new THREE.MeshBasicMaterial({ color: 0xff3a5a, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }));
       ring.rotation.x = -Math.PI / 2; ring.position.set(t.rig.root.position.x, 0.04, t.rig.root.position.z); scene.add(ring);
-      f.wind = { t: WIND, target: t, ring, dmg: Math.round((f.brute ? rand(38, 46) : rand(30, 36)) * f.dmgMul) };
+      f.wind = { t: WIND, target: t, ring, dmg: Math.round((f.brute ? rand(32, 40) : rand(30, 36)) * f.dmgMul) };
       log(f.name + ' winds up on ' + t.name + '!'); Sound.sfx('growl');
     } else {
       const t = pick(); if (!t) return;
@@ -348,6 +367,7 @@ const Combat = (() => {
     }
     aggroCd = 5; cur = null; foes = [];
     Player.setFrozen(false);
+    Save.save();
   }
 
   function blend() {
@@ -470,7 +490,7 @@ const Combat = (() => {
     if (phase === 'explore') {
       aggroCd = Math.max(0, aggroCd - dt);
       const g = nearestGroup(); ui.engage.hidden = !g;
-      if (g && g.aggro && aggroCd === 0 && groupDist(g, pp) < 4.4 && !(typeof Cutscene !== 'undefined' && Cutscene.active())) start();      // a patrol that has seen you
+      if (g && g.aggro && aggroCd === 0 && groupDist(g, pp) < (g.aggroR || 4.4) && !(typeof Cutscene !== 'undefined' && Cutscene.active())) start();      // a patrol that has seen you
     }
     else ui.engage.hidden = true;
     ui.battle.hidden = phase === 'explore';
@@ -548,5 +568,5 @@ const Combat = (() => {
     ui.actions.hidden = !who || phase !== 'battle';
   }
 
-  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
+  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone }), setState(d) { if (d.alley && !alleyDone) { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); } }, debugClearAlley: () => { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); }, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
 })();

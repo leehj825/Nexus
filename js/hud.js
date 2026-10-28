@@ -71,7 +71,7 @@ const HUD = (() => {
   let zone = '';
   function update(t, p) {
     drawMap(p, t);
-    const z = p.z < World.Z0 - 1 ? 'Neon Market \u00b7 Night' : 'Neon District \u00b7 Night';             // the zone title follows the player through the gate
+    const z = p.z < World.HUB_Z ? 'Industrial Hub \u00b7 Night' : p.z < World.Z0 - 1 ? 'Neon Market \u00b7 Night' : 'Neon District \u00b7 Night';             // the zone title follows the player through the gate
     if (z !== zone) { zone = z; const el = document.querySelector('.zone span'); if (el) el.innerHTML = z.replace('\u00b7', '&middot;'); }
   }
 
