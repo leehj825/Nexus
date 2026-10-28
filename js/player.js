@@ -1,19 +1,19 @@
 // Nexus - the player's avatar, its movement, and the camera.
 // Walking: WASD (relative to the view), or a tap / left click on the ground to walk to that spot.
-// Looking: drag with one finger or the left mouse button, drag with the right mouse button, or drag with two fingers.
-// A tap is a still, quick press; anything that moves is a look. The camera starts on the reference framing and follows the
-// avatar gently so the framing holds as it walks.
+// Looking: a third-person camera that orbits the avatar. Drag with one finger or either mouse button to turn it all the way round and
+// tilt it, wheel or pinch to zoom, arrow keys to turn. A tap is a still, quick press; anything that moves is a look. The camera stays
+// with the avatar wherever it goes and is pulled in when a wall would be in the way.
 const Player = (() => {
   const START = { x: -2.4, z: 2.4 };
-  const CAM = { x: 1.0, y: 4.2, z: 9.0 }, LOOK = { x: 0.0, y: 1.3, z: -3.5 };   // reference framing
+  const EYE = 1.5, DIST0 = 8, ELEV0 = 0.42, DMIN = 3.2, DMAX = 17, EMIN = 0.1, EMAX = 1.25;     // the orbit: eye height over the feet, start distance and elevation, and their limits
   const WALK = 2.3, RUN = 4.2, FOLLOW = 0.35, ARRIVE = 0.12;
   const TAP_MOVE = 10, TAP_TIME = 450;                                        // px and ms: how still and how quick a tap is
   const keys = {};
   const pos = { x: START.x, z: START.z };
-  let heading = Math.PI, speed = 0, yaw = 0, pitch = 0, avatar = null, camera = null, view = null;
+  let heading = Math.PI, speed = 0, yaw = 0, elev = ELEV0, dist = DIST0, shown = DIST0, avatar = null, camera = null, view = null;
   let goal = null, marker = null, frozen = false;
   const pointers = new Map();                                                 // every pointer on the canvas, by id
-  const camPos = new THREE.Vector3(), look = new THREE.Vector3();
+  const camPos = new THREE.Vector3(), look = new THREE.Vector3(), tgt = new THREE.Vector3(pos.x, EYE, pos.z); let pinch = 0;
   const ray = new THREE.Raycaster(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), ndc = new THREE.Vector2(), hit = new THREE.Vector3();
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
@@ -29,16 +29,19 @@ const Player = (() => {
     marker.rotation.x = -Math.PI / 2; marker.position.y = 0.03; marker.visible = false; scene.add(marker);
 
     window.addEventListener('keydown', e => {
+      if (e.code.startsWith('Arrow')) { keys[e.code] = true; if (!frozen) e.preventDefault(); }
       if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.shift = true;
       if (e.code.startsWith('Key')) { keys[e.code.slice(3).toLowerCase()] = true; goal = null; marker.visible = false; }
     });
     window.addEventListener('keyup', e => {
+      if (e.code.startsWith('Arrow')) keys[e.code] = false;
       if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.shift = false;
       if (e.code.startsWith('Key')) keys[e.code.slice(3).toLowerCase()] = false;
     });
     window.addEventListener('blur', () => { for (const k in keys) keys[k] = false; });
 
     canvas.addEventListener('contextmenu', e => e.preventDefault());
+    canvas.addEventListener('wheel', e => { if (frozen) return; e.preventDefault(); dist = clamp(dist + e.deltaY * 0.01, DMIN, DMAX); }, { passive: false });
     canvas.addEventListener('pointerdown', e => {
       if (frozen) return;                                                        // a battle or a cutscene owns the camera
       if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
@@ -57,13 +60,18 @@ const Player = (() => {
       if (!p.look && p.moved > TAP_MOVE) p.look = true;                        // once it moves, it is a drag: look
       if (p.look) {
         const k = pointers.size > 1 ? 0.5 : 1;                                  // two fingers share one look
-        yaw = clamp(yaw - dx * 0.006 * k, -1.1, 1.1);
-        pitch = clamp(pitch + dy * 0.004 * k, -0.6, 0.8);
+        yaw -= dx * 0.006 * k;
+        elev = clamp(elev - dy * 0.004 * k, EMIN, EMAX);
+      }
+      if (pointers.size === 2) {                                                // a pinch zooms
+        const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
+        if (pinch) dist = clamp(dist - (d - pinch) * 0.02, DMIN, DMAX);
+        pinch = d;
       }
     });
     const end = e => {
       const p = pointers.get(e.pointerId); if (!p) return;
-      pointers.delete(e.pointerId);
+      pointers.delete(e.pointerId); pinch = 0;
       const tap = !p.look && p.moved < TAP_MOVE && performance.now() - p.t < TAP_TIME && pointers.size === 0;
       if (tap) walkTo(e.clientX, e.clientY);
     };
@@ -111,12 +119,28 @@ const Player = (() => {
   function teleport(x, z) { pos.x = x; pos.z = z; goal = null; marker.visible = false; }     // for scripted placement and debugging
   function setFrozen(on) { frozen = on; if (on) { goal = null; marker.visible = false; for (const k in keys) keys[k] = false; } }
 
+  // Is a camera at (x, y, z) inside a wall, a building or out of the street? The alley's walls are at +-HALF; the Market's are footprints on the ground
+  function camBlocked(x, z, y) {
+    if (z > City.FAR - 1) return Math.abs(x) > City.HALF - 0.5;
+    return y < 40 && World.blocked(x, z, 0.5);
+  }
+
   function update(t, dt) {
-    // Camera: the reference pose, eased toward the avatar's walk, turned by the look yaw around the look point
-    const away = Math.hypot(pos.x - START.x, pos.z - START.z), fol = FOLLOW + (1 - FOLLOW) * clamp((away - 6) / 14, 0, 1);      // the alley keeps its framing; out in the world the camera follows fully
-    look.set(LOOK.x + (pos.x - START.x) * fol, LOOK.y, LOOK.z + (pos.z - START.z) * fol);
-    const ox = CAM.x - LOOK.x, oz = CAM.z - LOOK.z;
-    camPos.set(look.x + ox * Math.cos(yaw) + oz * Math.sin(yaw), CAM.y - pitch * 2.5, look.z - ox * Math.sin(yaw) + oz * Math.cos(yaw));
+    // Camera: orbits the avatar. The arrow keys turn and tilt it; it keeps the avatar in view and is pulled in when a wall is in the way.
+    if (!frozen) { yaw += ((keys.ArrowLeft ? 1 : 0) - (keys.ArrowRight ? 1 : 0)) * 1.8 * dt; elev = clamp(elev + ((keys.ArrowDown ? -1 : 0) + (keys.ArrowUp ? 1 : 0)) * 0.9 * dt, EMIN, EMAX); }
+    const k = Math.min(1, dt * 14);
+    tgt.x += (pos.x - tgt.x) * k; tgt.z += (pos.z - tgt.z) * k; tgt.y = EYE;
+    look.copy(tgt);
+    const ce = Math.cos(elev), se = Math.sin(elev), sy = Math.sin(yaw), cy = Math.cos(yaw);
+    let room = dist;                                                            // how far back the camera can go before a building is in the way
+    for (let d = dist; d >= DMIN * 0.6; d -= 0.5) {
+      const cx = tgt.x + sy * ce * d, cz = tgt.z + cy * ce * d;
+      if (!camBlocked(cx, cz, tgt.y + se * d)) { room = d; break; }
+      room = d - 0.5;
+    }
+    room = Math.max(1.6, room);
+    shown = room < shown ? room : shown + (room - shown) * Math.min(1, dt * 4);     // in at once, out gently
+    camPos.set(tgt.x + sy * ce * shown, tgt.y + se * shown, tgt.z + cy * ce * shown);
 
     // Direction, in priority: keys, then a tap target. A battle freezes the avatar.
     const b = basis();

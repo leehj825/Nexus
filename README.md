@@ -29,9 +29,11 @@ Opening `index.html` straight from the file system also works in most browsers.
 
 | Input | Action |
 | --- | --- |
-| Click the scene | Lock the mouse for look |
-| Mouse | Look around (while locked) |
-| W A S D | Walk |
+| Drag (mouse or finger) | Turn the camera all the way round Jin and tilt it |
+| Wheel or pinch | Zoom the camera in and out |
+| Arrow keys | Turn and tilt the camera |
+| Click or tap the ground | Walk there |
+| W A S D | Walk (relative to the camera) |
 | Shift | Run |
 | C | Open the camp (near the fire) |
 | P | Pause |
