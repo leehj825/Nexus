@@ -58,7 +58,7 @@ const CampUI = (() => {
 
   // Each frame: show the button only at the fire outside a battle, keep the counters and list current, toast new scrap
   function update() {
-    const near = Camp.nearFire(Player.state()) && !Combat.active();
+    const near = Camp.nearFire(Player.state()) && !Combat.active() && !Cutscene.active();
     if (open && !near) setOpen(false);
     btn.hidden = !near || open;
     $('parts').textContent = Camp.parts;
@@ -67,5 +67,5 @@ const CampUI = (() => {
     if (open && stateKey() !== shown) render();
   }
 
-  return { init, update };
+  return { init, update, isOpen: () => open };
 })();

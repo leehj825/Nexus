@@ -40,6 +40,7 @@ const Player = (() => {
 
     canvas.addEventListener('contextmenu', e => e.preventDefault());
     canvas.addEventListener('pointerdown', e => {
+      if (frozen) return;                                                        // a battle or a cutscene owns the camera
       if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
       canvas.setPointerCapture(e.pointerId);
       pointers.set(e.pointerId, {

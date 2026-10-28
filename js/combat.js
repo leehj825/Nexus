@@ -56,6 +56,7 @@ const Combat = (() => {
     }
     target = foes[0];
     buildUI();
+    bindView(document.getElementById('game'), camera);
     $('engage').addEventListener('click', start);
     window.addEventListener('keydown', e => { if (e.code === 'KeyE') start(); });
     for (const u of [...party, ...foes]) setHome(u);
@@ -232,7 +233,7 @@ const Combat = (() => {
   // ---------------- Phases ----------------
   function start() {
     if (phase !== 'explore' || !canEngage()) return;
-    phase = 'enter'; phaseT = 0;
+    phase = 'enter'; phaseT = 0; resetView();
     Player.setFrozen(true);
     for (const u of party) {
       u.rush = null; u.hp = u.hpMax; u.alive = true; u.ready = false; u.atb = rand(0, 0.3); u.guard = 0; u.brace = 0;
@@ -291,15 +292,59 @@ const Combat = (() => {
   function active() { return phase !== 'explore'; }
 
   // The camera: the alley's pose blended toward the battle angle
+  // The battle camera: the preset angle, turned / zoomed / panned by the player (drag to rotate, wheel or pinch to zoom, two fingers or a
+  // right / shift drag to pan, double-tap to reset). The player's changes fade out with the blend, so leaving a battle glides home.
+  const view = { yaw: 0, pitch: 0, zoom: 1, pan: new THREE.Vector3() };
+  const resetView = () => { view.yaw = 0; view.pitch = 0; view.zoom = 1; view.pan.set(0, 0, 0); };
+  const sph = new THREE.Vector3(), bpos = new THREE.Vector3(), blook = new THREE.Vector3();
   function applyCamera(cam) {
     const ex = Player.exploreView(), k = blend();
-    cam.position.lerpVectors(ex.pos, BATTLE.pos, k);
-    v.lerpVectors(ex.look, BATTLE.look, k);
+    sph.copy(BATTLE.pos).sub(BATTLE.look);
+    const r = sph.length() * (1 + (view.zoom - 1) * k), az = Math.atan2(sph.x, sph.z) + view.yaw * k;
+    const el = clamp(Math.asin(sph.y / sph.length()) + view.pitch * k, 0.12, 1.45);
+    blook.copy(BATTLE.look).addScaledVector(view.pan, k);
+    bpos.set(Math.sin(az) * Math.cos(el) * r, Math.sin(el) * r, Math.cos(az) * Math.cos(el) * r).add(blook);
+    cam.position.lerpVectors(ex.pos, bpos, k);
+    v.lerpVectors(ex.look, blook, k);
     cam.lookAt(v);
+  }
+  function bindView(canvas, camera) {
+    const ptr = new Map(); let two = null, lastTap = 0;
+    const pair = () => { const [a, b] = [...ptr.values()]; return { d: Math.hypot(a.x - b.x, a.y - b.y), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }; };
+    const pan = (dx, dy) => {
+      const kk = camera.position.distanceTo(blook) * 2 * Math.tan(camera.fov * Math.PI / 360) / innerHeight;
+      camera.updateMatrixWorld();
+      const rt = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+      view.pan.addScaledVector(rt, -dx * kk).addScaledVector(up, dy * kk);
+      view.pan.set(clamp(view.pan.x, -8, 8), clamp(view.pan.y, -1.5, 4), clamp(view.pan.z, -8, 8));
+    };
+    canvas.addEventListener('pointerdown', e => {
+      if (phase === 'explore') return;
+      ptr.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY, btn: e.button, shift: e.shiftKey });
+      try { canvas.setPointerCapture(e.pointerId); } catch (err) { /* a pointer that already ended */ }
+      two = ptr.size === 2 ? pair() : null;
+    });
+    canvas.addEventListener('pointermove', e => {
+      const p = ptr.get(e.pointerId); if (!p || phase === 'explore') return;
+      const dx = e.clientX - p.x, dy = e.clientY - p.y; p.x = e.clientX; p.y = e.clientY;
+      if (ptr.size === 2) {
+        const n = pair(); if (two) { view.zoom = clamp(view.zoom * two.d / Math.max(n.d, 1), 0.4, 2.2); pan(n.x - two.x, n.y - two.y); } two = n;
+      } else if (p.btn === 2 || p.btn === 1 || p.shift) pan(dx, dy);
+      else { view.yaw -= dx * 0.006; view.pitch = clamp(view.pitch + dy * 0.004, -0.8, 0.9); }
+    });
+    const lift = e => {
+      const p = ptr.get(e.pointerId); ptr.delete(e.pointerId); two = ptr.size === 2 ? pair() : null;
+      if (p && ptr.size === 0 && e.type === 'pointerup' && e.pointerType === 'touch' && Math.hypot(e.clientX - p.x0, e.clientY - p.y0) < 20) {
+        const now = performance.now(); if (now - lastTap < 320) { resetView(); lastTap = 0; } else lastTap = now;
+      }
+    };
+    canvas.addEventListener('pointerup', lift); canvas.addEventListener('pointercancel', lift);
+    canvas.addEventListener('wheel', e => { if (phase === 'explore') return; e.preventDefault(); view.zoom = clamp(view.zoom * (1 + e.deltaY * 0.001), 0.4, 2.2); }, { passive: false });
+    canvas.addEventListener('dblclick', () => { if (phase !== 'explore') resetView(); });
   }
 
   function canEngage() {
-    if (phase !== 'explore') return false;
+    if (phase !== 'explore' || (typeof Cutscene !== 'undefined' && Cutscene.active())) return false;
     const p = Player.state();
     return foes.some(f => f.alive && Math.hypot(p.x - f.home.x, p.z - f.home.z) <= ENCOUNTER_R);
   }
@@ -390,7 +435,7 @@ const Combat = (() => {
   }
   function updateUI(camera) {
     const show = phase !== 'explore';
-    document.body.classList.toggle('battle', show);
+    document.body.classList.toggle('in-battle', show);
     for (const u of [...party, ...foes]) {
       const L = u.label, p = u.rig.root.position;
       const s = screenOf(p, u.foe ? 2.1 : 2.0, camera);

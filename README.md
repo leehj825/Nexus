@@ -47,6 +47,7 @@ js/textures.js      canvas-drawn LED signs, portal face, glows, awning stripes
 js/anims.js          motion-capture clips (Mixamo, retargeted to this rig; copied from Deepward), read-only data
 js/mocap.js         plays the clips on the rigs: quaternion slerp between frames, pelvis height and forward shift
 js/models.js        the custom crew models (js/models_data.js: the custom meshes rigged to the game joints, skinned with the weights from each file)
+js/cutscene.js      the campfire scene (Talk button at the fire): camera shots, captions and dialogue, played step by step
 js/modelcheck.js    Model Check (settings gear > Model Check): plays every clip and pose on every character, shows the joints and the wireframe
 js/characters.js    the crew: joint hierarchy of Groups with primitive meshes; standing figures play mocap, seated ones are posed by hand
 js/city.js          the alley: blocks, signs, cables, props, the gate and portal

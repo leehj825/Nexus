@@ -37,9 +37,11 @@
   <div id="pauseTag" class="tag" hidden>Paused</div>
   <div class="prompt">Tap a spot to walk &middot; drag to look</div>
   <button id="engage" class="engage" type="button" hidden>Engage</button>
+  <button id="talkBtn" class="engage" type="button" hidden>Talk</button>
   <button id="campBtn" class="engage" type="button" hidden>Camp</button>
   <div id="toast" class="toast"></div>
   <div id="battle" class="battle" hidden>
+    <div class="vhint">Drag to rotate &middot; wheel or pinch to zoom &middot; two fingers or right-drag to pan &middot; double-tap to reset</div>
     <div id="log" class="log"></div>
     <div id="banner" class="banner" hidden></div>
     <div id="actions" class="actions" hidden></div>
@@ -57,6 +59,16 @@
     <p class="camp-note">Scrap from the alley pays for the crew's weapon upgrades. Upgrades apply in battle.</p>
     <ul id="campList" class="camp-list"></ul>
     <button id="campClose" class="camp-close" type="button">Back to the fire</button>
+  </div>
+</div>
+
+<div class="cut-bar top"></div><div class="cut-bar bottom"></div>
+<div id="dlg" class="dlg" hidden>
+  <div class="dlg-box">
+    <div class="dlg-head"><b id="dlgName"></b><span id="dlgCount"></span><button id="dlgSkip" type="button">Skip</button></div>
+    <div id="dlgNote" class="dlg-note" hidden></div>
+    <div id="dlgText" class="dlg-text"></div>
+    <div id="dlgNext" class="dlg-next">&#9654; tap to continue</div>
   </div>
 </div>
 
@@ -116,6 +128,7 @@
 <script src="js/hud.js"></script>
 <script src="js/combat.js"></script>
 <script src="js/campui.js"></script>
+<script src="js/cutscene.js"></script>
 <script src="js/modelcheck.js"></script>
 <script src="js/main.js"></script>
 </body>
