@@ -101,6 +101,9 @@ const Player = (() => {
 
   function exploreView() { return { pos: camPos, look }; }
   function rig() { return avatar; }
+  // A scripted walk (cutscenes): the avatar walks to (x, z) on its own, then turns to face `heading`. Pass null to hand control back.
+  let script = null;
+  function scriptTo(x, z, h) { script = x === null ? null : { x, z, h }; if (script) { goal = null; marker.visible = false; } }
   function setFrozen(on) { frozen = on; if (on) { goal = null; marker.visible = false; for (const k in keys) keys[k] = false; } }
 
   function update(t, dt) {
@@ -120,6 +123,10 @@ const Player = (() => {
     }
     if (mx || mz) {
       const m = Math.hypot(mx, mz); mx /= m; mz /= m; v = run ? RUN : WALK;
+    } else if (script) {
+      const gx = script.x - pos.x, gz = script.z - pos.z, dist = Math.hypot(gx, gz);
+      if (dist > 0.08) { mx = gx / dist; mz = gz / dist; v = Math.min(WALK * 1.4, dist * 4 + 0.6); }
+      else { heading += Math.atan2(Math.sin(script.h - heading), Math.cos(script.h - heading)) * Math.min(1, dt * 6); }
     } else if (goal && !frozen) {
       const gx = goal.x - pos.x, gz = goal.z - pos.z, dist = Math.hypot(gx, gz);
       if (dist < ARRIVE) { goal = null; marker.visible = false; }
@@ -148,5 +155,5 @@ const Player = (() => {
 
   function state() { return { x: pos.x, z: pos.z, heading, speed, moving: speed > 0.1 }; }
 
-  return { init, update, applyCamera, state, exploreView, setFrozen, rig };
+  return { init, update, applyCamera, state, exploreView, setFrozen, scriptTo, rig };
 })();
