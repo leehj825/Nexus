@@ -14,6 +14,8 @@ const World = (() => {
   let root = null, lights = [], lightT = 0, scene = null;
   const tmpP = new THREE.Vector3(), FOG_MKT = new THREE.Color(0x070b16), FOG_HUB = new THREE.Color(0x1a0f08); let hubK = -1;
   const taken = new Set(), clearedPacks = new Set();
+  let shutterOpen = false, bossArmed = false, bossDown = false, doorT = 0;             // the Foundry's story state: shutter, boss, and the core
+  const NODE_CHUNKS = ['-2,9', '2,10', '-2,12'], nodesTaken = new Set();           // where the three access nodes lie, and which are picked up
   const TOWER = { x: 0, z: Z0 - CH * (MROWS - 3 + 0.5) };                            // the landmark tower's chunk centre (the story's goal)                                                          // scrap already picked up, by key
 
   const GATE = { x: 0, z: Z0 - CH * (MROWS - 0.5) };                                  // the checkpoint in the Market's far wall, the way into the Hub
@@ -277,22 +279,45 @@ const World = (() => {
       ch.signs.push({ x: X - 4, y: 3, z: Z + 12, c: ORG });
       for (let i = 0; i < 6; i++) { const x = X + (rnd() - 0.5) * (CH - 6), z = Z + (rnd() - 0.5) * (CH - 6); if (free(x, z, 1.6)) clutter(x, z); }
       dropScrap(4, () => [X + (rnd() - 0.5) * (CH - 6), Z + 12 + (rnd() - 0.5) * 6]);
-    } else if (kind === 'foundry') {                                                    // the Hub's landmark: a furnace works with three chimneys and a sealed shutter door
-      const ORG = 0xff8a2a, w = 26, d = 22, h = 20, bz = Z - 3, front = bz + d / 2, steel = mat(0x2a2d33, { metalness: 0.3, roughness: 0.7 });
+    } else if (kind === 'foundry') {                                                    // the Hub's landmark: a hollow furnace works, open to the sky, behind a sealed shutter
+      const ORG = 0xff8a2a, w = 26, d = 22, h = 20, bz = Z - 3, front = bz + d / 2, steel = mat(0x2a2d33, { metalness: 0.3, roughness: 0.7 }), wallM = mat(0x2e2824, { roughness: 1 });
       box(g, CH - 1, 0.04, CH - 1, mat(0x181410, { roughness: 1 }), X, 0.02, Z);
-      box(g, w, h, d, mat(0x2e2824, { roughness: 1 }), X, h / 2, bz); solid(X, bz, w / 2, d / 2); facade(X, bz, w, d, h, 0, [0xff9a3a, 0xffc977, 0xff7a2a]);
+      const wall = (cx, cy, cz, ww, hh, dd) => { box(g, ww, hh, dd, wallM, cx, cy, cz); };
+      wall(X, h / 2, bz - d / 2 + 0.6, w, h, 1.2); solid(X, bz - d / 2 + 0.6, w / 2, 0.6);                               // back wall
+      for (const sx of [-1, 1]) { wall(X + sx * (w / 2 - 0.6), h / 2, bz, 1.2, h, d); solid(X + sx * (w / 2 - 0.6), bz, 0.6, d / 2); }
+      ch.cut = [];                                                                       // the front wall, which is hidden while the crew are inside so the camera can see in
+      for (const sx of [-1, 1]) { const m = new THREE.Mesh(unit, wallM); m.scale.set(7.5, h, 1.2); m.position.set(X + sx * 9.25, h / 2, front - 0.6); g.add(m); ch.cut.push(m); solid(X + sx * 9.25, front - 0.6, 3.75, 0.6); }
+      { const m = new THREE.Mesh(unit, wallM); m.scale.set(11, h - 9, 1.2); m.position.set(X, 9 + (h - 9) / 2, front - 0.6); g.add(m); ch.cut.push(m); }
+      facade(X, bz, w, d, h, 0, [0xff9a3a, 0xffc977, 0xff7a2a]);
       for (const sx of [-8, 0, 8]) {
         tube(g, 1.7, 15, mat(0x1d1b1a), X + sx, h + 7.5, bz - 4); tube(g, 1.8, 0.4, emis(ORG, 2.0), X + sx, h + 15.1, bz - 4);
         ch.spin.push(tubeSolid(g, 2.4, 0.2, emis(0xffb04a, 1.6), X + sx, h + 9, bz - 4));
       }
-      box(g, 14, 1.4, 0.2, emis(ORG, 2.4), X, 14, front + 0.1);                                           // the furnace glow through a slit
-      const door = new THREE.Mesh(new THREE.BoxGeometry(11, 8.5, 0.5), mat(0x1a1c20, { metalness: 0.5, roughness: 0.5 })); door.position.set(X, 4.25, front + 0.3); g.add(door);
-      for (let i = 0; i < 8; i++) box(g, 11, 0.12, 0.2, steel, X, 0.7 + i * 1.02, front + 0.62);          // shutter slats
-      const hz = new THREE.Mesh(new THREE.PlaneGeometry(11, 0.9), new THREE.MeshBasicMaterial({ map: Tex.stripes('#e8a020', '#15120e'), toneMapped: false })); hz.position.set(X, 8.9, front + 0.62); g.add(hz);
+      box(g, 14, 1.4, 0.2, emis(ORG, 2.4), X, 14, front + 0.1);                                           // the furnace glow through a slit over the door
+      // The shutter: slats on a door that rises into the wall once it has been opened
+      const door = new THREE.Group(); door.position.set(X, 0, front - 0.3); g.add(door); ch.door = door;
+      const dm = new THREE.Mesh(new THREE.BoxGeometry(11, 8.5, 0.5), mat(0x1a1c20, { metalness: 0.5, roughness: 0.5 })); dm.position.y = 4.25; door.add(dm);
+      for (let i = 0; i < 8; i++) { const sl = new THREE.Mesh(unit, steel); sl.scale.set(11, 0.12, 0.2); sl.position.set(0, 0.7 + i * 1.02, 0.32); door.add(sl); }
+      const hzD = new THREE.Mesh(new THREE.PlaneGeometry(11, 0.9), new THREE.MeshBasicMaterial({ map: Tex.stripes('#e8a020', '#15120e'), toneMapped: false })); hzD.position.set(0, 8.9, 0.34); door.add(hzD);
+      if (shutterOpen) door.position.y = 9.2; else ch.boxes.push(ch.doorBox = { x: X, z: front - 0.3, hw: 5.6, hd: 0.5 });
       const lg = new THREE.Mesh(new THREE.PlaneGeometry(9, 1.7), new THREE.MeshBasicMaterial({ map: Tex.led('NEXUS CORP', '#ffb04a', 768, 144, 60), toneMapped: false, color: new THREE.Color(1.6, 1.6, 1.6) })); lg.position.set(X, 16.5, front + 0.12); g.add(lg);
       const mk = new THREE.Mesh(new THREE.PlaneGeometry(13, 4), new THREE.MeshBasicMaterial({ map: Tex.stripes('#e8a020', '#15120e'), toneMapped: false, transparent: true, opacity: 0.9 })); mk.rotation.x = -Math.PI / 2; mk.position.set(X, 0.05, front + 3); g.add(mk);   // hazard stripes on the floor before the door
       for (const [lx, lz] of [[-12, front + 4], [12, front + 4], [-12, front + 12], [12, front + 12]]) { box(g, 0.14, 5, 0.14, mat(0x14171f), lx, 2.5, lz); box(g, 0.6, 0.2, 0.6, emis(ORG, 2.2), lx, 5.1, lz); post(lx, lz, 0.3); ch.signs.push({ x: lx, y: 5, z: lz, c: ORG }); }
       for (let i = 0; i < 5; i++) { const x = X + (rnd() < 0.5 ? -1 : 1) * (14 + rnd() * 1.5), z = Z + (rnd() - 0.5) * 24; if (free(x, z, 1.2)) clutter(x, z); }
+      // Inside: a dark floor with a river of molten metal, a catwalk overhead, the Loader Mech and, behind it, a pedestal for the Data Core
+      box(g, w - 2.4, 0.05, d - 1.2, mat(0x1a1714, { roughness: 1 }), X, 0.03, bz);
+      box(g, w - 5, 0.07, 1.2, emis(ORG, 1.3), X, 0.06, bz - 3.5); box(g, 1.2, 0.07, 6, emis(ORG, 1.3), X + 5, 0.06, bz - 7);
+      box(g, w - 2, 0.3, 2, steel, X, 7, bz - 8.5); for (const sx of [-1, 1]) { box(g, 0.3, 7, 0.3, steel, X + sx * 11, 3.5, bz - 8.5); }
+      for (const sx of [-1, 1]) { box(g, 1.2, 4, 1.2, mat(0x34302c), X + sx * 10.4, 2, bz - 9); solid(X + sx * 10.4, bz - 9, 0.6, 0.6); }
+      for (const [lx, lz] of [[-6, bz - 1], [6, bz - 1], [0, bz - 8]]) ch.signs.push({ x: X + lx, y: 5, z: lz, c: ORG });
+      box(g, 2.4, 1.0, 2.4, steel, X, 0.5, bz - 8); solid(X, bz - 8, 1.2, 1.2);
+      const core = new THREE.Mesh(new THREE.OctahedronGeometry(0.75), emis(0xfff0c0, 2.6)); core.position.set(X, 2.0, bz - 8); core.visible = false; g.add(core); ch.spin.push(core); ch.core = { mesh: core, x: X, z: bz - 8 };
+      ch.coreSign = { x: X, y: 2.4, z: bz - 6.5, c: 0xfff0c0 };
+      if (!bossDown) {
+        const rig = Chars.create('loader'); rig.root.position.set(X, 0, bz - 3); rig.root.rotation.y = 0; g.add(rig.root);
+        ch.pack = Combat.register({ id: 'boss', x: X, z: bz - 3, rigs: [rig], tier: 0, aggro: bossArmed, aggroR: 13, radius: 10, boss: true, text: 'The Loader Mech lurches to life!', onClear: () => { bossDown = true; } });
+      }
+      ch.hall = { x: X, z: bz, hw: w / 2 - 1.2, hd: d / 2 - 1.2, front };
       dropScrap(3, () => [X + (rnd() - 0.5) * 20, front + 4 + rnd() * 8]);
     } else {                                                                         // yard: containers, crates, barrels and a few fires
       box(g, CH - 1, 0.04, CH - 1, mat(0x141720, { roughness: 1 }), X, 0.02, Z);
@@ -305,6 +330,20 @@ const World = (() => {
       }
       for (let i = 0; i < 9; i++) clutter(X + (rnd() - 0.5) * (CH - 6), Z + (rnd() - 0.5) * (CH - 6));
       dropScrap(4, () => [X + (rnd() - 0.5) * (CH - 6), Z + (rnd() - 0.5) * (CH - 6)]);
+    }
+    // An access node (stage 8 of the story): a cyan pylon with a ring, standing in the open
+    if (NODE_CHUNKS.includes(ch.key) && !nodesTaken.has(ch.key)) {
+      for (let tries = 0; tries < 40; tries++) {
+        const nx = X + (rnd() - 0.5) * (CH - 8), nz = Z + (rnd() - 0.5) * (CH - 8);
+        if (!free(nx, nz, 2)) continue;
+        const grp = new THREE.Group(); grp.position.set(nx, 0, nz);
+        const py = new THREE.Mesh(cyl, emis(0x3ff0ff, 1.8)); py.scale.set(0.3, 1.4, 0.3); py.position.y = 0.7; grp.add(py);
+        const rg = new THREE.Mesh(new THREE.TorusGeometry(0.7, 0.05, 6, 20), emis(0x9ff7ff, 2)); rg.rotation.x = Math.PI / 2; rg.position.y = 1.0; grp.add(rg); ch.spin.push(rg);
+        const beam = new THREE.Mesh(cyl, new THREE.MeshBasicMaterial({ color: 0x3ff0ff, transparent: true, opacity: 0.18, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, toneMapped: false })); beam.scale.set(0.5, 40, 0.5); beam.position.y = 20; grp.add(beam);
+        grp.visible = false; g.add(grp); ch.node = { x: nx, z: nz, group: grp };
+        ch.signs.push({ x: nx, y: 1.6, z: nz, c: 0x3ff0ff });
+        break;
+      }
     }
     // Lane markings down the middle of the streets either side of the chunk
     if (kind !== 'wall') for (let i = 0; i < 8; i++) box(g, 0.25, 0.02, 2.4, mat(0x3a3f55, { roughness: 1 }), X + CH / 2, 0.012, Z - CH / 2 + 2 + i * 4);
@@ -396,6 +435,17 @@ const World = (() => {
     if (!Combat.active()) for (const ch of [...chunks.values()]) if (Math.max(Math.abs(p.x - ch.X), Math.abs(p.z - ch.Z)) > DROP) drop(ch);
     for (const ch of chunks.values()) {
       for (const s of ch.spin) s.rotation.y += dt * 0.8;
+      if (ch.node) {                                                                    // access nodes show once the story asks for them, and are picked up by walking close
+        const on = typeof Cutscene !== 'undefined' && Cutscene.stage() >= 8 && !nodesTaken.has(ch.key);
+        ch.node.group.visible = on;
+        if (on && Math.hypot(p.x - ch.node.x, p.z - ch.node.z) < 1.8) { nodesTaken.add(ch.key); ch.node.group.visible = false; Sound.sfx('pickup'); Cutscene.nodeTaken(nodesTaken.size); }
+      }
+      if (ch.cut) {                                                                     // the Foundry: the front wall steps aside while the crew are inside, so the camera can see in
+        const h = ch.hall, inside = Math.abs(p.x - h.x) < h.hw + 1 && p.z < h.front + 0.8 && p.z > h.z - h.hd, fighting = Combat.active() && Math.hypot(p.x - h.x, p.z - h.z) < 26;
+        for (const m of ch.cut) m.visible = !(inside || fighting);
+        if (ch.door && doorT > 0) { ch.door.position.y = Math.min(9.2, ch.door.position.y + dt * 4.5); if (ch.door.position.y >= 9.2) doorT = 0; }
+        ch.core.mesh.visible = bossDown; if (bossDown && !ch.coreLit) { ch.coreLit = true; ch.signs.push(ch.coreSign); }
+      }
       // Rigs are ~40 meshes each: past the fog's reach they are hidden rather than drawn
       for (const n of ch.npcs) n.rig.root.visible = Math.hypot(p.x - n.x, p.z - n.z) < SEE;
       if (ch.pack) for (const r of ch.pack.rigs) r.root.visible = Math.hypot(p.x - r.root.position.x, p.z - r.root.position.z) < SEE;
@@ -415,6 +465,23 @@ const World = (() => {
       lights.forEach((l, i) => { const a = i < lightsOn ? all[i] : null; if (a && a.d < 30) { l.position.set(a.s.x, a.s.y, a.s.z); l.color.setHex(a.s.c); l.intensity = 1.5; } else l.intensity = 0; });
     }
   }
+
+  // The Foundry's story state
+  function openShutter() {
+    shutterOpen = true; doorT = 1;
+    for (const ch of chunks.values()) if (ch.doorBox) { ch.boxes.splice(ch.boxes.indexOf(ch.doorBox), 1); ch.doorBox = null; }
+  }
+  function armBoss() { bossArmed = true; for (const ch of chunks.values()) if (ch.pack && ch.pack.id === 'boss') ch.pack.aggro = true; }
+  // The nearest access node not yet taken that is loaded, for the map marker; the far ones are known from the grid
+  function nextNode(p) {
+    let best = null, bd = 1e9;
+    for (const key of NODE_CHUNKS) {
+      if (nodesTaken.has(key)) continue; const [cx, r] = key.split(',').map(Number), x = cx * CH, z = Z0 - CH * (r + 0.5), ch = chunks.get(key);
+      const q = ch && ch.node ? ch.node : { x, z }, d = Math.hypot(p.x - q.x, p.z - q.z); if (d < bd) { bd = d; best = q; }
+    }
+    return best;
+  }
+  const coreAt = () => { for (const ch of chunks.values()) if (ch.core) return ch.core; return null; };
 
   // Quality levels 0 (full) to 2 (lean): fewer sign lights and a shorter load radius
   function setDetail(level) { lightsOn = [LIGHTS, 3, 1][level] ?? LIGHTS; LOAD = [1.6, 1.4, 1.2][level] * CH; lightT = 0; }
@@ -457,5 +524,5 @@ const World = (() => {
   const allNpcs = () => { const out = []; for (const ch of chunks.values()) for (const n of ch.npcs) out.push(n); return out; };
   function nearNpc(p, r) { let best = null, bd = r; for (const n of allNpcs()) { const d = Math.hypot(p.x - n.x, p.z - n.z); if (d < bd) { bd = d; best = n; } } return best; }
 
-  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, GATE, FOUNDRY, HUB_Z, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
+  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, GATE, FOUNDRY, HUB_Z, openShutter, armBoss, nextNode, coreAt, nodeCount: () => nodesTaken.size, bossDown: () => bossDown, shutterOpen: () => shutterOpen, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
 })();

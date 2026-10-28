@@ -72,7 +72,7 @@ See `Development Roadmap.md` for the full status, and `Enemies.md` for the enemy
 - **Phase 1, Foundation:** done.
 - **Phase 2, Combat:** the ATB system, all four crew mechanics, melee strikes for Jin and Kyle, and battles that start anywhere (husk patrols in the Market) are in. Next: more enemy types (see `Enemies.md`).
 - **Phase 3, World:** the camp, the Neon Market (a 224 m district streamed in chunks, with landmarks, NPCs and shops) and the Industrial Hub beyond its gate are in, and the crew follow the avatar.
-- **Phase 4, Story and polish:** the campfire, resonance, arrival, tower, revelation, Hub gate, Foundry and skit scenes play with gesturing characters, triggered by the place you stand in, with an objective marker on the map. Synthesized music and sound effects and attack effects are in. A debug overlay and adaptive quality are in. Next: Act 3, props for the new models.
+- **Phase 4, Story and polish:** the campfire, resonance, arrival, tower, revelation, Hub gate, Foundry, skit, shutter, Loader Mech and Data Core scenes play with gesturing characters, triggered by the place you stand in, with an objective marker on the map. Synthesized music and sound effects and attack effects are in. A debug overlay and adaptive quality are in. Next: Act 3, props for the new models.
 - **Phase 5, Deployment:** not started.
 
 ### Debug and quality

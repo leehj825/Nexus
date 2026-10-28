@@ -103,7 +103,30 @@ const Cutscene = (() => {
     { shot: 'who', who: 'yuna', mood: 'firm', note: 'Eyes on the shutter\'s lock.', text: 'Feelings are fine. But there\'s a corporate lock in front of us and a furnace behind it. We need a plan, not a vigil.' },
     { shot: 'who', who: 'jin', mood: 'nod', text: 'Both. Yuna, find us a way through that shutter. Kyle, stay near Ruen. And Ruen: when it whispers, tell it we\'re coming.' },
     { shot: 'who', who: 'ruen', mood: 'nod', fx: { resonance: 0.4, glitch: 0 }, text: '...I will. Thank you. All of you.' },
-    { shot: 'point', look: [World.FOUNDRY.x, 14, World.FOUNDRY.z - 15], fx: { resonance: 0.2 }, caption: 'The shutter is sealed from the inside. The way up to the Corporate Spire will have to wait for the next stretch of the road.\n\nEnd of Act 2. Act 3 is next.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', fx: { resonance: 0.2 }, note: 'Running her fingers over the lock plate.', text: 'It wants a corporate access node, and maintenance crews drop them like loose change. There should be three scattered through the works. Find them and I can talk this door open.' },
+    { shot: 'point', look: [World.FOUNDRY.x, 14, World.FOUNDRY.z - 15], caption: 'Three access nodes lie somewhere in the Hub, each marked by a pale beam of light.' },
+  ];
+  const SHUTTER_OPEN = [
+    { shot: 'point', look: [World.FOUNDRY.x, 5, World.FOUNDRY.z - 7], caption: 'Back at the shutter. Yuna presses the three nodes into the lock plate one after another.' },
+    { shot: 'who', who: 'yuna', mood: 'alert', note: 'The plate flickers from red to amber.', text: 'Come on, sweet-talk, give me what I need... Handshake accepted. Stand back.' },
+    { shot: 'who', who: 'kyle', mood: 'firm', note: 'Raising his shield as the door groans.', text: 'Whatever\'s holding that furnace is going to hear this. Ruen, behind me.' },
+    { shot: 'point', look: [World.FOUNDRY.x, 4, World.FOUNDRY.z - 10], fx: { glitch: 0.3 }, caption: 'The shutter grinds upward. Heat rolls out across the plaza, and in the dark hall beyond something huge turns its head.' },
+  ];
+  const LOADER_SIGHT = [
+    { shot: 'point', look: [World.FOUNDRY.x, 3, World.FOUNDRY.z - 24], fx: { glitch: 0.5, resonance: 0.8 }, caption: 'The Foundry floor\nA river of molten metal, a catwalk, and a loader the size of a house, its cockpit glowing pink where a pilot should be.' },
+    { shot: 'who', who: 'yuna', mood: 'alert', note: 'Counting the exits.', text: 'Cargo loader, hazard stripes, no pilot. The grid took it over. It\'s guarding the pedestal.' },
+    { shot: 'who', who: 'ruen', mood: 'worry', note: 'Her orb throbbing in her hand.', text: 'The core is behind it. I can feel it pulling at me through all that noise.' },
+    { shot: 'who', who: 'kyle', mood: 'firm', text: 'Then it has to go through me first. Yuna, Jin, find its weak side.' },
+    { shot: 'who', who: 'jin', mood: 'firm', fx: { glitch: 0, resonance: 0.3 }, text: 'Together. Kyle takes the sweep, Yuna keeps it off balance, and Ruen, hit it when you have the line.' },
+  ];
+  const CORE_SCENE = [
+    { shot: 'point', look: [World.FOUNDRY.x, 2, World.FOUNDRY.z - 22], fx: { resonance: 1, glitch: 0.2 }, caption: 'The Loader Mech folds to the floor with a groan of tearing metal. On the pedestal behind it, a Data Core turns in the furnace light.' },
+    { shot: 'who', who: 'ruen', mood: 'alert', fx: { aim: true }, note: 'Stepping forward, her orb burning white.', text: 'It\'s the same thing I felt in the alley. Quieter now. It knows us.' },
+    { shot: 'who', who: 'kyle', mood: 'worry', text: 'Ruen. Careful. Whatever the Corporation does with it, it hurt them to move it.' },
+    { shot: 'who', who: 'ruen', mood: 'nod', note: 'Laying her palm on the core. The light slows.', text: 'It doesn\'t want to hurt anyone. It wants to be somewhere quiet. And it\'s showing me where the rest of it is... Up. Up at the top of the city.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', text: 'The Spire. A freight lift behind the pedestal, still powered. They\'d have shipped the cores straight up.' },
+    { shot: 'who', who: 'jin', mood: 'firm', fx: { aim: false, glitch: 0, resonance: 0.4 }, text: 'Then that is our road. We rest, we gather ourselves, and then we ride it to the top.' },
+    { shot: 'point', look: [World.FOUNDRY.x, 18, World.FOUNDRY.z - 22], caption: 'The lift to the Corporate Spire waits in the dark.\n\nEnd of Act 2. Act 3, the Spire, comes next.' },
   ];
   const moodOf = st => st.mood || 'talk';
   const typed = () => steps && steps[i] ? (steps[i].text || steps[i].caption || steps[i].note || '') : '';
@@ -214,18 +237,23 @@ const Cutscene = (() => {
   // The story stage: 0 the campfire, 1 the resonance (both at the fire), 2 go through the gate, 3 follow the orb up the avenue,
   // 4 reach the tower, 5 Act 2 done. Stages 2-4 each end with a scene that plays where the crew stands when they reach a place.
   let stage = 0;
-  const QUEST = ['\u25c6 Speak with the crew', '\u25c6 Rest by the fire and feel for the resonance', '\u25c6 Go through the gate into the Neon Market', '\u25c6 Follow the orb up the avenue', '\u25c6 Reach the foot of the tower', '\u25c6 Follow the pull to the Industrial Hub gate', '\u25c6 Cross the Hub to the Foundry', '\u25c6 Reach the Foundry\'s shutter', '\u25c6 Act 2 complete: the Spire waits in Act 3'];
+  const QUEST = ['\u25c6 Speak with the crew', '\u25c6 Rest by the fire and feel for the resonance', '\u25c6 Go through the gate into the Neon Market', '\u25c6 Follow the orb up the avenue', '\u25c6 Reach the foot of the tower', '\u25c6 Follow the pull to the Industrial Hub gate', '\u25c6 Cross the Hub to the Foundry', '\u25c6 Reach the Foundry\'s shutter', '\u25c6 Find the three access nodes', '\u25c6 Return to the Foundry\'s shutter', '\u25c6 Enter the Foundry', '\u25c6 Defeat the Loader Mech', '\u25c6 Take the Data Core', '\u25c6 Act 2 complete: the Spire waits in Act 3'];
   function setQuest(n) {
     const q = $('qtext'); if (q) q.textContent = QUEST[n]; if (n > 0) Sound.sfx('quest');
     const toast = $('toast'); if (toast && n > 0) { toast.textContent = 'Quest updated'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
   }
   const setStage = n => { stage = n; setQuest(n); };
+  // Each access node picked up: the toast and the quest line show the count
+  function nodeTaken(n) { const q = $('qtext'); if (q && stage === 8) q.textContent = QUEST[8] + ' (' + n + '/3)'; const toast = $('toast'); if (toast) { toast.textContent = 'Access node ' + n + ' / 3'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1800); } }
   // The objective the map points at: the gate, then the tower
   function objective() {
     if (stage === 2) return { x: 0, z: World.Z0 + 4, label: 'the gate' };
     if (stage === 3 || stage === 4) return { x: World.TOWER.x, z: World.TOWER.z, label: 'the tower' };
     if (stage === 5) return { x: World.GATE.x, z: World.GATE.z + 6, label: 'the Hub gate' };
-    if (stage === 6 || stage === 7) return { x: World.FOUNDRY.x, z: World.FOUNDRY.z, label: 'the Foundry' };
+    if (stage === 6 || stage === 7 || stage === 9) return { x: World.FOUNDRY.x, z: World.FOUNDRY.z, label: stage === 9 ? 'the shutter' : 'the Foundry' };
+    if (stage === 8) { const n = World.nextNode(Player.state()); return n ? { x: n.x, z: n.z, label: 'an access node' } : null; }
+    if (stage === 10 || stage === 11) { const c = World.coreAt(); return c ? { x: c.x, z: c.z + 5, label: 'the Foundry floor' } : null; }
+    if (stage === 12) { const c = World.coreAt(); return c ? { x: c.x, z: c.z, label: 'the Data Core' } : null; }
     return null;
   }
   // Place triggers: each plays once, when the crew first reaches the place at that stage
@@ -237,6 +265,11 @@ const Cutscene = (() => {
     else if (stage === 5 && Math.hypot(p.x - World.GATE.x, p.z - World.GATE.z) < 22) begin(HUB_GATE, () => setStage(6), { anchor: 'here' });
     else if (stage === 6 && Math.hypot(p.x - World.FOUNDRY.x, p.z - World.FOUNDRY.z) < 75) begin(FOUNDRY_SIGHT, () => setStage(7), { anchor: 'here' });
     else if (stage === 7 && Math.hypot(p.x - World.FOUNDRY.x, p.z - World.FOUNDRY.z) < 14) begin(FOUNDRY_SKIT, () => setStage(8), { anchor: 'here' });
+    else if (stage === 8 && World.nodeCount() >= 3) setStage(9);
+    else if (stage === 9 && Math.hypot(p.x - World.FOUNDRY.x, p.z - World.FOUNDRY.z) < 12) begin(SHUTTER_OPEN, () => { World.openShutter(); setStage(10); }, { anchor: 'here' });
+    else if (stage === 10 && p.z < World.FOUNDRY.z - 9 && Math.abs(p.x - World.FOUNDRY.x) < 11) begin(LOADER_SIGHT, () => { World.armBoss(); setStage(11); }, { anchor: 'here' });
+    else if (stage === 11 && World.bossDown()) { setStage(12); }
+    else if (stage === 12 && World.coreAt() && Math.hypot(p.x - World.coreAt().x, p.z - World.coreAt().z) < 5) begin(CORE_SCENE, () => setStage(13), { anchor: 'here' });
   }
   const NPC_LINES = {
     vendor: ['Scrap is as good as credit here. Show me what you\'ve got.', 'Fresh circuits, honest prices. Mostly honest.', 'Nobody\'s buying tonight. The signs keep lying about what\'s open.'],
@@ -282,5 +315,5 @@ const Cutscene = (() => {
     if (!active && !campOpen && !Combat.active() && !Combat.engaging()) checkTriggers();
   }
 
-  return { init, update, updateUI, applyCamera, active: () => active, start, started: () => started, stage: () => stage, objective, debugStage: n => setStage(n) };
+  return { init, update, updateUI, applyCamera, active: () => active, start, started: () => started, stage: () => stage, objective, nodeTaken, debugStage: n => setStage(n) };
 })();

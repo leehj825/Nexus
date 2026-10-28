@@ -514,11 +514,17 @@ const Chars = (() => {
   // walks and runs with the plain unarmed locomotion. The crew drop into the magic stance when a fight starts (their
   // strikes are brawling punches and hooks, their skills are casts); the husks keep a loose unarmed idle.
   const UNARMED = { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'mgIdle' };
-  const LOCO = { husk: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' }, brute: { idle: 'idleEase', walk: 'walkCalm', run: 'walkCalm', battle: 'idleUnarmed' } };
+  const LOCO = { husk: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' }, brute: { idle: 'idleEase', walk: 'walkCalm', run: 'walkCalm', battle: 'idleUnarmed' }, loader: { idle: 'idleEase', walk: 'walkCalm', run: 'walkCalm', battle: 'idleUnarmed' } };
 
   // Builds one of the crew by name and returns its rig (the root is what the scene adds)
   function create(kind) {
-    const c = Models.has(kind) ? modelRig(kind) : kinds[kind](); c.name = kind;
+    // The Loader Mech has no model of its own yet: it borrows the Brute's, scaled up and painted in hazard yellow
+    const stand = kind === 'loader' && !Models.has('loader');
+    const c = Models.has(kind) ? modelRig(kind) : stand ? modelRig('brute') : kinds[kind](); c.name = kind;
+    if (stand) {
+      c.root.scale.setScalar(1.55);
+      c.root.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); o.material.color.setHex(0xffd060); o.material.emissiveIntensity = 1.0; } });
+    }
     c.walk = 0; c.speed = 0;
     c.mocap = true; c.loco = LOCO[kind] || UNARMED; c.idleClip = c.loco.idle;   // standing figures use the clips; idleClip is what they do when still
     return c;
@@ -533,6 +539,7 @@ const Chars = (() => {
   // roll in the hips and twitch their heads. The clips (mostly walking and brawling) supply the legs and the strikes; this bends them out of human shape.
   const CREATURE = {
     husk: { hunch: 0.2, head: 0.12, armsOut: 0.05, armFwd: 0.22, roll: 0.1, lurch: 0.035, twitch: 1, breath: 0.03 },
+    loader: { hunch: 0.08, head: 0.05, armsOut: 0.25, armFwd: 0.05, roll: 0.03, lurch: 0.02, twitch: 0, breath: 0.015 },
     brute: { hunch: 0.14, head: 0.12, armsOut: 0.2, armFwd: 0.1, roll: 0.07, lurch: 0.05, twitch: 0.3, breath: 0.045 },
   };
   function creature(c, t, dt, speed) {

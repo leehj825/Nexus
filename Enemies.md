@@ -71,7 +71,9 @@ Theme: the grid is still running machines, with nobody to watch them. Corporate 
 * **Stats:** 90 HP, medium gauge, rifle 12 to 16, shield bash (heavy) 28.
 * **Model needs:** Mixamo humanoid skeleton, `rifle idle`, `rifle fire`, `shield block`, `bash`, `death`.
 
-### Loader Mech (mini-boss, Industrial Hub gate)
+### Loader Mech (mini-boss, in the Foundry; stand-in in the game)
+*In the game now:* guards the Data Core inside the Foundry. 440 HP. It sweeps the whole crew (12 to 16), winds up a telegraphed crush (30 to 38), and below half health speeds up and rains shards (11 to 15 to everyone). It uses the Brute's model scaled up and painted yellow until a real model arrives.
+
 * **Who:** a cargo loader the grid took over. Not corporate, not human, only a machine doing what it was doing before.
 * **Look:** a 3.5 m tall two-legged cargo mech, yellow-and-black hazard stripes (rusted), a crane arm with a claw on the left and a piston hammer on the right, cockpit window with pink glitch light inside instead of a pilot.
 * **Behaviour:** boss. Two phases. First, slow heavy swings (telegraphed). At half health the glitch takes over: it fires scrap shards in a wide arc and its swings speed up. A cable on its back is the weak point (a target for Yuna).
