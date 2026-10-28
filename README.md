@@ -64,6 +64,10 @@ Coordinates: feet at y = 0, the fire at the origin, the alley running along z wi
 
 ## Roadmap
 
-- **Phase 1, Foundation:** done. Flat-shaded low-poly pipeline with neon lights and bloom; WASD, tap-to-walk and a high-angle camera.
-- **Phase 2, Combat:** in progress. Battle encounters from the alley (press E or tap Engage near the husks), with the camera transition to the battle angle, the ATB gauges, Ruen's dual-gauge Data Burst, Kyle's Guard and Intercept, Yuna's fast gauge and Stagger, and husk AI with telegraphed Crush attacks.
-- **Phase 3, World:** in progress. Done: the camp's safe-zone panel. Scrap in the alley pays for weapon upgrades (Data-Orb Core, Kinetic Gauntlet, Tuned Blasters, each +25% damage in battle). Next: chunk loading and the first two zones.
+See `Development Roadmap.md` for the full status. In short:
+
+- **Phase 1, Foundation:** done.
+- **Phase 2, Combat:** the ATB system, all four crew mechanics and melee strikes for Jin and Kyle are in. Next: battles that start anywhere in the world.
+- **Phase 3, World:** the camp and the Neon Market (a 224 m district streamed in chunks) are in, and the crew follow the avatar. Next: enemies and NPCs in the Market.
+- **Phase 4, Story and polish:** the campfire scene and Act 2's resonance scene play with gesturing characters. Next: scenes triggered by place, sound and attack effects.
+- **Phase 5, Deployment:** not started.
