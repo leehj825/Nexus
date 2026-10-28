@@ -461,6 +461,49 @@ const Chars = (() => {
     }
   }
 
+  // ---------------- Talking: gestures laid on top of whatever pose the figure is in (seated, idle clip), used by cutscenes ----------------
+  // setTalk(c, mood, speaking): mood is one of talk / worry / firm / think / alert / nod / wipe (or null to stop); speaking is true while the
+  // words are coming out (full movement) and false once the line is done (the figure settles). setLook(c, worldPoint) turns the head to a point.
+  const gq = new THREE.Quaternion(), ge = new THREE.Euler(), gv = new THREE.Vector3();
+  const addRot = (j, x, y = 0, z = 0) => { if (j) j.quaternion.multiply(gq.setFromEuler(ge.set(x, y, z))); };
+  function setTalk(c, mood, speaking = true) { c.talkMood = mood; c.talkSpeaking = speaking; }
+  function setLook(c, pt) { c.lookPt = pt || null; }
+  function gesture(c, t, dt) {
+    const want = c.talkMood ? (c.talkSpeaking ? 1 : 0.35) : 0;
+    c.talkAmp = (c.talkAmp || 0) + (want - (c.talkAmp || 0)) * Math.min(1, dt * 6);
+    c.lookAmp = (c.lookAmp || 0) + ((c.lookPt ? 1 : 0) - (c.lookAmp || 0)) * Math.min(1, dt * 4);
+    const a = c.talkAmp, ph = t + (c.seed || 0);
+    if (c.lookAmp > 0.01 && c.lookPt) {                                           // listeners turn their head toward the speaker
+      c.root.updateMatrixWorld(true); gv.copy(c.lookPt); c.head.parent.worldToLocal(gv);
+      const yaw = Math.max(-0.9, Math.min(0.9, Math.atan2(gv.x, gv.z))), pit = Math.max(-0.25, Math.min(0.25, -Math.atan2(gv.y - c.head.position.y - 0.15, Math.hypot(gv.x, gv.z)) * 0.5));
+      addRot(c.head, pit * c.lookAmp, yaw * c.lookAmp);
+    }
+    if (a < 0.01) { if (c.orb && c.name === 'ruen') c.orb.scale.setScalar(1); return; }
+    const beat = Math.max(0, Math.sin(ph * 5.2)) * (0.6 + 0.4 * Math.sin(ph * 1.3)), slow = Math.sin(ph * 1.6), m = c.talkMood;
+    const sp = c.talkSpeaking ? 1 : 0.3, R = c.j.shR, E = c.j.elR, L = c.j.shL, EL = c.j.elL;
+    if (m === 'talk') {                                                       // an even conversation: head bobs on the words, a hand comes up
+      addRot(c.head, a * (-0.04 + 0.07 * beat * sp), a * 0.1 * slow); addRot(c.torso, a * 0.02 * slow);
+      addRot(R, a * -0.35 * (0.4 + beat) * sp); addRot(E, a * -0.5 * (0.3 + beat) * sp);
+    } else if (m === 'worry') {                                               // head down, shoulders in, slow breaths
+      addRot(c.head, a * (0.22 + 0.03 * slow), a * 0.12 * slow); addRot(c.torso, a * (0.1 + 0.02 * slow));
+      addRot(R, a * -0.12, 0, a * 0.1); addRot(L, a * -0.12, 0, a * -0.1);
+    } else if (m === 'firm') {                                                // chest up, chin up, a decisive chop with the hand on each beat
+      addRot(c.head, a * (-0.1 + 0.05 * beat * sp)); addRot(c.torso, a * -0.07);
+      addRot(R, a * (-0.45 - 0.5 * beat) * sp, 0, a * 0.1); addRot(E, a * (-0.7 - 0.5 * beat) * sp);
+    } else if (m === 'think') {                                               // head tilted, a hand toward the chin
+      addRot(c.head, a * 0.12, a * 0.15 * slow, a * 0.2); addRot(c.torso, a * 0.04);
+      addRot(L, a * -0.55, 0, a * 0.05); addRot(EL, a * -1.0);
+    } else if (m === 'alert') {                                               // snaps up: chin up, a little back, a hand out
+      addRot(c.head, a * (-0.17 - 0.03 * beat), a * 0.05 * Math.sin(ph * 3)); addRot(c.torso, a * -0.1);
+      addRot(R, a * -0.55 * sp, 0, a * 0.15); addRot(E, a * -0.4 * sp);
+    } else if (m === 'nod') {                                                 // a calm, agreeing nod
+      addRot(c.head, a * 0.16 * Math.max(0, Math.sin(ph * 3.2)) * sp); addRot(c.torso, a * 0.03);
+    } else if (m === 'wipe') {                                                // rubbing a blade clean: the forearm sweeps to and fro, eyes down
+      addRot(c.head, a * 0.16); addRot(R, a * -0.55); addRot(E, a * (-0.65 + 0.28 * Math.sin(ph * 6)));
+    }
+    if (c.orb && c.name === 'ruen') c.orb.scale.setScalar(1 + a * sp * 0.18 * (0.5 + 0.5 * Math.sin(ph * 7)));   // the orb pulses with her voice
+  }
+
   const orbAt = new THREE.Vector3();
   const kinds = { ruen, kyle, yuna, player, stranger, husk };
   // The clips a figure walks, runs and idles with, and the idle it holds in battle. Nobody holds a weapon, so everyone
@@ -510,6 +553,7 @@ const Chars = (() => {
       }
     }
     if (c.armFix) undoAPose(c);
+    if (c.talkMood || c.talkAmp > 0.01 || c.lookPt || c.lookAmp > 0.01) gesture(c, t, dt);
     if (c.name === 'ruen') {                                                     // the orb floats over her left palm, specks circling it
       c.root.updateMatrixWorld(true);
       c.j.wrL.getWorldPosition(orbAt); c.root.worldToLocal(orbAt);
@@ -523,5 +567,5 @@ const Chars = (() => {
     if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = -Math.min(speed, 4) * 0.06; }
   }
 
-  return { create, update, play, clipLength };
+  return { create, update, play, clipLength, setTalk, setLook };
 })();
