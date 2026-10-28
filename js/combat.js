@@ -105,7 +105,7 @@ const Combat = (() => {
 
   // ---------------- Damage ----------------
   function kill(u) {
-    u.alive = false; u.ready = false; clearWind(u);
+    u.alive = false; u.ready = false; u.rush = null; clearWind(u);
     Chars.play(u.rig, 'die', true);
     log(u.name + (u.foe ? ' falls.' : ' is down!'));
   }
@@ -133,12 +133,46 @@ const Combat = (() => {
 
   // ---------------- Commands ----------------
   function endTurn(u) { u.atb = 0; u.ready = false; menuFor = null; }
+  // The melee fighters (Jin, Kyle) run up to their target, strike it face to face and run back; the others shoot from where they stand
+  const MELEE = { you: true, kyle: true }, RUN = 6.5, REACH = 1.25;
   function strike(u, dmg, clip = 'brawlPunch') {                     // clip null: the second blow of a combo, the first one's clip plays on
     const t = selected(); if (!t) return;
     dmg = Math.round(dmg * Camp.damageMult(u.id));                   // the camp's weapon upgrades
+    if (MELEE[u.id] && clip) {
+      const home = new THREE.Vector3(SPOT[u.id][0], 0, SPOT[u.id][1]), tp = t.rig.root.position;
+      const dir = home.clone().sub(tp).setY(0).normalize();
+      u.rush = { phase: 'out', t: 0, target: t, dmg, clip, home, stand: tp.clone().setY(0).addScaledVector(dir, REACH), struck: false };
+      endTurn(u); return;
+    }
     if (clip) Chars.play(u.rig, clip);
     shot(u, t, u.color); hitFoe(t, dmg); log(u.name + ' hits the husk for ' + dmg + '.');
     endTurn(u);
+  }
+  // Moves a rushing fighter one frame: out to the target, the blow (damage lands on the clip's hit frame), back to the spot
+  function updateRush(u, dt) {
+    const r = u.rush, p = u.rig.root.position; u.speed = 0;
+    if (!u.alive) { u.rush = null; return; }
+    const face = (to) => { const dx = to.x - p.x, dz = to.z - p.z; if (Math.hypot(dx, dz) > 0.01) u.rig.root.rotation.y = Math.atan2(dx, dz); };
+    const go = (to) => {                                              // run toward a point; true on arrival
+      const dx = to.x - p.x, dz = to.z - p.z, d = Math.hypot(dx, dz), step = RUN * dt;
+      face(to);
+      if (d <= step) { p.x = to.x; p.z = to.z; return true; }
+      p.x += dx / d * step; p.z += dz / d * step; u.speed = RUN; return false;
+    };
+    if (r.phase === 'out') {
+      if (!r.target.alive) r.target = selected() || r.target;
+      r.stand = r.target.rig.root.position.clone().setY(0).addScaledVector(r.home.clone().sub(r.target.rig.root.position).setY(0).normalize(), REACH);
+      if (go(r.stand)) { r.phase = 'hit'; r.t = 0; face(r.target.rig.root.position); Chars.play(u.rig, r.clip); }
+    } else if (r.phase === 'hit') {
+      r.t += dt; face(r.target.rig.root.position);
+      const hitAt = Math.max(0.1, (Mocap.clips[r.clip] && Mocap.clips[r.clip].hit) || 0.3);
+      if (!r.struck && r.t >= hitAt) {
+        r.struck = true;
+        if (!r.target.alive) r.target = selected() || r.target;
+        if (r.target.alive) { hitFoe(r.target, r.dmg); log(u.name + ' hits the husk for ' + r.dmg + '.'); }
+      }
+      if (r.t >= Math.min(Chars.clipLength(r.clip), 1.0)) { r.phase = 'back'; u.rig.clip = null; }
+    } else if (go(r.home)) { u.rush = null; u.rig.root.rotation.y = Math.PI; }
   }
   function guard(u) {
     u.guard = GUARD_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block');
@@ -195,7 +229,7 @@ const Combat = (() => {
     phase = 'enter'; phaseT = 0;
     Player.setFrozen(true);
     for (const u of party) {
-      u.hp = u.hpMax; u.alive = true; u.ready = false; u.atb = rand(0, 0.3); u.guard = 0; u.brace = 0;
+      u.rush = null; u.hp = u.hpMax; u.alive = true; u.ready = false; u.atb = rand(0, 0.3); u.guard = 0; u.brace = 0;
       u.home = { x: u.rig.root.position.x, z: u.rig.root.position.z, ry: u.rig.root.rotation.y };   // where the avatar stands now
       u.rig.combat = true; u.rig.kind = 'stand'; u.rig.clip = null; u.rig.idleClip = u.rig.loco.battle;
       u.from = u.rig.root.position.clone(); u.rig.root.rotation.set(0, Math.PI, 0);
@@ -221,7 +255,7 @@ const Combat = (() => {
 
   function startLeave() {
     phase = 'leave'; phaseT = 0; ui.banner.hidden = true;
-    for (const u of [...party, ...foes]) { clearWind(u); u.from = u.rig.root.position.clone(); }
+    for (const u of [...party, ...foes]) { clearWind(u); u.rush = null; u.from = u.rig.root.position.clone(); }
     for (const u of party) u.to = new THREE.Vector3(u.home.x, 0, u.home.z);
     for (const f of foes) f.to = new THREE.Vector3(f.home.x, 0, f.home.z);
   }
@@ -229,7 +263,7 @@ const Combat = (() => {
   function finishLeave() {
     phase = 'explore'; phaseT = 0;
     for (const u of party) {
-      u.rig.combat = false; u.rig.clip = null; u.rig.idleClip = u.rig.loco.idle;
+      u.rush = null; u.rig.combat = false; u.rig.clip = null; u.rig.idleClip = u.rig.loco.idle;
       if (u.id !== 'you') u.rig.kind = 'seated';
       u.rig.root.rotation.set(0, u.home.ry, 0); u.rig.root.position.y = 0;
       u.rig.root.position.set(u.home.x, 0, u.home.z);
@@ -315,7 +349,7 @@ const Combat = (() => {
 
     // Idle motion for everyone not under the crew's own pose
     for (const f of foes) Chars.update(f.rig, clock, dt, walking);
-    for (const u of party) if (u.rig.combat) Chars.update(u.rig, clock, dt, walking);
+    for (const u of party) if (u.rig.combat) { if (u.rush) updateRush(u, dt); Chars.update(u.rig, clock, dt, u.rush ? u.speed : walking); }
 
     updateShots(dt);
     updatePops(dt);
