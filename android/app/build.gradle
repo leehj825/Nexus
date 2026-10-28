@@ -1,0 +1,48 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'io.github.leehj825.nexus'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'io.github.leehj825.nexus'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '0.1.0'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+            debuggable true
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    // The game is the plain web files at the repository root. They are copied (not duplicated in git) into
+    // the app's assets under www/ before every build, and served to the WebView from a https:// origin.
+    sourceSets {
+        main.assets.srcDir(layout.buildDirectory.dir('generated/www'))
+    }
+}
+
+def webRoot = rootProject.projectDir.parentFile
+tasks.register('copyWeb', Copy) {
+    from(webRoot) {
+        include 'index.html', 'css/**', 'js/**', 'vendor/**'
+    }
+    into layout.buildDirectory.dir('generated/www/www')
+}
+tasks.matching { it.name == 'preBuild' }.configureEach { dependsOn 'copyWeb' }
