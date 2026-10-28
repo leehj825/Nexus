@@ -38,7 +38,7 @@ const ModelCheck = (() => {
   function build() {
     stage();
     rigs = [];
-    for (const [kind, label] of KINDS) for (const lk of Models.has(kind) && Models.hasBuilt(kind) ? ['custom', 'built'] : ['custom']) {
+    for (const [kind, label] of KINDS) for (const lk of Models.has(kind) && Models.hasBuilt(kind) ? ['custom', 'built', ...(Models.hasShapes(kind) ? ['shapes'] : [])] : ['custom']) {
       const rig = Chars.create(kind, lk); scene.add(rig.root);
       // Drawn as a person's skeleton: the collar bones run from the neck joint out to each shoulder, the spine from the pelvis
       // up through the waist to the neck (in the rig the shoulders hang off the waist joint, which is only how they are driven)
@@ -63,7 +63,7 @@ const ModelCheck = (() => {
     const shown = rigs.filter(r => (who === 'all' || r.kind === who) && wantLook(r));
     rigs.forEach(r => { r.rig.root.visible = shown.includes(r); r.lines.visible = r.dots.visible = bones && r.rig.root.visible; });
     // in Compare each character stands twice, the custom model on the left and the box-built one on the right
-    let x = 0; const gap = look === 'compare' ? 1.05 : 1.5, groupGap = look === 'compare' ? 2.5 : 1.5;
+    let x = 0; const gap = look === 'compare' ? 1.0 : 1.5, groupGap = look === 'compare' ? 1.8 : 1.5;
     shown.forEach((r, i) => { const prev = shown[i - 1]; x += i === 0 ? 0 : (prev.kind === r.kind ? gap : groupGap); r.rig.root.position.set(x, 0, 0); r.rig.root.rotation.y = 0; });
     const mid = shown.length ? x / 2 : 0; shown.forEach(r => r.rig.root.position.x -= mid);
     if (fresh) { const groups = new Set(shown.map(r => r.kind)).size; dist = groups > 4 ? 10 : groups > 1 ? 7.5 : shown.length > 1 ? 4.8 : 4.2; fresh = false; }
@@ -122,8 +122,8 @@ const ModelCheck = (() => {
     }
   }
   function renderLook() {
-    chips($('mcLook'), [['custom', 'Custom'], ['built', 'Built'], ['compare', 'Compare']], look, id => { look = id; fresh = true; layout(); start(); renderLook(); });
-    chips($('mcUse'), [['custom', 'Custom'], ['built', 'Built']], Models.style, id => { Models.setStyle(id); renderLook(); $('mcUseNote').textContent = 'Reload the page to use ' + (id === 'built' ? 'the box-built' : 'the custom') + ' models in the game.'; });
+    chips($('mcLook'), [['custom', 'Custom'], ['built', 'Built'], ['shapes', 'Shapes'], ['compare', 'Compare all']], look, id => { look = id; fresh = true; layout(); start(); renderLook(); });
+    chips($('mcUse'), [['custom', 'Custom'], ['built', 'Built'], ['shapes', 'Shapes']], Models.style, id => { Models.setStyle(id); renderLook(); $('mcUseNote').textContent = 'Reload the page to use ' + (id === 'built' ? 'the box-built' : id === 'shapes' ? 'the shape-built' : 'the custom') + ' models in the game.'; });
   }
   function renderWho() { chips($('mcWho'), [['all', 'All'], ...KINDS], who, id => { who = id; fresh = true; layout(); start(); renderWho(); }); }
   function renderList() {
