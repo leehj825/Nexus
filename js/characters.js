@@ -480,7 +480,7 @@ const Chars = (() => {
   }
 
   // Plays a one-shot clip on a rig: it runs once and hands back to the idle. hold keeps its last frame (a death, say)
-  function play(c, name, hold = false) { c.clip = { name, t: 0, hold }; }
+  function play(c, name, hold = false, rate = 1) { c.clip = { name, t: 0, hold, rate }; }               // rate: playback speed (1.7 = 70% faster)
   function clipLength(name) { return Mocap.clips[name] ? Mocap.clips[name].d : 0; }
 
   // Poses one character for time t. speed (m/s) drives the walk cycle of standing figures
@@ -494,7 +494,7 @@ const Chars = (() => {
       let played = false;
       if (c.clip) {
         const clip = Mocap.clips[c.clip.name];
-        c.clip.t += dt;
+        c.clip.t += dt * (c.clip.rate || 1);
         if (clip.loop || c.clip.hold || c.clip.t < clip.d) { Mocap.sample(c, c.clip.name, c.clip.t); played = true; }
         else c.clip = null;
       }
