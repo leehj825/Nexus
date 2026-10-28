@@ -47,9 +47,15 @@ Status key: ✅ done · 🟡 partly done · ⬜ not started. Last updated after 
 *   🟡 **Testing:** Quality (Auto, High, Low) lowers the pixel ratio, bloom, lights and load radius when the frame rate drops. The page loads about 3.5 MB (about 2 MB gzipped, 1.1 MB of it the models). Still to do: measure on real phones and other browsers.
 *   ⬜ **Launch:** Version 1.0 Release.
 
-## Next steps (suggested order)
-1. **Enemy models:** send models for the enemies in `Enemies.md`. The Loader Mech boss uses a stand-in until its own model arrives (name the file `loader` and it is picked up). Enforcers and Sentry Drones would fill the Hub.
-2. **Measure on a phone:** open the game with `?debug` on a real phone, note the frame rate, draw calls and memory, and tell me what you see. The Hub and the Foundry hall have more geometry than the Market.
-3. **Act 3:** the freight lift to the Corporate Spire, the Spire's pristine-and-tearing look, Enforcers and drones, and the CEO.
-4. **Props for the new models:** Yuna's blasters, Jin's blade, Ruen's orb, sized to the custom meshes.
-5. **Saving:** the game does not save yet (the quest stage, scrap, picked-up nodes and cleared patrols are all lost on reload).
+## Next steps (in order)
+1. **Saving:** quest stage, scrap, cleared patrols, picked-up nodes, shutter and boss state, settings; autosave at the camp and on key story points, plus a Continue button.
+2. **Character growth, part 1:** XP and levels for all four, stat gains per level, a level-up screen after battle, and rebalancing of the Market, Hub and boss for levelled characters.
+3. **Character growth, part 2:** one new skill per character at set levels (Jin's combo, Kyle's party Guard, Ruen's heal or bigger Burst, Yuna's debuffing Stagger), shown in the battle menu.
+4. **Camp stat screen:** level, XP, skills and gear per character, in the camp menu.
+5. **Gear tied to scrap:** each camp upgrade changes a named weapon or armour piece.
+6. **Bonds:** pair bond levels raised by skits and fighting together, unlocking combined attacks and extra skits.
+7. **Phone test:** install the debug APK, send me the debug overlay numbers, then tune quality and load radius.
+8. **Enemy models (yours):** Enforcer, Sentry Drone, a real Loader Mech and the rest of `Enemies.md`; I wire them in as they arrive.
+9. **Act 3:** freight lift, the Corporate Spire, Enforcers and drones, the CEO.
+10. **Props for the new models:** Yuna's blasters, Jin's blade, Ruen's orb, and a custom Stranger.
+11. **Release:** web hosting, a release APK build, and a final polish pass.
