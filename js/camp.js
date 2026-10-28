@@ -179,6 +179,7 @@ const Camp = (() => {
   }
   function crewMove(c, dt, av) {
     const rig = c.rig; if (rig.combat || c.name === 'stranger') return null;
+    if (c.mode === 'scene') return 0;
     const away = Math.hypot(av.x, av.z), busy = Cutscene.active();
     if (c.mode === 'seated' && away > LEAVE_R && !busy) { c.mode = 'follow'; rig.kind = 'stand'; rig.hips.position.y = rig.hipsRest; }
     else if (c.mode === 'follow' && away < BACK_R) c.mode = 'returning';
@@ -197,6 +198,15 @@ const Camp = (() => {
     }
     return 0;
   }
+  // A place scene: the crew gather round (x, z), standing and facing `facing`; held in 'scene' mode until the scene ends
+  function gatherAt(x, z, facing) {
+    const off = { ruen: [-1.8, 1.5], kyle: [1.8, 1.5], yuna: [0, 3.0] };
+    for (const c of crew) if (off[c.name]) {
+      c.mode = 'scene'; c.rig.kind = 'stand'; c.rig.hips.position.y = c.rig.hipsRest;
+      const n = Player.collidePoint(x + off[c.name][0], z + off[c.name][1]); c.rig.root.position.set(n.x, 0, n.z); c.rig.root.rotation.y = facing;
+    }
+  }
+  function release() { for (const c of crew) if (c.mode === 'scene') c.mode = 'follow'; }
   // Seats everyone at once (a cutscene at the fire starts with the crew where the story expects them)
   function seatAll() {
     for (const c of crew) if (c.seat) { c.mode = 'seated'; c.rig.kind = 'seated'; c.rig.root.position.set(c.seat.x, 0, c.seat.z); faceFire(c.rig.root, c.seat.x, c.seat.z); c.rig.seatH = c.seat.h; }
@@ -228,7 +238,7 @@ const Camp = (() => {
 
   return {
     build, update, crew, colliders, SEATS,
-    UPGRADES, buy, damageMult, nearFire, FIRE_R, addScrap, dropScrap, seatAll, afterBattle, addParts: n => { parts += n; },
+    UPGRADES, buy, damageMult, nearFire, FIRE_R, addScrap, dropScrap, seatAll, gatherAt, release, afterBattle, addParts: n => { parts += n; },
     isOwned: id => owned.has(id),
     get parts() { return parts; },
   };

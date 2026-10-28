@@ -541,5 +541,5 @@ const Combat = (() => {
     ui.actions.hidden = !who || phase !== 'battle';
   }
 
-  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, groupList: () => [...groups.values()], phase: () => phase, stage: () => stage };
+  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], phase: () => phase, stage: () => stage };
 })();
