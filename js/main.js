@@ -80,7 +80,7 @@
   let gateHint = 0;
   function gateWatch(dt) {
     const cleared = Combat.alleyCleared();
-    if (cleared !== gateWas) { gateWas = cleared; City.setGate(cleared); if (cleared) Cutscene.gateOpened(); }
+    if (cleared !== gateWas) { gateWas = cleared; City.setGate(cleared); if (cleared) { Sound.sfx('door'); Cutscene.gateOpened(); } }
     gateHint -= dt;
     if (!cleared && gateHint <= 0 && Player.state().z < City.FAR + 4.4) {
       gateHint = 6; const toast = document.getElementById('toast');

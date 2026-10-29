@@ -286,10 +286,10 @@ const Combat = (() => {
 
 
   // ---------------- Skills (learned at set levels, see growth.js) and link attacks (unlocked by bonds) ----------------
-  function arc(u) { strike(u, 22, 'brawlSwipe', { all: 14, delay: Tuning.delay.arc }); }
-  function edge(u) { strike(u, 48, 'brawlSwipe', { delay: Tuning.delay.edge }); }
+  function arc(u) { Sound.sfx('slash', { pitch: 300 }); strike(u, 22, 'brawlSwipe', { all: 14, delay: Tuning.delay.arc }); }
+  function edge(u) { Sound.sfx('slash', { pitch: -400 }); strike(u, 48, 'brawlSwipe', { delay: Tuning.delay.edge }); }
   function mend(u) {
-    Chars.play(u.rig, 'mgHeal'); Sound.sfx('shield'); busy(1.1);
+    Chars.play(u.rig, 'mgHeal'); Sound.sfx('heal'); busy(1.1);
     for (const a of alive()) { const h = Math.round(a.hpMax * Tuning.mend); a.hp = Math.min(a.hpMax, a.hp + h); popup(a, '+' + h, '#8dffb0'); FX.shield(a.rig.root.position, 0x6dff9a); }
     log('Ruen mends the crew.'); endTurn(u, Tuning.delay.mend);
   }
@@ -319,19 +319,19 @@ const Combat = (() => {
   const lbonus = (a, b) => Growth.bondLevel(a, b) >= 3 ? 1.3 : 1;
   function crossfire(u) {
     const t = selected(), y = partyOf('yuna'); if (!t) return; const lb = lbonus('you', 'yuna');
-    Chars.play(u.rig, 'brawlPunch'); Chars.play(y.rig, 'mgBolt2'); Sound.sfx('crit'); shot(u, t, u.color); shot(y, t, y.color); shake(0.2); busy(1.3);
+    Chars.play(u.rig, 'brawlPunch'); Chars.play(y.rig, 'mgBolt2'); Sound.sfx('link'); shot(u, t, u.color); shot(y, t, y.color); shake(0.2); busy(1.3);
     hitFoe(t, Math.round((pdmg(u, 30) + pdmg(y, 24)) * lb)); t.atb = Math.max(0, t.atb - STAGGER); clearWind(t);
     y.atb = Math.max(0, y.atb - 0.5); log('Jin and Yuna\'s Crossfire!'); endTurn(u, Tuning.delay.link);
   }
   function aegis(u) {
     const k = partyOf('kyle'), lb = lbonus('ruen', 'kyle');
-    Chars.play(u.rig, 'mgNova'); Chars.play(k.rig, 'block'); Sound.sfx('nova'); shake(0.35); busy(1.4); FX.shield(k.rig.root.position);
+    Chars.play(u.rig, 'mgNova'); Chars.play(k.rig, 'block'); Sound.sfx('link'); shake(0.35); busy(1.4); FX.shield(k.rig.root.position);
     for (const f of foesAlive()) { FX.nova(f.rig.root.position); breakShield(f); hitFoe(f, Math.round(pdmg(u, 26) * lb)); }
     k.guard = GUARD_TIME; k.rig.idleClip = 'blockIdle'; k.atb = Math.max(0, k.atb - 0.5); log('Ruen\'s Aegis Burst, under Kyle\'s shield!'); endTurn(u, Tuning.delay.link);
   }
   function vow(u) {
     const t = selected(), j = partyOf('you'); if (!t) return; const lb = lbonus('kyle', 'you');
-    Chars.play(u.rig, 'brawlSwipe'); Chars.play(j.rig, 'brawlPunch'); Sound.sfx('crit'); shot(u, t, u.color); shot(j, t, j.color); shake(0.2); busy(1.3);
+    Chars.play(u.rig, 'brawlSwipe'); Chars.play(j.rig, 'brawlPunch'); Sound.sfx('link'); shot(u, t, u.color); shot(j, t, j.color); shake(0.2); busy(1.3);
     hitFoe(t, Math.round((pdmg(u, 24) + pdmg(j, 18)) * lb));
     for (const a of [u, j]) { a.brace = BRACE_TIME; a.rig.idleClip = 'blockIdle'; FX.shield(a.rig.root.position, 0xffffff); }
     j.atb = Math.max(0, j.atb - 0.5); log('Kyle and Jin\'s Iron Vow!'); endTurn(u, Tuning.delay.link);
@@ -350,11 +350,11 @@ const Combat = (() => {
   function useItem(u, id) {
     if (!itemOk(u, id) || !Items.use(id)) return;
     const D = Tuning.items[id];
-    Chars.play(u.rig, 'mgBless'); busy(0.9); Sound.sfx('shield');
+    Chars.play(u.rig, 'mgBless'); busy(0.9); Sound.sfx(id === 'revive' ? 'revive' : id === 'stim' ? 'stim' : id === 'flash' ? 'nova' : 'heal');
     if (id === 'patch') { const a = hurtest(), h = Math.round(a.hpMax * D.heal); a.hp = Math.min(a.hpMax, a.hp + h); popup(a, '+' + h, '#8dffb0'); FX.shield(a.rig.root.position, 0x6dff9a); log(u.name + ' patches up ' + a.name + '.'); }
     else if (id === 'revive') { const a = fallen(); a.alive = true; a.hp = Math.round(a.hpMax * D.heal); a.atb = 0; a.ready = false; a.rig.clip = null; a.rig.idleClip = a.rig.loco.battle; popup(a, '+' + a.hp, '#8dffb0'); FX.nova(a.rig.root.position, 0x6dff9a); log(u.name + ' brings ' + a.name + ' back!'); }
     else if (id === 'stim') { const a = slowest(u); a.atb = 1; a.ready = !(a.id === 'ruen' && cast); FX.shield(a.rig.root.position, 0x3ff0ff); log(u.name + ' stims ' + a.name + '. They act next.'); }
-    else if (id === 'flash') { Sound.sfx('nova'); shake(0.2); for (const f of foesAlive()) { f.atb = Math.max(0, f.atb - D.push); f.guard = 0; clearWind(f); FX.nova(f.rig.root.position, 0xffffff); } log(u.name + ' throws a flash grenade!'); }
+    else if (id === 'flash') { shake(0.2); for (const f of foesAlive()) { f.atb = Math.max(0, f.atb - D.push); f.guard = 0; clearWind(f); FX.nova(f.rig.root.position, 0xffffff); } log(u.name + ' throws a flash grenade!'); }
     endTurn(u, 0.15);
   }
   // The Items menu replaces the command buttons: what is owned, greyed out when it would do nothing, and Back
@@ -503,7 +503,7 @@ const Combat = (() => {
     if (text === 'Cleared') {                                                 // the spoils: XP for everyone, level-ups, and the pairs grow closer
       const xp = Math.round(foes.reduce((n, f) => n + (f.xp || 0), 0) * DIFF[diff].xp), ups = Growth.award(xp), cr = foes.reduce((n, f) => n + (f.cr || 0), 0); Growth.fought(); refreshAll(true); Items.add(cr);
       lvl.innerHTML = '<div class="xp">+' + xp + ' XP' + (cr ? ' \u00b7 +' + cr + ' credits' : '') + '</div>' + ups.map(g => '<div><b style="color:' + PARTY[g.id].color + '">' + PARTY[g.id].name + '</b> Lv ' + g.from + ' \u2192 ' + g.to + (g.skills.length ? ' \u00b7 New: ' + g.skills.join(', ') : '') + '</div>').join('');
-      lvl.hidden = false; if (ups.length) { resultWait = 5; setTimeout(() => Sound.sfx('quest'), 900); }
+      lvl.hidden = false; if (ups.length) { resultWait = 5; setTimeout(() => Sound.sfx('levelup'), 900); }
     }
     ui.banner.textContent = text; ui.banner.hidden = false; Sound.sfx(text === 'Cleared' ? 'win' : 'lose');
   }

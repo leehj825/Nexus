@@ -8,12 +8,12 @@ const ShopUI = (() => {
       const d = Items.DEF[id], li = document.createElement('li'), info = document.createElement('div'), nm = document.createElement('b'), tx = document.createElement('span'), btn = document.createElement('button');
       nm.textContent = d.name + '  \u00d7' + Items.count(id); tx.textContent = d.text; info.append(nm, tx);
       btn.type = 'button'; btn.textContent = 'Buy \u25cf ' + d.price; btn.disabled = Items.credits < d.price;
-      btn.addEventListener('click', () => { if (Items.buy(id)) { Sound.sfx('pickup'); render(); } });
+      btn.addEventListener('click', () => { if (Items.buy(id)) { Sound.sfx('coin'); render(); } });
       li.append(info, btn); list.append(li);
     }
     const sl = document.createElement('li'), si = document.createElement('div'), sn = document.createElement('b'), st = document.createElement('span'), sb = document.createElement('button');
     sn.textContent = 'Sell scrap'; st.textContent = 'The vendor pays ' + Tuning.credits.scrapSell + ' credits for each piece (the camp uses scrap for gear)'; si.append(sn, st);
-    sb.type = 'button'; sb.textContent = 'Sell \u25c6 1'; sb.disabled = Camp.parts < 1; sb.addEventListener('click', () => { if (Items.sellScrap()) { Sound.sfx('pickup'); render(); } });
+    sb.type = 'button'; sb.textContent = 'Sell \u25c6 1'; sb.disabled = Camp.parts < 1; sb.addEventListener('click', () => { if (Items.sellScrap()) { Sound.sfx('sell'); render(); } });
     sl.append(si, sb); list.append(sl);
     $('shopCredits').textContent = Items.credits; $('shopScrap').textContent = Camp.parts;
   }

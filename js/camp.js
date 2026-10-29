@@ -200,7 +200,7 @@ const Camp = (() => {
     if (!id) return;
     discover(id); lastCamp = id; Combat.restAll(); Save.save();
     const toast = document.getElementById('toast'); if (toast) { toast.textContent = 'The crew rest. Everyone is back on their feet.'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
-    Sound.sfx('quest');
+    Sound.sfx('rest');
   }
   function travel(id) { if (!found.has(id)) return; lastCamp = id; fadeThen(() => { arriveAt(id); Save.save(); }); }
   function wake() { fadeThen(() => { arriveAt(lastCamp); Combat.restAll(); Save.save(); }); }

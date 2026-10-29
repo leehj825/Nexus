@@ -21,7 +21,7 @@ const CampUI = (() => {
         name.textContent = u ? u.name : worn; text.textContent = u ? label + ' \u00b7 ' + u.text + (worn ? ' (now ' + worn + ')' : '') : label + ' \u00b7 fully upgraded';
         info.append(name, text); btn.type = 'button';
         btn.textContent = u ? 'Craft \u25c6 ' + u.cost : 'Maxed'; btn.disabled = !u || Camp.parts < u.cost;
-        if (u) btn.addEventListener('click', () => { if (Camp.buy(u.id)) { Combat.refreshAll(true); render(); } });
+        if (u) btn.addEventListener('click', () => { if (Camp.buy(u.id)) { Sound.sfx('equip'); Combat.refreshAll(true); render(); } });
         li.classList.toggle('done', !u); li.append(info, btn); list.append(li);
       }
     }
@@ -32,7 +32,7 @@ const CampUI = (() => {
     for (const s of dest) {
       const li = document.createElement('li'), info = document.createElement('div'), nm = document.createElement('b'), go = document.createElement('button');
       nm.textContent = s.name; info.append(nm); go.type = 'button'; go.textContent = 'Go';
-      go.addEventListener('click', () => { setOpen(false); Camp.travel(s.id); });
+      go.addEventListener('click', () => { setOpen(false); Sound.sfx('travel'); Camp.travel(s.id); });
       li.append(info, go); tl.append(li);
     }
     shown = stateKey();

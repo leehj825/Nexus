@@ -105,6 +105,19 @@ const Sound = (() => {
       case 'lose': for (let i = 0; i < 4; i++) note(t + i * 0.2, 'sawtooth', hz(64 - i * 3), 0.5, 0.1 * vol, d, 1500); break;
       case 'blip': note(t, 'square', o.f || 300, 0.045, 0.05 * vol, d, 3000); break;
       case 'glitch': for (let i = 0; i < 4; i++) noise(t + i * 0.05, 0.04, 0.2 * vol, d, 'bandpass', 800 + Math.random() * 3000, 4); break;
+      case 'slash': { noise(t, 0.22, 0.3 * vol, d, 'bandpass', 2400 + (o.pitch || 0), 1.6); const os = ctx.createOscillator(), g = ctx.createGain(); os.type = 'sawtooth'; os.frequency.setValueAtTime(1800 + (o.pitch || 0), t); os.frequency.exponentialRampToValueAtTime(260, t + 0.16); g.gain.setValueAtTime(0.1 * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18); os.connect(g); g.connect(d); os.start(t); os.stop(t + 0.2); note(t + 0.04, 'triangle', 2200, 0.3, 0.05 * vol, d, 7000); break; }
+      case 'heal': for (let i = 0; i < 5; i++) note(t + i * 0.08, 'sine', hz(72 + [0, 4, 7, 12, 16][i]), 0.6, 0.11 * vol, d, 6000); break;
+      case 'link': noise(t, 0.3, 0.3 * vol, d, 'bandpass', 1200, 1); for (let i = 0; i < 3; i++) { note(t + i * 0.09, 'sawtooth', hz(60 + i * 7), 0.5, 0.09 * vol, d, 3500); note(t + i * 0.09, 'square', hz(72 + i * 7), 0.4, 0.05 * vol, d, 5000); } note(t + 0.3, 'sine', 55, 0.5, 0.5 * vol, d, 300); break;
+      case 'levelup': for (let i = 0; i < 7; i++) note(t + i * 0.09, 'square', hz(67 + [0, 4, 7, 12, 16, 19, 24][i]), 0.4, 0.09 * vol, d, 5500); note(t + 0.63, 'triangle', hz(91), 1.0, 0.12 * vol, d, 7000); break;
+      case 'coin': note(t, 'square', hz(83), 0.07, 0.07 * vol, d, 6000); note(t + 0.07, 'square', hz(88), 0.28, 0.07 * vol, d, 6000); break;
+      case 'sell': note(t, 'square', hz(88), 0.07, 0.07 * vol, d, 6000); note(t + 0.07, 'square', hz(81), 0.07, 0.07 * vol, d, 6000); note(t + 0.14, 'square', hz(76), 0.2, 0.07 * vol, d, 5000); break;
+      case 'equip': noise(t, 0.06, 0.4 * vol, d, 'bandpass', 3200, 4); note(t, 'square', 520, 0.25, 0.08 * vol, d, 4000); note(t, 'square', 780, 0.25, 0.06 * vol, d, 4000); for (let i = 0; i < 3; i++) note(t + 0.25 + i * 0.08, 'triangle', hz(76 + [0, 5, 9][i]), 0.4, 0.09 * vol, d, 6000); break;
+      case 'rest': for (const iv of [0, 7, 12, 16]) note(t, 'sine', hz(57 + iv), 2.2, 0.1 * vol, d, 2400); noise(t, 0.7, 0.05 * vol, d, 'lowpass', 600); break;
+      case 'revive': { const os = ctx.createOscillator(), g = ctx.createGain(); os.type = 'sine'; os.frequency.setValueAtTime(200, t); os.frequency.exponentialRampToValueAtTime(1400, t + 0.5); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.2 * vol, t + 0.1); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7); os.connect(g); g.connect(d); os.start(t); os.stop(t + 0.75); note(t + 0.45, 'triangle', hz(84), 0.6, 0.1 * vol, d, 6000); break; }
+      case 'stim': for (let i = 0; i < 4; i++) note(t + i * 0.04, 'square', 900 + i * 350, 0.06, 0.06 * vol, d, 6000); break;
+      case 'travel': { noise(t, 0.9, 0.35 * vol, d, 'bandpass', 500, 0.7); const os = ctx.createOscillator(), g = ctx.createGain(); os.type = 'sine'; os.frequency.setValueAtTime(90, t); os.frequency.exponentialRampToValueAtTime(900, t + 0.8); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18 * vol, t + 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9); os.connect(g); g.connect(d); os.start(t); os.stop(t + 0.95); break; }
+      case 'deny': note(t, 'square', 150, 0.12, 0.08 * vol, d, 1200); note(t + 0.1, 'square', 110, 0.16, 0.08 * vol, d, 1200); break;
+      case 'door': noise(t, 0.35, 0.25 * vol, d, 'lowpass', 500); note(t, 'sine', 70, 0.4, 0.3 * vol, d, 300); break;
       case 'crackle': noise(t, 0.03, 0.08 * vol, d, 'highpass', 3000 + Math.random() * 2000); break;
     }
   }
