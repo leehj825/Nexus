@@ -504,7 +504,6 @@ const Chars = (() => {
     player: { kind: 'stand', seed: 0.6, extra: c => addBlade(c, { steelD: std(0x464b54, { roughness: 0.45, metalness: 0.45 }), bladeEdge: lit(0x3ff0ff, 1.6), bladeCore: lit(0xe6feff, 2.4) }) },
     ranger: { kind: 'stand', seed: 3.3, extra: () => {} },
     rangeroldcloth: { kind: 'stand', seed: 2.7, extra: () => {} },
-    rangerbare: { kind: 'stand', seed: 4.4, extra: () => {} },
   };
   // Yuna's blasters: short pistols held in each hand with the barrel running along the forearm (the grip sits in the fist,
   // the body on top of the hand), after the reference
