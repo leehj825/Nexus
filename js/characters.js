@@ -636,8 +636,8 @@ const Chars = (() => {
         else c.clip = null;
       }
       if (!played && c.mocap) {
-        const moving = speed > 0.15, run = speed > 3.2;
-        if (moving) c.walkT = (c.walkT || 0) + dt * (run ? speed / 3.6 : speed / 1.6);
+        const moving = speed > 0.15, run = speed > 4.2;
+        if (moving) c.walkT = (c.walkT || 0) + dt * (run ? speed / 4.6 : speed / 2.0);
         Mocap.sample(c, !moving ? c.idleClip : run ? c.loco.run : c.loco.walk, moving ? c.walkT : t);
         played = true;
       }

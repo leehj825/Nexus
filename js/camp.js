@@ -220,7 +220,7 @@ const Camp = (() => {
     let v = 0;
     c.px = c.px || 0; c.pz = c.pz || 0;
     if (d > 0.25) {
-      v = Math.min(run ? 4.4 : 2.3, 0.6 + d * 1.6);
+      v = Math.min(run ? 6.4 : 3.0, 0.6 + d * 1.8);
       const step = Math.min(v * dt, d), want = Math.atan2(dx, dz);
       let best = null, bestScore = -1e9;
       const base = c.detour && c.detour.t > 0 ? c.detour.ang : want;                // a deliberate sidestep overrides for a moment
@@ -269,7 +269,7 @@ const Camp = (() => {
       const f = FORM[c.name] || [0, -2], h = av.heading, sx = Math.sin(h), sz = Math.cos(h), rx = Math.cos(h), rz = -Math.sin(h);
       const goal = Player.collidePoint(av.x + sx * f[1] + rx * f[0], av.z + sz * f[1] + rz * f[0]), tx = goal.x, tz = goal.z;      // the spot must be on free ground
       const away = Math.hypot(av.x - rig.root.position.x, av.z - rig.root.position.z);
-      const r = stepTo(c, tx, tz, dt, Math.hypot(tx - rig.root.position.x, tz - rig.root.position.z) > 3.5 || av.speed > 3.2, { d: away });
+      const r = stepTo(c, tx, tz, dt, Math.hypot(tx - rig.root.position.x, tz - rig.root.position.z) > 3.5 || av.speed > 4.0, { d: away });
       if (r.snap) { snapTo(c, av, f); return 0; }
       if (r.v === 0) rig.root.rotation.y += wrap(h - rig.root.rotation.y) * Math.min(1, dt * 4);     // standing still: face where the avatar faces
       return r.v;

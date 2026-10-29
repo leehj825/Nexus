@@ -6,12 +6,11 @@
 const Player = (() => {
   const START = { x: -2.4, z: 2.4 };
   const EYE = 1.5, DIST0 = 8, ELEV0 = 0.42, DMIN = 3.2, DMAX = 17, EMIN = 0.1, EMAX = 1.25;     // the orbit: eye height over the feet, start distance and elevation, and their limits
-  const WALK = 2.3, RUN = 4.2, FOLLOW = 0.35, ARRIVE = 0.12;
-  const TAP_MOVE = 10, TAP_TIME = 450;                                        // px and ms: how still and how quick a tap is
+  const WALK = 3.0, RUN = 5.6;                                                 // m/s: a steady walk and a run (run mode is on by default, R or the Run button toggles it)
   const keys = {};
   const pos = { x: START.x, z: START.z };
   let heading = Math.PI, speed = 0, yaw = 0, elev = ELEV0, dist = DIST0, shown = DIST0, avatar = null, camera = null, view = null;
-  let goal = null, marker = null, frozen = false;
+  let frozen = false, runMode = true, stick = { x: 0, y: 0 };                 // stick: the on-screen stick, -1..1 (y up is forward)
   const pointers = new Map();                                                 // every pointer on the canvas, by id
   const camPos = new THREE.Vector3(), look = new THREE.Vector3(), tgt = new THREE.Vector3(pos.x, EYE, pos.z); let pinch = 0;
   const ray = new THREE.Raycaster(), ground = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), ndc = new THREE.Vector2(), hit = new THREE.Vector3();
@@ -19,19 +18,17 @@ const Player = (() => {
 
   function init(scene, canvas, cam) {
     camera = cam; view = canvas;
+    try { runMode = localStorage.getItem('nexus.run') !== '0'; } catch (e) {}
+    setRun(runMode); initStick(); document.getElementById('btnRun').addEventListener('click', () => setRun(!runMode));
     avatar = Chars.create('player');
     avatar.root.position.set(pos.x, 0, pos.z);
     avatar.root.rotation.y = heading;
     scene.add(avatar.root);
 
-    // The walk target: a flat cyan ring on the ground that pulses until the avatar arrives
-    marker = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.3, 24), new THREE.MeshBasicMaterial({ color: 0x3ff0ff, transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false }));
-    marker.rotation.x = -Math.PI / 2; marker.position.y = 0.03; marker.visible = false; scene.add(marker);
-
     window.addEventListener('keydown', e => {
       if (e.code.startsWith('Arrow')) { keys[e.code] = true; if (!frozen) e.preventDefault(); }
       if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') keys.shift = true;
-      if (e.code.startsWith('Key')) { keys[e.code.slice(3).toLowerCase()] = true; goal = null; marker.visible = false; }
+      if (e.code.startsWith('Key')) { keys[e.code.slice(3).toLowerCase()] = true; if (e.code === 'KeyR' && !e.repeat) setRun(!runMode); }
     });
     window.addEventListener('keyup', e => {
       if (e.code.startsWith('Arrow')) keys[e.code] = false;
@@ -47,7 +44,7 @@ const Player = (() => {
       if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 2) return;
       canvas.setPointerCapture(e.pointerId);
       pointers.set(e.pointerId, {
-        id: e.pointerId, look: e.pointerType === 'mouse' && e.button === 2,
+        id: e.pointerId, look: true,
         x: e.clientX, y: e.clientY, t: performance.now(), moved: 0,
       });
       if (pointers.size >= 2) for (const p of pointers.values()) p.look = true;     // a second finger means look
@@ -57,7 +54,6 @@ const Player = (() => {
       const p = pointers.get(e.pointerId); if (!p) return;
       const dx = e.clientX - p.x, dy = e.clientY - p.y;
       p.x = e.clientX; p.y = e.clientY; p.moved += Math.hypot(dx, dy);
-      if (!p.look && p.moved > TAP_MOVE) p.look = true;                        // once it moves, it is a drag: look
       if (p.look) {
         const k = pointers.size > 1 ? 0.5 : 1;                                  // two fingers share one look
         yaw -= dx * 0.006 * k;
@@ -72,21 +68,28 @@ const Player = (() => {
     const end = e => {
       const p = pointers.get(e.pointerId); if (!p) return;
       pointers.delete(e.pointerId); pinch = 0;
-      const tap = !p.look && p.moved < TAP_MOVE && performance.now() - p.t < TAP_TIME && pointers.size === 0;
-      if (tap) walkTo(e.clientX, e.clientY);
     };
     canvas.addEventListener('pointerup', end);
     canvas.addEventListener('pointercancel', end);
   }
 
-  // Turns a screen point into a point on the ground and sets it as the walk target
-  function walkTo(sx, sy) {
-    const r = view.getBoundingClientRect();
-    ndc.set((sx - r.left) / r.width * 2 - 1, -((sy - r.top) / r.height) * 2 + 1);
-    ray.setFromCamera(ndc, camera);
-    if (!ray.ray.intersectPlane(ground, hit)) return;
-    goal = { x: hit.x, z: hit.z };
-    marker.position.set(goal.x, 0.03, goal.z); marker.visible = true;
+  // Run mode: on by default; R or the Run button toggles it, and holding Shift swaps it for as long as it is held
+  function setRun(on) { runMode = on; try { localStorage.setItem('nexus.run', on ? '1' : '0'); } catch (e) {} const b = document.getElementById('btnRun'); if (b) { b.classList.toggle('on', on); b.title = on ? 'Running (R)' : 'Walking (R)'; } }
+  // The on-screen stick: drag the knob; the avatar goes the way it points, relative to the camera, and turns to face it (no strafing)
+  function initStick() {
+    const el = document.getElementById('stick'); if (!el) return;
+    const knob = el.querySelector('i'), R = 46; let pid = null;
+    const touch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+    if (touch) document.body.classList.add('touch');
+    const set = (cx, cy) => {
+      const r = el.getBoundingClientRect(), dx = cx - (r.left + r.width / 2), dy = cy - (r.top + r.height / 2), d = Math.hypot(dx, dy), k = d > R ? R / d : 1;
+      stick.x = dx * k / R; stick.y = -dy * k / R; knob.style.transform = 'translate(' + (dx * k) + 'px,' + (dy * k) + 'px)';
+    };
+    el.addEventListener('pointerdown', e => { if (frozen) return; pid = e.pointerId; try { el.setPointerCapture(pid); } catch (err) {} set(e.clientX, e.clientY); document.body.classList.add('played'); e.preventDefault(); });
+    el.addEventListener('pointermove', e => { if (e.pointerId === pid) set(e.clientX, e.clientY); });
+    const up = e => { if (e.pointerId !== pid) return; pid = null; stick.x = stick.y = 0; knob.style.transform = ''; };
+    el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+    window.addEventListener('blur', () => { pid = null; stick.x = stick.y = 0; knob.style.transform = ''; });
   }
 
   // Keeps the avatar inside the alley (or the world beyond its gate) and out of the props. The alley is narrower than the world, and
@@ -115,9 +118,9 @@ const Player = (() => {
   function rig() { return avatar; }
   // A scripted walk (cutscenes): the avatar walks to (x, z) on its own, then turns to face `heading`. Pass null to hand control back.
   let script = null;
-  function scriptTo(x, z, h) { script = x === null ? null : { x, z, h }; if (script) { goal = null; marker.visible = false; } }
-  function teleport(x, z) { pos.x = x; pos.z = z; goal = null; marker.visible = false; }     // for scripted placement and debugging
-  function setFrozen(on) { frozen = on; if (on) { goal = null; marker.visible = false; for (const k in keys) keys[k] = false; } }
+  function scriptTo(x, z, h) { script = x === null ? null : { x, z, h }; }
+  function teleport(x, z) { pos.x = x; pos.z = z; }     // for scripted placement and debugging
+  function setFrozen(on) { frozen = on; if (on) { stick.x = stick.y = 0; const k = document.querySelector('#stick i'); if (k) k.style.transform = ''; for (const k2 in keys) keys[k2] = false; } }
 
   // Is a camera at (x, y, z) inside a wall, a building or out of the street? The alley's walls are at +-HALF; the Market's are footprints on the ground
   function camBlocked(x, z, y) {
@@ -144,23 +147,23 @@ const Player = (() => {
 
     // Direction, in priority: keys, then a tap target. A battle freezes the avatar.
     const b = basis();
-    let mx = 0, mz = 0, v = 0, run = !!keys.shift;
+    let mx = 0, mz = 0, v = 0, run = runMode !== !!keys.shift, power = 1;
     if (!frozen) {
       if (keys.w) { mx += b.fx; mz += b.fz; }
       if (keys.s) { mx -= b.fx; mz -= b.fz; }
       if (keys.d) { mx += b.rx; mz += b.rz; }
       if (keys.a) { mx -= b.rx; mz -= b.rz; }
+      if (!(mx || mz)) {                                                      // the stick: its direction and how far it is pushed
+        const sm = Math.hypot(stick.x, stick.y);
+        if (sm > 0.12) { mx = b.fx * stick.y + b.rx * stick.x; mz = b.fz * stick.y + b.rz * stick.x; power = Math.min(1, sm / 0.85); }
+      }
     }
     if (mx || mz) {
-      const m = Math.hypot(mx, mz); mx /= m; mz /= m; v = run ? RUN : WALK;
+      const m = Math.hypot(mx, mz); mx /= m; mz /= m; v = (run ? RUN : WALK) * power;
     } else if (script) {
       const gx = script.x - pos.x, gz = script.z - pos.z, dist = Math.hypot(gx, gz);
       if (dist > 0.08) { mx = gx / dist; mz = gz / dist; v = Math.min(WALK * 1.4, dist * 4 + 0.6); }
       else { heading += Math.atan2(Math.sin(script.h - heading), Math.cos(script.h - heading)) * Math.min(1, dt * 6); }
-    } else if (goal && !frozen) {
-      const gx = goal.x - pos.x, gz = goal.z - pos.z, dist = Math.hypot(gx, gz);
-      if (dist < ARRIVE) { goal = null; marker.visible = false; }
-      else { mx = gx / dist; mz = gz / dist; v = WALK; }
     }
     if (v > 0) {
       const next = collide(pos.x + mx * v * dt, pos.z + mz * v * dt);
@@ -169,7 +172,6 @@ const Player = (() => {
       heading += Math.atan2(Math.sin(target - heading), Math.cos(target - heading)) * Math.min(1, dt * 10);
     }
     speed += (v - speed) * Math.min(1, dt * 8);
-    if (marker.visible) marker.scale.setScalar(1 + Math.sin(t * 6) * 0.08);
     // In a battle the avatar is posed and placed by Combat
     if (!avatar.combat) {
       avatar.root.position.set(pos.x, 0, pos.z);
@@ -185,7 +187,7 @@ const Player = (() => {
 
   function faceTowards(x, z) { heading = Math.atan2(x - pos.x, z - pos.z); avatar.root.rotation.y = heading; }
   const getState = () => ({ x: pos.x, z: pos.z, heading, yaw, elev, dist });
-  function setState(d) { pos.x = d.x; pos.z = d.z; heading = d.heading; yaw = d.yaw || 0; elev = d.elev || ELEV0; dist = shown = d.dist || DIST0; tgt.set(pos.x, EYE, pos.z); goal = null; marker.visible = false; avatar.root.position.set(pos.x, 0, pos.z); avatar.root.rotation.y = heading; }
+  function setState(d) { pos.x = d.x; pos.z = d.z; heading = d.heading; yaw = d.yaw || 0; elev = d.elev || ELEV0; dist = shown = d.dist || DIST0; tgt.set(pos.x, EYE, pos.z); avatar.root.position.set(pos.x, 0, pos.z); avatar.root.rotation.y = heading; }
 
   function state() { return { x: pos.x, z: pos.z, heading, speed, moving: speed > 0.1 }; }
 

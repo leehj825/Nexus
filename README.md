@@ -32,9 +32,9 @@ Opening `index.html` straight from the file system also works in most browsers.
 | Drag (mouse or finger) | Turn the camera all the way round Jin and tilt it |
 | Wheel or pinch | Zoom the camera in and out |
 | Arrow keys | Turn and tilt the camera |
-| Click or tap the ground | Walk there |
-| W A S D | Walk (relative to the camera) |
-| Shift | Run |
+| On-screen stick (touch screens) | Move Jin the way it points, relative to the camera; push further to go faster |
+| R / Run button | Toggle running (on by default). Holding Shift swaps it for as long as it is held |
+| W A S D | Move (relative to the camera; Jin turns to face the way he goes) |
 | C | Open the camp (near the fire) |
 | P | Pause |
 | Esc | Release the mouse |
