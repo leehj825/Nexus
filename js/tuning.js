@@ -26,5 +26,7 @@ const Tuning = {
   "delay": {"link": 0.2, "arc": 0.25, "edge": 0.4, "mend": 0.3, "bulwark": 0.3, "shock": 0.35, "barrage": 0.4, "weak": 0.1},
   "zoneTier": {"market": {"row0": 0, "base": 0.207, "perRow": 0.349}, "hub": {"row0": 8, "base": 2.921, "perRow": 0.222}, "spire": {"row0": 14, "base": 5.394, "perRow": 0.25}},
   "scale": {"foeHp": 1, "foeDmg": 1, "xp": 1.219, "bossDmg": 2.827, "ceoDmg": 2.368},
+  "credits": { "perFoe": 6, "tierGrowth": 0.5, "loader": 120, "scrapSell": 8 },
+  "items": { "patch": { "name": "Patch Kit", "price": 30, "heal": 0.45, "text": "Heals the most hurt ally by 45%" }, "revive": { "name": "Revive Kit", "price": 80, "heal": 0.4, "text": "Brings a fallen ally back at 40% health" }, "stim": { "name": "Stim", "price": 45, "text": "Fills an ally's gauge so they act next" }, "flash": { "name": "Flash Grenade", "price": 60, "push": 0.5, "text": "Pushes every foe's gauge back and breaks wind-ups" } },
   "loot": {"base": 2.456, "perTier": 0.5}
 };

@@ -72,6 +72,7 @@ const HUD = (() => {
   function update(t, p) {
     drawMap(p, t);
     { const c = Growth.chars.you, lv = document.querySelector('.status .lv'); if (lv) lv.textContent = 'Lv ' + c.lv; const sf = $('stFill'); if (sf) sf.style.width = (c.lv >= Growth.MAXLV ? 100 : c.xp / Growth.need(c.lv) * 100) + '%'; }
+    { const cr = $('credits'); if (cr) cr.textContent = Items.credits; }
     const pi = Combat.partyInfo()[0];                                              // Jin's health in the status bar
     if (pi) { const f = $('hpFill'); if (f) f.style.width = Math.max(0, Math.min(100, pi.hp / pi.hpMax * 100)) + '%'; $('hpTxt').textContent = Math.round(pi.hp) + ' / ' + pi.hpMax; }
     const z = p.z < World.SPIRE_Z ? 'Corporate Spire \u00b7 Night' : p.z < World.HUB_Z ? 'Industrial Hub \u00b7 Night' : p.z < World.Z0 - 1 ? 'Neon Market \u00b7 Night' : 'Neon District \u00b7 Night';             // the zone title follows the player through the gate

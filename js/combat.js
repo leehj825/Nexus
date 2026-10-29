@@ -97,7 +97,7 @@ const Combat = (() => {
     if (g.foes) return g.foes;
     g.foes = g.rigs.map((rig, i) => {
       const BS = rig.name === 'loader', B = rig.name === 'brute' || BS, K = { loader: BOSS, brute: BRUTE, enforcer: ENFORCER, drone: DRONE, seraph: SERAPH, ceo: CEO }[rig.name] || HUSK, hp = Math.round(K.hp * (1 + Tuning.tier.hp * g.tier) * Tuning.scale.foeHp);
-      const f = { id: g.id + ':' + i, name: K.name, ai: K.ai || (BS ? 'boss' : 'husk'), xp: Math.round(K.xp * (1 + Tuning.tier.xp * g.tier) * Tuning.scale.xp), brute: B, boss: BS, turn: 0, phase2: false, color: K.color, rig, hp, hpMax: hp, dmgMul: (1 + Tuning.tier.dmg * g.tier) * Tuning.scale.foeDmg * (BS ? Tuning.scale.bossDmg : rig.name === 'ceo' ? Tuning.scale.ceoDmg : 1), rate: K.rate * (1 + Tuning.tier.rate * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
+      const f = { id: g.id + ':' + i, name: K.name, cr: K.cr !== undefined ? K.cr : Math.round(Tuning.credits.perFoe * (1 + Tuning.credits.tierGrowth * g.tier)), ai: K.ai || (BS ? 'boss' : 'husk'), xp: Math.round(K.xp * (1 + Tuning.tier.xp * g.tier) * Tuning.scale.xp), brute: B, boss: BS, turn: 0, phase2: false, color: K.color, rig, hp, hpMax: hp, dmgMul: (1 + Tuning.tier.dmg * g.tier) * Tuning.scale.foeDmg * (BS ? Tuning.scale.bossDmg : rig.name === 'ceo' ? Tuning.scale.ceoDmg : 1), rate: K.rate * (1 + Tuning.tier.rate * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
       f.rate0 = f.rate; f.label = makeLabel(K.name, K.color, f); return f;
     });
     return g.foes;
@@ -337,10 +337,37 @@ const Combat = (() => {
     j.atb = Math.max(0, j.atb - 0.5); log('Kyle and Jin\'s Iron Vow!'); endTurn(u, Tuning.delay.link);
   }
   const LINK_RUN = { crossfire, aegis, vow };
+
+  // ---------------- Items (bought in shops): they take the user's turn ----------------
+  let itemMenu = false, itemMenuFor = null;
+  const hurtest = () => alive().filter(a => a.hp < a.hpMax).sort((a, b) => a.hp / a.hpMax - b.hp / b.hpMax)[0];
+  const fallen = () => party.find(a => !a.alive);
+  const slowest = u => alive().filter(a => a !== u && a.atb < 0.95 && !(a.id === 'ruen' && cast)).sort((a, b) => a.atb - b.atb)[0];
+  function itemOk(u, id) {
+    if (id === 'patch') return !!hurtest(); if (id === 'revive') return !!fallen();
+    if (id === 'stim') return !!slowest(u); if (id === 'flash') return foesAlive().length > 0; return false;
+  }
+  function useItem(u, id) {
+    if (!itemOk(u, id) || !Items.use(id)) return;
+    const D = Tuning.items[id];
+    Chars.play(u.rig, 'mgBless'); busy(0.9); Sound.sfx('shield');
+    if (id === 'patch') { const a = hurtest(), h = Math.round(a.hpMax * D.heal); a.hp = Math.min(a.hpMax, a.hp + h); popup(a, '+' + h, '#8dffb0'); FX.shield(a.rig.root.position, 0x6dff9a); log(u.name + ' patches up ' + a.name + '.'); }
+    else if (id === 'revive') { const a = fallen(); a.alive = true; a.hp = Math.round(a.hpMax * D.heal); a.atb = 0; a.ready = false; a.rig.clip = null; a.rig.idleClip = a.rig.loco.battle; popup(a, '+' + a.hp, '#8dffb0'); FX.nova(a.rig.root.position, 0x6dff9a); log(u.name + ' brings ' + a.name + ' back!'); }
+    else if (id === 'stim') { const a = slowest(u); a.atb = 1; a.ready = !(a.id === 'ruen' && cast); FX.shield(a.rig.root.position, 0x3ff0ff); log(u.name + ' stims ' + a.name + '. They act next.'); }
+    else if (id === 'flash') { Sound.sfx('nova'); shake(0.2); for (const f of foesAlive()) { f.atb = Math.max(0, f.atb - D.push); f.guard = 0; clearWind(f); FX.nova(f.rig.root.position, 0xffffff); } log(u.name + ' throws a flash grenade!'); }
+    endTurn(u, 0.15);
+  }
+  // The Items menu replaces the command buttons: what is owned, greyed out when it would do nothing, and Back
+  function itemCommands(u) {
+    const list = Items.IDS.filter(id => Items.count(id) > 0).map(id => ({ label: Tuning.items[id].name + ' ×' + Items.count(id), off: !itemOk(u, id), run: w => { itemMenu = false; useItem(w, id); } }));
+    list.push({ label: 'Back', run: () => { itemMenu = false; } });
+    return list;
+  }
   // What a crew member's menu holds: the two basic commands, the skills their level has earned, and the links their bonds allow (greyed out unless the partner is up with half a gauge)
   function commandsFor(u) {
     const list = COMMANDS[u.id].map(c => ({ label: c.label, run: c.run }));
     for (const s of Growth.unlocked(u.id)) list.push({ label: s.name, run: SKILL_RUN[s.id], skill: true });
+    if (Items.any()) list.push({ label: 'Items', run: w => { itemMenu = true; itemMenuFor = w.id; } });
     for (const l of Growth.LINKS) if (l.lead === u.id && Growth.bondLevel(l.lead, l.with) >= 2) { const p = partyOf(l.with); list.push({ label: l.name, run: LINK_RUN[l.id], link: true, off: !(p && p.alive && p.atb >= 0.5) }); }
     return list;
   }
@@ -474,8 +501,8 @@ const Combat = (() => {
     for (const u of party) u.ready = false;
     const lvl = $('lvl'); lvl.hidden = true;
     if (text === 'Cleared') {                                                 // the spoils: XP for everyone, level-ups, and the pairs grow closer
-      const xp = Math.round(foes.reduce((n, f) => n + (f.xp || 0), 0) * DIFF[diff].xp), ups = Growth.award(xp); Growth.fought(); refreshAll(true);
-      lvl.innerHTML = '<div class="xp">+' + xp + ' XP</div>' + ups.map(g => '<div><b style="color:' + PARTY[g.id].color + '">' + PARTY[g.id].name + '</b> Lv ' + g.from + ' \u2192 ' + g.to + (g.skills.length ? ' \u00b7 New: ' + g.skills.join(', ') : '') + '</div>').join('');
+      const xp = Math.round(foes.reduce((n, f) => n + (f.xp || 0), 0) * DIFF[diff].xp), ups = Growth.award(xp), cr = foes.reduce((n, f) => n + (f.cr || 0), 0); Growth.fought(); refreshAll(true); Items.add(cr);
+      lvl.innerHTML = '<div class="xp">+' + xp + ' XP' + (cr ? ' \u00b7 +' + cr + ' credits' : '') + '</div>' + ups.map(g => '<div><b style="color:' + PARTY[g.id].color + '">' + PARTY[g.id].name + '</b> Lv ' + g.from + ' \u2192 ' + g.to + (g.skills.length ? ' \u00b7 New: ' + g.skills.join(', ') : '') + '</div>').join('');
       lvl.hidden = false; if (ups.length) { resultWait = 5; setTimeout(() => Sound.sfx('quest'), 900); }
     }
     ui.banner.textContent = text; ui.banner.hidden = false; Sound.sfx(text === 'Cleared' ? 'win' : 'lose');
@@ -708,7 +735,8 @@ const Combat = (() => {
     }
     // The command menu: the first ready crew member (in order), who is not casting
     const who = isBusy() ? null : party.find(u => u.alive && u.ready && !(u.id === 'ruen' && cast));
-    const cmds = who ? commandsFor(who) : [], key = who ? who.id + '|' + cmds.map(c => c.label + (c.off ? '-' : '')).join(',') : null;
+    if (itemMenu && (!who || who.id !== itemMenuFor)) itemMenu = false;
+    const cmds = who ? (itemMenu ? itemCommands(who) : commandsFor(who)) : [], key = who ? who.id + '|' + cmds.map(c => c.label + (c.off ? '-' : '')).join(',') : null;
     if (key !== menuFor) {
       menuFor = key;
       ui.actions.innerHTML = '';
@@ -722,7 +750,7 @@ const Combat = (() => {
     ui.actions.hidden = !who || phase !== 'battle';
   }
 
-  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone, hp: party.map(u => [u.id, Math.round(u.hp)]) }), debugRun: (id, label) => { const u = partyOf(id), c = u && commandsFor(u).find(q => q.label === label); if (!c) return 'missing'; if (c.off) return 'off'; u.atb = 1; u.ready = true; c.run(u); return 'ok'; }, debugFoeHp: f => { for (const x of foes) x.hp = Math.round(x.hpMax * f); }, debugFoeAct: () => { for (const f of foes) if (f.alive && !f.wind) foeAct(f); }, debugReady: () => { for (const u of party) if (u.alive) u.atb = 1; }, restAll, refreshAll, setDifficulty, difficulty: () => diff, DIFF, partyInfo: () => party.map(u => ({ id: u.id, name: u.name, hp: u.hp, hpMax: u.hpMax })), setState(d) {
+  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone, hp: party.map(u => [u.id, Math.round(u.hp)]) }), debugRun: (id, label) => { const u = partyOf(id), c = u && commandsFor(u).find(q => q.label === label); if (!c) return 'missing'; if (c.off) return 'off'; u.atb = 1; u.ready = true; c.run(u); return 'ok'; }, debugFoeHp: f => { for (const x of foes) x.hp = Math.round(x.hpMax * f); }, debugFoeAct: () => { for (const f of foes) if (f.alive && !f.wind) foeAct(f); }, debugItem: id => { const u = party[0]; const ok = itemOk(u, id); useItem(u, id); return ok; }, debugReady: () => { for (const u of party) if (u.alive) u.atb = 1; }, restAll, refreshAll, setDifficulty, difficulty: () => diff, DIFF, partyInfo: () => party.map(u => ({ id: u.id, name: u.name, hp: u.hp, hpMax: u.hpMax })), setState(d) {
     for (const [id, hp] of d.hp || []) { const u = party.find(q => q.id === id); if (u) { u.hp = hp; u.alive = hp > 0; } }
      if (d.alley && !alleyDone) { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); } }, debugClearAlley: () => { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); }, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
 })();

@@ -429,7 +429,7 @@ const Cutscene = (() => {
     const pool = NPC_LINES[npc.shop ? 'vendor' : npc.hub ? 'hub' : 'rumor'], a = pool[Math.floor(Math.random() * pool.length)], b2 = NPC_LINES.rumor[Math.floor(Math.random() * NPC_LINES.rumor.length)];
     const list = [{ shot: 'who', rig: npc.rig, name: npc.name, color: '#9fe0d0', mood: 'talk', text: a }];
     if (npc.shop) list.push({ shot: 'who', rig: npc.rig, name: npc.name, color: '#9fe0d0', mood: 'nod', text: 'Take a look at the counter.' }); else list.push({ shot: 'who', rig: npc.rig, name: npc.name, color: '#9fe0d0', mood: 'worry', text: b2 });
-    begin(list, () => { if (npc.shop) CampUI.openShop(); }, { anchor: 'npc', npc });
+    begin(list, () => { if (npc.shop) ShopUI.open(); }, { anchor: 'npc', npc });
   }
   // What the interact button does right now: the story at the fire, or a chat with someone close by
   function interactable() {

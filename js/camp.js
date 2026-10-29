@@ -325,6 +325,7 @@ const Camp = (() => {
     UPGRADES, GEAR, buy, damageMult, hpMult, nextGear, wornName, nearFire, nearCamp, rest, siteList, discover, travel, wake, fadeThen, FIRE_R,
     found: () => [...found], lastCamp: () => lastCamp, setLast: id => { lastCamp = id; }, skitSeen: id => skits.has(id), markSkit: id => skits.add(id), addScrap, dropScrap, seatAll, gatherAt, release, afterBattle, addParts: n => { parts += n; },
     isOwned: id => owned.has(id),
+    spend: n => { if (parts < n) return false; parts -= n; return true; },
     getState: () => ({ parts, owned: [...owned], found: [...found], last: lastCamp, skits: [...skits] }),
     setState(d) {
       parts = d.parts || 0; owned.clear(); (d.owned || []).forEach(id => owned.add(LEGACY[id] || id));

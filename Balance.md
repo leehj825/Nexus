@@ -30,6 +30,9 @@ Average level: 4.8 at the tower, 5.0 at the Hub gate, 7.9 before the Loader Mech
 * **Scrap and gear costs:** weapons cost 5, 10, 17 and armour 5, 11 (the first estimate gave the whole Market's scrap away for nothing).
 * **Bosses have far more health and act more often** than first guessed. The first versions died in under 20 seconds.
 
+## Items and credits
+Shops sell battle items for credits (Patch Kit 30, Stim 45, Flash Grenade 60, Revive Kit 80); fights pay credits (6 per foe, growing with the zone, 120 for the Loader Mech) and a vendor buys scrap at 8 credits each. The simulator does not model items, so its results are on the cautious side: a player using items will do better than the bot.
+
 ## What the simulation cannot tell
 * The bot plays one fixed way, so it says nothing about feel, boredom or how a new player reads a telegraph.
 * The route is assumed (how many patrols are met, how much scrap is picked up). Players who explore everything will be stronger, and those who skip fights weaker. The numbers are for a middle path.

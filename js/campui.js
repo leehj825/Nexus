@@ -74,5 +74,5 @@ const CampUI = (() => {
     if (open && stateKey() !== shown) render();
   }
 
-  return { init, update, isOpen: () => open, openShop: () => { shop = true; setOpen(true); } };
+  return { init, update, isOpen: () => open };
 })();
