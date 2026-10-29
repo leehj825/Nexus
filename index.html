@@ -22,6 +22,7 @@
   <div class="zone"><span>Neon District &middot; Night</span></div>
 
   <div class="corner">
+    <button id="btnCrew" type="button" aria-label="Crew" title="Crew (I)">&#9786;</button>
     <button id="btnMap" type="button" aria-label="Map" title="Map">&#9638;</button>
     <button id="btnPause" type="button" aria-label="Pause" title="Pause (P)">&#10074;&#10074;</button>
     <button id="btnSound" type="button" aria-label="Sound" title="Sound">&#9834;</button>
@@ -44,6 +45,7 @@
     <div class="vhint">Drag to rotate &middot; wheel or pinch to zoom &middot; two fingers or right-drag to pan &middot; double-tap to reset</div>
     <div id="log" class="log"></div>
     <div id="banner" class="banner" hidden></div>
+    <div id="lvl" class="lvl" hidden></div>
     <div id="actions" class="actions" hidden></div>
     <div id="party" class="party"></div>
   </div>
@@ -71,6 +73,14 @@
     <button id="tContinue" type="button">Continue</button>
     <div id="tInfo" class="title-info"></div>
     <button id="tNew" type="button">Start</button>
+  </div>
+</div>
+
+<div id="crew" class="camp" hidden>
+  <div class="camp-card crew-card" role="dialog" aria-label="Crew">
+    <header><h2>Crew</h2></header>
+    <div id="crewBody" class="crew-body"></div>
+    <button id="crewClose" class="camp-close" type="button">Close</button>
   </div>
 </div>
 
@@ -141,6 +151,7 @@
 <script src="js/textures.js"></script>
 <script src="js/sound.js"></script>
 <script src="js/save.js"></script>
+<script src="js/growth.js"></script>
 <script src="js/perf.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/characters.js"></script>
@@ -153,6 +164,7 @@
 <script src="js/campui.js"></script>
 <script src="js/cutscene.js"></script>
 <script src="js/modelcheck.js"></script>
+<script src="js/crewui.js"></script>
 <script src="js/title.js"></script>
 <script src="js/main.js"></script>
 </body>

@@ -27,9 +27,9 @@ const Combat = (() => {
     yuna: { name: 'Yuna', hp: 80, rate: 0.2, color: '#7ff7ff' },
   };
   const ORDER = ['you', 'ruen', 'kyle', 'yuna'];
-  const HUSK = { name: 'Husk', hp: 60, rate: 0.09, color: '#ff5a7a' };
-  const BOSS = { name: 'Loader Mech', hp: 440, rate: 0.07, color: '#ffd24a' };            // the Foundry's guardian: a sweep that hits everyone, crushes, and a shard volley once it is half broken
-  const BRUTE = { name: 'Husk Brute', hp: 110, rate: 0.065, color: '#ff8a4a' };       // big and slow: no light attacks, only the telegraphed Crush, which hits hard
+  const HUSK = { name: 'Husk', hp: 60, rate: 0.09, color: '#ff5a7a', xp: 14 };
+  const BOSS = { name: 'Loader Mech', hp: 440, rate: 0.07, color: '#ffd24a', xp: 220 };            // the Foundry's guardian: a sweep that hits everyone, crushes, and a shard volley once it is half broken
+  const BRUTE = { name: 'Husk Brute', hp: 110, rate: 0.065, color: '#ff8a4a', xp: 38 };       // big and slow: no light attacks, only the telegraphed Crush, which hits hard
   const COMMANDS = {
     you: [{ label: 'Strike', run: u => strike(u, 16, 'brawlPunch') }, { label: 'Brace', run: u => brace(u) }],
     ruen: [{ label: 'Data Bolt', run: u => strike(u, 22, 'mgBolt') }, { label: 'Data Burst', run: u => startCast(u) }],
@@ -48,6 +48,15 @@ const Combat = (() => {
   let ui = null;
   const v = new THREE.Vector3();
 
+  // A crew member's health and gauge speed from their level and armour. A rise in health (a level, a new piece of armour) heals the difference.
+  function refreshStats(u, heal) {
+    const mx = Math.round(PARTY[u.id].hp * Growth.hpMult(u.id) * Camp.hpMult(u.id));
+    if (heal && u.hp > 0 && mx > u.hpMax) u.hp += mx - u.hpMax;
+    u.hpMax = mx; u.hp = Math.min(u.hp, mx); u.rate = PARTY[u.id].rate * Growth.rateMult(u.id);
+  }
+  const refreshAll = heal => { for (const u of party) refreshStats(u, heal); };
+  const pdmg = (u, base) => Math.round(base * Camp.damageMult(u.id) * Growth.dmgMult(u.id));        // damage from a level and a weapon
+
   // ---------------- Setup ----------------
   function init(s, camera) {
     scene = s;
@@ -56,7 +65,7 @@ const Combat = (() => {
       const rig = id === 'you' ? Player.rig() : Camp.crew.find(c => c.name === id).rig;
       const u = { id, name: PARTY[id].name, color: PARTY[id].color, rig, hp: PARTY[id].hp, hpMax: PARTY[id].hp, rate: PARTY[id].rate, atb: 0, ready: false, alive: true, guard: 0, brace: 0, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
       u.label = makeLabel(u.name, u.color, null);
-      party.push(u);
+      party.push(u); refreshStats(u, false); u.hp = u.hpMax;
     }
     const alleyRigs = [];
     for (let i = 0; i < 3; i++) {
@@ -79,7 +88,7 @@ const Combat = (() => {
     if (g.foes) return g.foes;
     g.foes = g.rigs.map((rig, i) => {
       const BS = rig.name === 'loader', B = rig.name === 'brute' || BS, K = BS ? BOSS : B ? BRUTE : HUSK, hp = Math.round(K.hp * (1 + 0.22 * g.tier));
-      const f = { id: g.id + ':' + i, name: K.name, brute: B, boss: BS, turn: 0, phase2: false, color: K.color, rig, hp, hpMax: hp, dmgMul: 1 + 0.14 * g.tier, rate: K.rate * (1 + 0.05 * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
+      const f = { id: g.id + ':' + i, name: K.name, xp: Math.round(K.xp * (1 + 0.2 * g.tier)), brute: B, boss: BS, turn: 0, phase2: false, color: K.color, rig, hp, hpMax: hp, dmgMul: 1 + 0.14 * g.tier, rate: K.rate * (1 + 0.05 * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
       f.label = makeLabel(K.name, K.color, f); return f;
     });
     return g.foes;
@@ -169,7 +178,8 @@ const Combat = (() => {
     if (u.hp <= 0) kill(u); else Chars.play(u.rig, u.hp < u.hpMax * 0.3 ? 'impact2' : 'impact');
   }
   // A husk's attack on a crew member. Kyle may intercept a fatal blow on Ruen or Yuna
-  function hitParty(u, dmg) {
+  function hitParty(u, dmg, from) {
+    if (from && from.weak > 0) dmg = Math.round(dmg * 0.7);
     const kyle = party.find(p => p.id === 'kyle');
     if (dmg >= u.hp && u.id !== 'kyle' && kyle.alive && kyle.guard > 0 && kyle.atb >= 0.5) {
       kyle.atb = 0; kyle.guard = 0;
@@ -194,17 +204,17 @@ const Combat = (() => {
   function endTurn(u) { u.atb = 0; u.ready = false; menuFor = null; }
   // The melee fighters (Jin, Kyle) run up to their target, strike it face to face and run back; the others shoot from where they stand
   const MELEE = { you: true, kyle: true }, RUN = 12, REACH = 1.25, SWING = 1.8;          // run speed (m/s) and how much faster than normal the blow plays
-  function strike(u, dmg, clip = 'brawlPunch') {                     // clip null: the second blow of a combo, the first one's clip plays on
+  function strike(u, dmg, clip = 'brawlPunch', opts = {}) {          // clip null: the second blow of a combo, the first one's clip plays on
     const t = selected(); if (!t) return;
-    dmg = Math.round(dmg * Camp.damageMult(u.id));                   // the camp's weapon upgrades
+    dmg = pdmg(u, dmg); const others = opts.all ? pdmg(u, opts.all) : 0;      // level and weapon
     if (MELEE[u.id] && clip) {
       const home = u.to.clone(), tp = t.rig.root.position;
       const dir = home.clone().sub(tp).setY(0).normalize();
-      u.rush = { phase: 'out', t: 0, target: t, dmg, clip, home, stand: tp.clone().setY(0).addScaledVector(dir, REACH), struck: false };
+      u.rush = { phase: 'out', t: 0, target: t, dmg, clip, home, stand: tp.clone().setY(0).addScaledVector(dir, REACH), struck: false, others };
       endTurn(u); return;
     }
     if (clip) { Chars.play(u.rig, clip); Sound.sfx(clip === 'mgBolt' ? 'bolt' : 'blast'); } else Sound.sfx('blast', { delay: 0.14 });
-    shot(u, t, u.color); hitFoe(t, dmg); log(u.name + ' hits the husk for ' + dmg + '.');
+    shot(u, t, u.color); hitFoe(t, dmg); log(u.name + ' hits ' + t.name + ' for ' + dmg + '.');
     if (clip) busy(Math.min(Chars.clipLength(clip), 1.1));
     endTurn(u);
   }
@@ -229,7 +239,8 @@ const Combat = (() => {
       if (!r.struck && r.t >= hitAt) {
         r.struck = true; Sound.sfx('swing', { pitch: u.id === 'kyle' ? -300 : 200 });
         if (!r.target.alive) r.target = selected() || r.target;
-        if (r.target.alive) { hitFoe(r.target, r.dmg); log(u.name + ' hits the husk for ' + r.dmg + '.'); }
+        if (r.target.alive) { hitFoe(r.target, r.dmg); log(u.name + ' hits ' + r.target.name + ' for ' + r.dmg + '.'); }
+        if (r.others) for (const f of foesAlive()) if (f !== r.target) { hitFoe(f, r.others); FX.hit(f.rig.root.position.clone().setY(1.2), 0xffe9a8, false); }
       }
       if (r.t >= Math.min(Chars.clipLength(r.clip), 1.4) / SWING) { r.phase = 'back'; u.rig.clip = null; }
     } else if (go(r.home)) { u.rush = null; u.rig.root.rotation.y = Math.PI + stage.th; }
@@ -251,7 +262,69 @@ const Combat = (() => {
     endTurn(u);
   }
   function ruenRig() { return party.find(p => p.id === 'ruen').rig; }
-  function startCast(u) { cast = { t: 0 }; Chars.play(u.rig, 'mgHoly'); FX.charge(u.rig.root.position); Sound.sfx('cast'); log('Ruen begins Data Burst.'); endTurn(u); }
+  const ruenUnit = () => party.find(p => p.id === 'ruen');
+  function startCast(u, power = 1) { cast = { t: 0, power }; Chars.play(u.rig, 'mgHoly'); FX.charge(u.rig.root.position); Sound.sfx('cast'); log(power === 2 ? 'Ruen begins Data Storm.' : 'Ruen begins Data Burst.'); endTurn(u); }
+
+
+  // ---------------- Skills (learned at set levels, see growth.js) and link attacks (unlocked by bonds) ----------------
+  function arc(u) { strike(u, 22, 'brawlSwipe', { all: 14 }); }
+  function edge(u) { strike(u, 48, 'brawlSwipe'); }
+  function mend(u) {
+    Chars.play(u.rig, 'mgHeal'); Sound.sfx('shield'); busy(1.1);
+    for (const a of alive()) { const h = Math.round(a.hpMax * 0.28); a.hp = Math.min(a.hpMax, a.hp + h); popup(a, '+' + h, '#8dffb0'); FX.shield(a.rig.root.position, 0x6dff9a); }
+    log('Ruen mends the crew.'); endTurn(u);
+  }
+  function bulwark(u) {
+    Chars.play(u.rig, 'block'); Sound.sfx('shield'); busy(1.0);
+    for (const a of alive()) { a.brace = BRACE_TIME; a.rig.idleClip = 'blockIdle'; FX.shield(a.rig.root.position, 0xffd27a); }
+    log('Kyle\'s Bulwark covers the crew.'); endTurn(u);
+  }
+  function shockwave(u) {
+    Chars.play(u.rig, 'brawlSwipe'); Sound.sfx('nova'); shake(0.3); busy(1.3); FX.nova(u.rig.root.position, 0xffd27a);
+    for (const f of foesAlive()) { hitFoe(f, pdmg(u, 22)); f.atb = Math.max(0, f.atb - 0.35); clearWind(f); }
+    log('Kyle\'s Shockwave rocks the foes.'); endTurn(u);
+  }
+  function weakPoint(u) {
+    const t = selected(); if (!t) return;
+    Chars.play(u.rig, 'mgBolt2'); Sound.sfx('blast'); shot(u, t, u.color); hitFoe(t, pdmg(u, 12)); busy(0.9);
+    t.weak = 14; t.atb = Math.max(0, t.atb - STAGGER * 0.6); clearWind(t); log(t.name + ' is hit in a weak spot and will hit softer.'); endTurn(u);
+  }
+  function barrage(u) {
+    Chars.play(u.rig, 'mgBolt2'); Sound.sfx('blast'); busy(1.6);
+    for (let i = 0; i < 5; i++) { const fs = foesAlive(); if (!fs.length) break; const t = fs[Math.floor(Math.random() * fs.length)]; shot(u, t, u.color); hitFoe(t, pdmg(u, 10)); }
+    log('Yuna\'s Barrage!'); endTurn(u);
+  }
+  const SKILL_RUN = { arc, edge, mend, storm: u => startCast(u, 2), bulwark, shock: shockwave, weak: weakPoint, barrage };
+  // A link spends half of the partner's gauge; at bond level 3 it hits 30% harder
+  const partyOf = id => party.find(p => p.id === id);
+  const lbonus = (a, b) => Growth.bondLevel(a, b) >= 3 ? 1.3 : 1;
+  function crossfire(u) {
+    const t = selected(), y = partyOf('yuna'); if (!t) return; const lb = lbonus('you', 'yuna');
+    Chars.play(u.rig, 'brawlPunch'); Chars.play(y.rig, 'mgBolt2'); Sound.sfx('crit'); shot(u, t, u.color); shot(y, t, y.color); shake(0.2); busy(1.3);
+    hitFoe(t, Math.round((pdmg(u, 30) + pdmg(y, 24)) * lb)); t.atb = Math.max(0, t.atb - STAGGER); clearWind(t);
+    y.atb = Math.max(0, y.atb - 0.5); log('Jin and Yuna\'s Crossfire!'); endTurn(u);
+  }
+  function aegis(u) {
+    const k = partyOf('kyle'), lb = lbonus('ruen', 'kyle');
+    Chars.play(u.rig, 'mgNova'); Chars.play(k.rig, 'block'); Sound.sfx('nova'); shake(0.35); busy(1.4); FX.shield(k.rig.root.position);
+    for (const f of foesAlive()) { FX.nova(f.rig.root.position); hitFoe(f, Math.round(pdmg(u, 26) * lb)); }
+    k.guard = GUARD_TIME; k.rig.idleClip = 'blockIdle'; k.atb = Math.max(0, k.atb - 0.5); log('Ruen\'s Aegis Burst, under Kyle\'s shield!'); endTurn(u);
+  }
+  function vow(u) {
+    const t = selected(), j = partyOf('you'); if (!t) return; const lb = lbonus('kyle', 'you');
+    Chars.play(u.rig, 'brawlSwipe'); Chars.play(j.rig, 'brawlPunch'); Sound.sfx('crit'); shot(u, t, u.color); shot(j, t, j.color); shake(0.2); busy(1.3);
+    hitFoe(t, Math.round((pdmg(u, 24) + pdmg(j, 18)) * lb));
+    for (const a of [u, j]) { a.brace = BRACE_TIME; a.rig.idleClip = 'blockIdle'; FX.shield(a.rig.root.position, 0xffffff); }
+    j.atb = Math.max(0, j.atb - 0.5); log('Kyle and Jin\'s Iron Vow!'); endTurn(u);
+  }
+  const LINK_RUN = { crossfire, aegis, vow };
+  // What a crew member's menu holds: the two basic commands, the skills their level has earned, and the links their bonds allow (greyed out unless the partner is up with half a gauge)
+  function commandsFor(u) {
+    const list = COMMANDS[u.id].map(c => ({ label: c.label, run: c.run }));
+    for (const s of Growth.unlocked(u.id)) list.push({ label: s.name, run: SKILL_RUN[s.id], skill: true });
+    for (const l of Growth.LINKS) if (l.lead === u.id && Growth.bondLevel(l.lead, l.with) >= 2) { const p = partyOf(l.with); list.push({ label: l.name, run: LINK_RUN[l.id], link: true, off: !(p && p.alive && p.atb >= 0.5) }); }
+    return list;
+  }
 
   // ---------------- Husk AI ----------------
   function bossAct(f) {
@@ -261,7 +334,7 @@ const Combat = (() => {
     const sweep = f.phase2 ? f.turn % 2 === 0 : f.turn % 3 === 0;
     if (sweep) {                                                      // the sweep (or, broken, the shard volley) hits everyone at once
       Chars.play(f.rig, 'brawlSwipe', false, 0.9); busy(1.5);
-      for (const u of all) { shot(f, u, f.color); hitParty(u, Math.round((f.phase2 ? rand(11, 15) : rand(12, 16)) * f.dmgMul)); }
+      for (const u of all) { shot(f, u, f.color); hitParty(u, Math.round((f.phase2 ? rand(11, 15) : rand(12, 16)) * f.dmgMul), f); }
       log(f.phase2 ? 'Scrap shards rain on the crew!' : 'The Loader Mech sweeps its arm across the crew!');
     } else {
       const t = pick(); if (!t) return;
@@ -283,7 +356,7 @@ const Combat = (() => {
     } else {
       const t = pick(); if (!t) return;
       Chars.play(f.rig, 'brawlPunch'); busy(0.9);
-      shot(f, t, f.color || HUSK.color); hitParty(t, Math.round(rand(11, 15) * f.dmgMul));
+      shot(f, t, f.color || HUSK.color); hitParty(t, Math.round(rand(11, 15) * f.dmgMul), f);
       log(f.name + ' lashes ' + t.name + '.');
     }
   }
@@ -295,7 +368,7 @@ const Combat = (() => {
     w.ring.material.opacity = 0.4 + k * 0.5;
     if (w.t <= 0) {
       const t = w.target.alive ? w.target : pick();
-      if (t) { Chars.play(f.rig, 'brawlSwipe', false, f.brute ? 0.8 : 1); busy(f.brute ? 1.3 : 1.0); shot(f, t, f.color || HUSK.color); hitParty(t, w.dmg); log(f.name + ' crushes ' + t.name + '!'); }
+      if (t) { Chars.play(f.rig, 'brawlSwipe', false, f.brute ? 0.8 : 1); busy(f.brute ? 1.3 : 1.0); shot(f, t, f.color || HUSK.color); hitParty(t, w.dmg, f); log(f.name + ' crushes ' + t.name + '!'); }
       clearWind(f);
     }
   }
@@ -309,7 +382,7 @@ const Combat = (() => {
     phase = 'enter'; phaseT = 0; resetView();
     Player.setFrozen(true);
     for (const u of party) {
-      u.rush = null; u.alive = u.hp > 0; u.ready = false; u.atb = rand(0, 0.3); u.guard = 0; u.brace = 0;
+      refreshStats(u, false); u.rush = null; u.alive = u.hp > 0; u.ready = false; u.atb = rand(0, 0.3); u.guard = 0; u.brace = 0;
       u.home = { x: u.rig.root.position.x, z: u.rig.root.position.z, ry: u.rig.root.rotation.y };   // where the avatar stands now
       u.rig.combat = true; u.rig.kind = 'stand'; u.rig.clip = null; u.rig.idleClip = u.rig.loco.battle;
       u.from = u.rig.root.position.clone(); u.rig.root.rotation.set(0, Math.PI + stage.th, 0);
@@ -327,10 +400,17 @@ const Combat = (() => {
     log(g.text || 'Husks! They have seen you.'); Sound.sfx('growl'); shake(0.15);
   }
 
+  let resultWait = RESULT_WAIT;
   function end(text) {
-    phase = 'result'; phaseT = 0;
+    phase = 'result'; phaseT = 0; resultWait = RESULT_WAIT;
     cast = null; menuFor = null;
     for (const u of party) u.ready = false;
+    const lvl = $('lvl'); lvl.hidden = true;
+    if (text === 'Cleared') {                                                 // the spoils: XP for everyone, level-ups, and the pairs grow closer
+      const xp = foes.reduce((n, f) => n + (f.xp || 0), 0), ups = Growth.award(xp); Growth.fought(); refreshAll(true);
+      lvl.innerHTML = '<div class="xp">+' + xp + ' XP</div>' + ups.map(g => '<div><b style="color:' + PARTY[g.id].color + '">' + PARTY[g.id].name + '</b> Lv ' + g.from + ' \u2192 ' + g.to + (g.skills.length ? ' \u00b7 New: ' + g.skills.join(', ') : '') + '</div>').join('');
+      lvl.hidden = false; if (ups.length) { resultWait = 5; setTimeout(() => Sound.sfx('quest'), 900); }
+    }
     ui.banner.textContent = text; ui.banner.hidden = false; Sound.sfx(text === 'Cleared' ? 'win' : 'lose');
   }
 
@@ -338,7 +418,7 @@ const Combat = (() => {
   function restAll() { for (const u of party) { u.hp = u.hpMax; u.alive = true; } }
 
   function startLeave() {
-    phase = 'leave'; phaseT = 0; ui.banner.hidden = true;
+    phase = 'leave'; phaseT = 0; ui.banner.hidden = true; $('lvl').hidden = true;
     for (const u of [...party, ...foes]) { clearWind(u); u.rush = null; u.from = u.rig.root.position.clone(); }
     for (const u of party) u.to = new THREE.Vector3(u.home.x, 0, u.home.z);
     for (const f of foes) f.to = new THREE.Vector3(f.home.x, 0, f.home.z);
@@ -472,16 +552,17 @@ const Combat = (() => {
       }
       for (const f of foes) {
         if (!f.alive || wait) continue;
+        if (f.weak > 0) f.weak = Math.max(0, f.weak - dt);
         if (f.wind) { updateWind(f, dt); continue; }
         f.atb = Math.min(1, f.atb + f.rate * dt);
         if (f.atb >= 1) foeAct(f);
       }
       if (cast && !wait) {
-        cast.t = Math.min(1, cast.t + CAST_RATE * dt);
+        cast.t = Math.min(1, cast.t + CAST_RATE * (cast.power === 2 ? 0.65 : 1) * dt);
         if (cast.t >= 1) {
           Chars.play(ruenRig(), 'mgNova'); busy(1.4); Sound.sfx('nova'); shake(0.4);
-          for (const f of foesAlive()) { FX.nova(f.rig.root.position); hitFoe(f, 30); }
-          log('Data Burst!');
+          for (const f of foesAlive()) { FX.nova(f.rig.root.position); hitFoe(f, pdmg(ruenUnit(), cast.power === 2 ? 60 : 30)); }
+          log(cast.power === 2 ? 'Data Storm!' : 'Data Burst!');
           cast = null;
         }
       }
@@ -489,7 +570,7 @@ const Combat = (() => {
       else if (!alive().length) end('Defeat');
     }
 
-    if (phase === 'result' && phaseT >= RESULT_WAIT) startLeave();
+    if (phase === 'result' && phaseT >= resultWait) startLeave();
 
     if (phase === 'explore') {
       aggroCd = Math.max(0, aggroCd - dt);
@@ -556,23 +637,21 @@ const Combat = (() => {
     }
     // The command menu: the first ready crew member (in order), who is not casting
     const who = isBusy() ? null : party.find(u => u.alive && u.ready && !(u.id === 'ruen' && cast));
-    const key = who ? who.id : null;
+    const cmds = who ? commandsFor(who) : [], key = who ? who.id + '|' + cmds.map(c => c.label + (c.off ? '-' : '')).join(',') : null;
     if (key !== menuFor) {
       menuFor = key;
       ui.actions.innerHTML = '';
-      if (who) {
-        for (const c of COMMANDS[who.id]) {
-          const b = document.createElement('button');
-          b.type = 'button'; b.textContent = c.label;
-          b.addEventListener('click', () => { if (who.ready) c.run(who); menuFor = null; });
-          ui.actions.appendChild(b);
-        }
+      for (const c of cmds) {
+        const b = document.createElement('button');
+        b.type = 'button'; b.textContent = c.label; b.disabled = !!c.off; b.classList.toggle('skill', !!c.skill); b.classList.toggle('link', !!c.link);
+        b.addEventListener('click', () => { if (who.ready && !c.off) c.run(who); menuFor = null; });
+        ui.actions.appendChild(b);
       }
     }
     ui.actions.hidden = !who || phase !== 'battle';
   }
 
-  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone, hp: party.map(u => [u.id, Math.round(u.hp)]) }), restAll, partyInfo: () => party.map(u => ({ id: u.id, name: u.name, hp: u.hp, hpMax: u.hpMax })), setState(d) {
+  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone, hp: party.map(u => [u.id, Math.round(u.hp)]) }), debugRun: (id, label) => { const u = partyOf(id), c = u && commandsFor(u).find(q => q.label === label); if (!c) return 'missing'; if (c.off) return 'off'; u.atb = 1; u.ready = true; c.run(u); return 'ok'; }, debugReady: () => { for (const u of party) if (u.alive) u.atb = 1; }, restAll, refreshAll, partyInfo: () => party.map(u => ({ id: u.id, name: u.name, hp: u.hp, hpMax: u.hpMax })), setState(d) {
     for (const [id, hp] of d.hp || []) { const u = party.find(q => q.id === id); if (u) { u.hp = hp; u.alive = hp > 0; } }
      if (d.alley && !alleyDone) { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); } }, debugClearAlley: () => { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); }, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
 })();

@@ -47,15 +47,15 @@ Status key: ✅ done · 🟡 partly done · ⬜ not started. Last updated after 
 *   🟡 **Testing:** Quality (Auto, High, Low) lowers the pixel ratio, bloom, lights and load radius when the frame rate drops. The page loads about 3.5 MB (about 2 MB gzipped, 1.1 MB of it the models). Still to do: measure on real phones and other browsers.
 *   ⬜ **Launch:** Version 1.0 Release.
 
+## Done since the last list
+*   ✅ **Saving:** one slot in localStorage, autosave (camps, story points, battles, every 15 s, when the page is hidden), a title screen with Continue and New Game, and a Save now button.
+*   ✅ **Camps:** a fire in the alley, the Market plaza, the Hub checkpoint and the Foundry plaza. Opening the camp rests (full heal) and saves. Camps are found by walking up to them, and found camps are fast-travel stops. Each has a one-time skit.
+*   ✅ **HP carries between fights.** A win patches the crew up 30%, a defeat wakes them at the last camp.
+*   ✅ **Growth:** XP and levels (cap 10), skills at Lv 3 and 6 for each of the four, a crew screen (I key or the Crew button), gear in tiers (weapon +15% damage, armour +12% health), and bonds that unlock link attacks.
+*   ✅ **Camera and followers:** a third-person orbit camera; followers feel their way round obstacles and rejoin Jin if stuck or left behind; the minimap arrow points where Jin faces.
+
 ## Next steps (in order)
-1. **Saving:** quest stage, scrap, cleared patrols, picked-up nodes, shutter and boss state, settings; autosave at the camp and on key story points, plus a Continue button.
-2. **Character growth, part 1:** XP and levels for all four, stat gains per level, a level-up screen after battle, and rebalancing of the Market, Hub and boss for levelled characters.
-3. **Character growth, part 2:** one new skill per character at set levels (Jin's combo, Kyle's party Guard, Ruen's heal or bigger Burst, Yuna's debuffing Stagger), shown in the battle menu.
-4. **Camp stat screen:** level, XP, skills and gear per character, in the camp menu.
-5. **Gear tied to scrap:** each camp upgrade changes a named weapon or armour piece.
-6. **Bonds:** pair bond levels raised by skits and fighting together, unlocking combined attacks and extra skits.
-7. **Phone test:** install the debug APK, send me the debug overlay numbers, then tune quality and load radius.
-8. **Enemy models (yours):** Enforcer, Sentry Drone, a real Loader Mech and the rest of `Enemies.md`; I wire them in as they arrive.
-9. **Act 3:** freight lift, the Corporate Spire, Enforcers and drones, the CEO.
-10. **Props for the new models:** Yuna's blasters, Jin's blade, Ruen's orb, and a custom Stranger.
-11. **Release:** web hosting, a release APK build, and a final polish pass.
+1. **Act 3:** freight lift, the Corporate Spire, Enforcers and drones (stand-ins until models arrive), the CEO.
+2. **Props for the new models:** Yuna's blasters, Jin's blade, Ruen's orb.
+3. **Enemy models (yours):** Enforcer, Sentry Drone, a real Loader Mech and the rest of `Enemies.md`.
+4. **Phone test and release (yours).**

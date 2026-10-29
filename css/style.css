@@ -201,3 +201,33 @@ body.cutscene #hud, body.cutscene #labels { display: none; }
 
 .camp-sub { margin: 14px 0 6px; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
 .camp-sub[hidden] { display: none; }
+
+.lvl { position: absolute; left: 50%; top: 34%; transform: translateX(-50%); z-index: 6; min-width: 240px; max-width: 90vw; padding: 10px 16px; text-align: center; background: rgba(6, 8, 16, 0.82); border: 1px solid rgba(255, 210, 74, 0.5); border-radius: 8px; font-size: 14px; line-height: 1.6; }
+.lvl[hidden] { display: none; }
+.lvl .xp { color: var(--gold); font-size: 18px; letter-spacing: 0.1em; }
+.actions button.skill { border-color: rgba(127, 247, 255, 0.55); }
+.actions button.link { border-color: rgba(255, 210, 74, 0.8); color: #ffe9a8; }
+.actions button:disabled { opacity: 0.4; }
+
+.actions { flex-wrap: wrap; justify-content: center; max-width: 94vw; }
+.camp-list { max-height: 52vh; overflow-y: auto; }
+.camp-char { display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px; padding: 4px 2px; border-bottom: 1px solid rgba(255, 255, 255, 0.14); }
+.camp-char b { color: var(--gold); letter-spacing: 0.08em; }
+.camp-char span { color: var(--dim); font-size: 12px; }
+
+.crew-card { width: min(960px, 96vw); max-height: 92vh; overflow-y: auto; }
+.crew-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 10px 0; }
+.crew-card-one { padding: 10px 12px; background: rgba(8, 8, 14, 0.6); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 8px; font-size: 12px; }
+.cc-head { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; }
+.cc-head span { color: var(--dim); font-size: 12px; }
+.cc-xp { height: 6px; margin-top: 8px; background: rgba(255, 255, 255, 0.12); border-radius: 3px; overflow: hidden; }
+.cc-xp i { display: block; height: 100%; background: var(--gold); }
+.cc-xpt { margin: 3px 0 6px; color: var(--dim); font-size: 11px; }
+.cc-stats { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; color: var(--dim); }
+.cc-stats b { color: var(--ink); }
+.cc-sub { margin: 8px 0 2px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+.cc-list { list-style: none; margin: 0; padding: 0; }
+.cc-list li { padding: 3px 0; opacity: 0.55; }
+.cc-list li.on, .cc-list li:not([class]) { opacity: 1; }
+.cc-list b { display: block; font-size: 12px; }
+.cc-list span { display: block; color: var(--dim); font-size: 11px; }
