@@ -219,21 +219,36 @@ const Combat = (() => {
   let actT = 0;
   const busy = t => { actT = Math.max(actT, t); };
   const isBusy = () => actT > 0 || party.some(u => u.rush);
+  // Effects land when the animation does, not when it starts: HIT is when each attack clip connects (seconds into the clip at normal speed:
+  // the fist arrives, the blade comes through, the arms are stretched out), `later` runs a function after a delay, and FAST is how much
+  // faster than the clip a ranged attack plays.
+  const HIT = { brawlPunch: 0.29, brawlSwipe: 1.2, mgBolt: 1.1, mgBolt2: 1.0, mgNova: 1.0, mgHoly: 1.1, mgHeal: 0.55, mgBless: 0.6, block: 0.25, shoot: 0.6 }, FAST = 1.5;
+  const hitT = (clip, rate = 1) => (HIT[clip] || (Mocap.clips[clip] && Mocap.clips[clip].hit) || 0.3) / rate;
+  let pending = [];
+  const later = (t, fn) => pending.push({ t, fn });
+  const runPending = dt => { if (!pending.length) return; for (const e of pending) e.t -= dt; const due = pending.filter(e => e.t <= 0); pending = pending.filter(e => e.t > 0); for (const e of due) e.fn(); };
+  const foeLater = (f, clip, rate, fn) => later(hitT(clip, rate), () => { if (f.alive) fn(); });                    // a foe's blow lands only if it is still standing
+  const liveTarget = t => (t && t.alive ? t : selected());
   function endTurn(u, delay = 0) { u.atb = -delay; u.ready = false; menuFor = null; }                 // a skill's delay leaves the gauge below empty, so the next turn is later
   // The melee fighters (Jin, Kyle) run up to their target, strike it face to face and run back; the others shoot from where they stand
   const MELEE = { you: true, kyle: true }, RUN = 12, REACH = 1.25, SWING = 1.8;          // run speed (m/s) and how much faster than normal the blow plays
+  let lastShot = 0;
   function strike(u, dmg, clip = 'brawlPunch', opts = {}) {          // clip null: the second blow of a combo, the first one's clip plays on
     const t = selected(); if (!t) return;
     dmg = pdmg(u, dmg); const others = opts.all ? pdmg(u, opts.all) : 0;      // level and weapon
     if (MELEE[u.id] && clip) {
       const home = u.to.clone(), tp = t.rig.root.position;
       const dir = home.clone().sub(tp).setY(0).normalize();
-      u.rush = { phase: 'out', t: 0, target: t, dmg, clip, home, stand: tp.clone().setY(0).addScaledVector(dir, REACH), struck: false, others };
+      u.rush = { phase: 'out', t: 0, target: t, dmg, clip, home, stand: tp.clone().setY(0).addScaledVector(dir, REACH), struck: false, others, slash: opts.slash };
       endTurn(u, opts.delay); return;
     }
-    if (clip) { Chars.play(u.rig, clip); Sound.sfx(clip === 'mgBolt' ? 'bolt' : 'blast'); } else Sound.sfx('blast', { delay: 0.14 });
-    shot(u, t, u.color); hitFoe(t, dmg); log(u.name + ' hits ' + t.name + ' for ' + dmg + '.');
-    if (clip) busy(Math.min(Chars.clipLength(clip), 1.1));
+    const at = clip ? hitT(clip, FAST) : lastShot + 0.18; lastShot = at;                                  // the shot leaves when the arms are stretched out
+    if (clip) Chars.play(u.rig, clip, false, FAST);
+    later(at, () => {
+      const f = liveTarget(t); if (!f) return;
+      Sound.sfx(clip === 'mgBolt' ? 'bolt' : 'blast'); shot(u, f, u.color); hitFoe(f, dmg); log(u.name + ' hits ' + f.name + ' for ' + dmg + '.');
+    });
+    busy(at + 0.4);
     endTurn(u, opts.delay);
   }
   // Moves a rushing fighter one frame: out to the target, the blow (damage lands on the clip's hit frame), back to the spot
@@ -253,14 +268,14 @@ const Combat = (() => {
       if (go(r.stand)) { r.phase = 'hit'; r.t = 0; face(r.target.rig.root.position); Chars.play(u.rig, r.clip, false, SWING); }
     } else if (r.phase === 'hit') {
       r.t += dt; face(r.target.rig.root.position);
-      const hitAt = Math.max(0.06, ((Mocap.clips[r.clip] && Mocap.clips[r.clip].hit) || 0.3) / SWING);
+      const hitAt = Math.max(0.06, hitT(r.clip, SWING));
       if (!r.struck && r.t >= hitAt) {
-        r.struck = true; Sound.sfx('swing', { pitch: u.id === 'kyle' ? -300 : 200 });
+        r.struck = true; if (r.slash !== undefined) Sound.sfx('slash', { pitch: r.slash }); else Sound.sfx('swing', { pitch: u.id === 'kyle' ? -300 : 200 });
         if (!r.target.alive) r.target = selected() || r.target;
         if (r.target.alive) { hitFoe(r.target, r.dmg); log(u.name + ' hits ' + r.target.name + ' for ' + r.dmg + '.'); }
         if (r.others) for (const f of foesAlive()) if (f !== r.target) { hitFoe(f, r.others); FX.hit(f.rig.root.position.clone().setY(1.2), 0xffe9a8, false); }
       }
-      if (r.t >= Math.min(Chars.clipLength(r.clip), 1.4) / SWING) { r.phase = 'back'; u.rig.clip = null; }
+      if (r.t >= Math.min(Chars.clipLength(r.clip), r.clip === 'brawlSwipe' ? 1.75 : 1.4) / SWING) { r.phase = 'back'; u.rig.clip = null; }
     } else if (go(r.home)) { u.rush = null; u.rig.root.rotation.y = Math.PI + stage.th; }
   }
   function guard(u) {
@@ -273,11 +288,14 @@ const Combat = (() => {
   }
   function stagger(u) {
     const t = selected(); if (!t) return;
-    Chars.play(u.rig, 'brawlSwipe');
-    t.atb = Math.max(0, t.atb - STAGGER); t.guard = 0;
-    if (party.some(a => a.locked > 0)) { for (const a of party) a.locked = 0; log('Yuna breaks the lock on the crew!'); }
-    if (t.wind) { t.wind = null; log('Stagger breaks the wind-up.'); } else log('Stagger pushes ' + t.name + ' back.');
-    shot(u, t, u.color); busy(0.9);
+    Chars.play(u.rig, 'brawlSwipe', false, SWING); const at = hitT('brawlSwipe', SWING); busy(at + 0.5);
+    later(at, () => {
+      const f = liveTarget(t); if (!f) return;
+      f.atb = Math.max(0, f.atb - STAGGER); f.guard = 0;
+      if (party.some(a => a.locked > 0)) { for (const a of party) a.locked = 0; log('Yuna breaks the lock on the crew!'); }
+      if (f.wind) { clearWind(f); log('Stagger breaks the wind-up.'); } else log('Stagger pushes ' + f.name + ' back.');
+      shot(u, f, u.color);
+    });
     endTurn(u);
   }
   function ruenRig() { return party.find(p => p.id === 'ruen').rig; }
@@ -286,11 +304,11 @@ const Combat = (() => {
 
 
   // ---------------- Skills (learned at set levels, see growth.js) and link attacks (unlocked by bonds) ----------------
-  function arc(u) { Sound.sfx('slash', { pitch: 300 }); strike(u, 22, 'brawlSwipe', { all: 14, delay: Tuning.delay.arc }); }
-  function edge(u) { Sound.sfx('slash', { pitch: -400 }); strike(u, 48, 'brawlSwipe', { delay: Tuning.delay.edge }); }
+  function arc(u) { strike(u, 22, 'brawlSwipe', { all: 14, delay: Tuning.delay.arc, slash: 300 }); }
+  function edge(u) { strike(u, 48, 'brawlSwipe', { delay: Tuning.delay.edge, slash: -400 }); }
   function mend(u) {
-    Chars.play(u.rig, 'mgHeal'); Sound.sfx('heal'); busy(1.1);
-    for (const a of alive()) { const h = Math.round(a.hpMax * Tuning.mend); a.hp = Math.min(a.hpMax, a.hp + h); popup(a, '+' + h, '#8dffb0'); FX.shield(a.rig.root.position, 0x6dff9a); }
+    Chars.play(u.rig, 'mgHeal', false, FAST); busy(hitT('mgHeal', FAST) + 0.5);
+    later(hitT('mgHeal', FAST), () => { Sound.sfx('heal'); for (const a of alive()) { const h = Math.round(a.hpMax * Tuning.mend); a.hp = Math.min(a.hpMax, a.hp + h); popup(a, '+' + h, '#8dffb0'); FX.shield(a.rig.root.position, 0x6dff9a); } });
     log('Ruen mends the crew.'); endTurn(u, Tuning.delay.mend);
   }
   function bulwark(u) {
@@ -299,18 +317,26 @@ const Combat = (() => {
     log('Kyle\'s Bulwark covers the crew.'); endTurn(u, Tuning.delay.bulwark);
   }
   function shockwave(u) {
-    Chars.play(u.rig, 'brawlSwipe'); Sound.sfx('nova'); shake(0.3); busy(1.3); FX.nova(u.rig.root.position, 0xffd27a);
-    for (const f of foesAlive()) { f.guard = 0; hitFoe(f, pdmg(u, 22)); f.atb = Math.max(0, f.atb - 0.35); clearWind(f); }
+    Chars.play(u.rig, 'brawlSwipe', false, SWING); busy(hitT('brawlSwipe', SWING) + 0.6);
+    later(hitT('brawlSwipe', SWING), () => {
+      Sound.sfx('nova'); shake(0.3); FX.nova(u.rig.root.position, 0xffd27a);
+      for (const f of foesAlive()) { f.guard = 0; hitFoe(f, pdmg(u, 22)); f.atb = Math.max(0, f.atb - 0.35); clearWind(f); }
+    });
     log('Kyle\'s Shockwave rocks the foes.'); endTurn(u, Tuning.delay.shock);
   }
   function weakPoint(u) {
     const t = selected(); if (!t) return;
-    Chars.play(u.rig, 'mgBolt2'); Sound.sfx('blast'); shot(u, t, u.color); hitFoe(t, pdmg(u, 12)); busy(0.9);
-    t.weak = Tuning.weakTime; t.guard = 0; t.atb = Math.max(0, t.atb - STAGGER * 0.6); clearWind(t); log(t.name + ' is hit in a weak spot and will hit softer.'); endTurn(u, Tuning.delay.weak);
+    Chars.play(u.rig, 'mgBolt2', false, FAST); busy(hitT('mgBolt2', FAST) + 0.4);
+    later(hitT('mgBolt2', FAST), () => {
+      const f = liveTarget(t); if (!f) return;
+      Sound.sfx('blast'); shot(u, f, u.color); hitFoe(f, pdmg(u, 12));
+      f.weak = Tuning.weakTime; f.guard = 0; f.atb = Math.max(0, f.atb - STAGGER * 0.6); clearWind(f); log(f.name + ' is hit in a weak spot and will hit softer.');
+    });
+    endTurn(u, Tuning.delay.weak);
   }
   function barrage(u) {
-    Chars.play(u.rig, 'mgBolt2'); Sound.sfx('blast'); busy(1.6);
-    for (let i = 0; i < 5; i++) { const fs = foesAlive(); if (!fs.length) break; const t = fs[Math.floor(Math.random() * fs.length)]; shot(u, t, u.color); hitFoe(t, pdmg(u, 10)); }
+    Chars.play(u.rig, 'mgBolt2', false, FAST); busy(hitT('mgBolt2', FAST) + 0.9);
+    for (let i = 0; i < 5; i++) later(hitT('mgBolt2', FAST) + i * 0.12, () => { const fs = foesAlive(); if (!fs.length) return; const t = fs[Math.floor(Math.random() * fs.length)]; Sound.sfx('blast'); shot(u, t, u.color); hitFoe(t, pdmg(u, 10)); });
     log('Yuna\'s Barrage!'); endTurn(u, Tuning.delay.barrage);
   }
   const SKILL_RUN = { arc, edge, mend, storm: u => startCast(u, 2), bulwark, shock: shockwave, weak: weakPoint, barrage };
@@ -319,20 +345,22 @@ const Combat = (() => {
   const lbonus = (a, b) => Growth.bondLevel(a, b) >= 3 ? 1.3 : 1;
   function crossfire(u) {
     const t = selected(), y = partyOf('yuna'); if (!t) return; const lb = lbonus('you', 'yuna');
-    Chars.play(u.rig, 'brawlPunch'); Chars.play(y.rig, 'mgBolt2'); Sound.sfx('link'); shot(u, t, u.color); shot(y, t, y.color); shake(0.2); busy(1.3);
-    hitFoe(t, Math.round((pdmg(u, 30) + pdmg(y, 24)) * lb)); t.atb = Math.max(0, t.atb - STAGGER); clearWind(t);
+    Chars.play(u.rig, 'brawlPunch'); Chars.play(y.rig, 'mgBolt2', false, FAST); Sound.sfx('link'); const dmg = Math.round((pdmg(u, 30) + pdmg(y, 24)) * lb); busy(hitT('mgBolt2', FAST) + 0.5);
+    later(hitT('brawlPunch'), () => { const f = liveTarget(t); if (f) shot(u, f, u.color); });
+    later(hitT('mgBolt2', FAST), () => { const f = liveTarget(t); if (!f) return; shot(y, f, y.color); shake(0.2); hitFoe(f, dmg); f.atb = Math.max(0, f.atb - STAGGER); clearWind(f); });
     y.atb = Math.max(0, y.atb - 0.5); log('Jin and Yuna\'s Crossfire!'); endTurn(u, Tuning.delay.link);
   }
   function aegis(u) {
     const k = partyOf('kyle'), lb = lbonus('ruen', 'kyle');
-    Chars.play(u.rig, 'mgNova'); Chars.play(k.rig, 'block'); Sound.sfx('link'); shake(0.35); busy(1.4); FX.shield(k.rig.root.position);
-    for (const f of foesAlive()) { FX.nova(f.rig.root.position); breakShield(f); hitFoe(f, Math.round(pdmg(u, 26) * lb)); }
+    Chars.play(u.rig, 'mgNova', false, FAST); Chars.play(k.rig, 'block'); Sound.sfx('link'); FX.shield(k.rig.root.position); busy(hitT('mgNova', FAST) + 0.7);
+    later(hitT('mgNova', FAST), () => { shake(0.35); for (const f of foesAlive()) { FX.nova(f.rig.root.position); breakShield(f); hitFoe(f, Math.round(pdmg(u, 26) * lb)); } });
     k.guard = GUARD_TIME; k.rig.idleClip = 'blockIdle'; k.atb = Math.max(0, k.atb - 0.5); log('Ruen\'s Aegis Burst, under Kyle\'s shield!'); endTurn(u, Tuning.delay.link);
   }
   function vow(u) {
     const t = selected(), j = partyOf('you'); if (!t) return; const lb = lbonus('kyle', 'you');
-    Chars.play(u.rig, 'brawlSwipe'); Chars.play(j.rig, 'brawlPunch'); Sound.sfx('link'); shot(u, t, u.color); shot(j, t, j.color); shake(0.2); busy(1.3);
-    hitFoe(t, Math.round((pdmg(u, 24) + pdmg(j, 18)) * lb));
+    Chars.play(u.rig, 'brawlSwipe', false, SWING); Chars.play(j.rig, 'brawlPunch'); Sound.sfx('link'); const dmg = Math.round((pdmg(u, 24) + pdmg(j, 18)) * lb); busy(hitT('brawlSwipe', SWING) + 0.6);
+    later(hitT('brawlPunch'), () => { const f = liveTarget(t); if (f) shot(j, f, j.color); });
+    later(hitT('brawlSwipe', SWING), () => { const f = liveTarget(t); if (!f) return; shot(u, f, u.color); shake(0.2); hitFoe(f, dmg); });
     for (const a of [u, j]) { a.brace = BRACE_TIME; a.rig.idleClip = 'blockIdle'; FX.shield(a.rig.root.position, 0xffffff); }
     j.atb = Math.max(0, j.atb - 0.5); log('Kyle and Jin\'s Iron Vow!'); endTurn(u, Tuning.delay.link);
   }
@@ -350,12 +378,16 @@ const Combat = (() => {
   function useItem(u, id) {
     if (!itemOk(u, id) || !Items.use(id)) return;
     const D = Tuning.items[id];
-    Chars.play(u.rig, 'mgBless'); busy(0.9); Sound.sfx(id === 'revive' ? 'revive' : id === 'stim' ? 'stim' : id === 'flash' ? 'nova' : 'heal');
-    if (id === 'patch') { const a = hurtest(), h = Math.round(a.hpMax * D.heal); a.hp = Math.min(a.hpMax, a.hp + h); popup(a, '+' + h, '#8dffb0'); FX.shield(a.rig.root.position, 0x6dff9a); log(u.name + ' patches up ' + a.name + '.'); }
-    else if (id === 'revive') { const a = fallen(); a.alive = true; a.hp = Math.round(a.hpMax * D.heal); a.atb = 0; a.ready = false; a.rig.clip = null; a.rig.idleClip = a.rig.loco.battle; popup(a, '+' + a.hp, '#8dffb0'); FX.nova(a.rig.root.position, 0x6dff9a); log(u.name + ' brings ' + a.name + ' back!'); }
-    else if (id === 'stim') { const a = slowest(u); a.atb = 1; a.ready = !(a.id === 'ruen' && cast); FX.shield(a.rig.root.position, 0x3ff0ff); log(u.name + ' stims ' + a.name + '. They act next.'); }
-    else if (id === 'flash') { shake(0.2); for (const f of foesAlive()) { f.atb = Math.max(0, f.atb - D.push); f.guard = 0; clearWind(f); FX.nova(f.rig.root.position, 0xffffff); } log(u.name + ' throws a flash grenade!'); }
+    Chars.play(u.rig, 'mgBless', false, FAST); busy(hitT('mgBless', FAST) + 0.5);
+    later(hitT('mgBless', FAST), () => applyItem(u, id, D));
     endTurn(u, 0.15);
+  }
+  function applyItem(u, id, D) {
+    Sound.sfx(id === 'revive' ? 'revive' : id === 'stim' ? 'stim' : id === 'flash' ? 'nova' : 'heal');
+    if (id === 'patch') { const a = hurtest(); if (!a) return; const h = Math.round(a.hpMax * D.heal); a.hp = Math.min(a.hpMax, a.hp + h); popup(a, '+' + h, '#8dffb0'); FX.shield(a.rig.root.position, 0x6dff9a); log(u.name + ' patches up ' + a.name + '.'); }
+    else if (id === 'revive') { const a = fallen(); if (!a) return; a.alive = true; a.hp = Math.round(a.hpMax * D.heal); a.atb = 0; a.ready = false; a.rig.clip = null; a.rig.idleClip = a.rig.loco.battle; popup(a, '+' + a.hp, '#8dffb0'); FX.nova(a.rig.root.position, 0x6dff9a); log(u.name + ' brings ' + a.name + ' back!'); }
+    else if (id === 'stim') { const a = slowest(u); if (!a) return; a.atb = 1; a.ready = !(a.id === 'ruen' && cast); FX.shield(a.rig.root.position, 0x3ff0ff); log(u.name + ' stims ' + a.name + '. They act next.'); }
+    else if (id === 'flash') { shake(0.2); for (const f of foesAlive()) { f.atb = Math.max(0, f.atb - D.push); f.guard = 0; clearWind(f); FX.nova(f.rig.root.position, 0xffffff); } log(u.name + ' throws a flash grenade!'); }
   }
   // The Items menu replaces the command buttons: what is owned, greyed out when it would do nothing, and Back
   function itemCommands(u) {
@@ -379,8 +411,9 @@ const Combat = (() => {
     const all = party.filter(u => u.alive); if (!all.length) return;
     const sweep = f.phase2 ? f.turn % 2 === 0 : f.turn % 3 === 0;
     if (sweep) {                                                      // the sweep (or, broken, the shard volley) hits everyone at once
-      Chars.play(f.rig, 'brawlSwipe', false, 0.9); busy(1.5);
-      for (const u of all) { shot(f, u, f.color); hitParty(u, Math.round((f.phase2 ? rand(...Tuning.boss.volley) : rand(...Tuning.boss.sweep)) * f.dmgMul), f); }
+      Chars.play(f.rig, 'brawlSwipe', false, 1.3); busy(hitT('brawlSwipe', 1.3) + 0.6);
+      const dmgs = all.map(() => Math.round((f.phase2 ? rand(...Tuning.boss.volley) : rand(...Tuning.boss.sweep)) * f.dmgMul));
+      foeLater(f, 'brawlSwipe', 1.3, () => all.forEach((u, i) => { shot(f, u, f.color); hitParty(u, dmgs[i], f); }));
       log(f.phase2 ? 'Scrap shards rain on the crew!' : 'The Loader Mech sweeps its arm across the crew!');
     } else {
       const t = pick(); if (!t) return;
@@ -399,7 +432,8 @@ const Combat = (() => {
   function enforcerAct(f) {
     if (!(f.guard > 0) && Math.random() < Tuning.enf.guardChance) { f.guard = Tuning.enf.guard; Chars.play(f.rig, 'block'); FX.shield(f.rig.root.position, 0x9fd8ff); Sound.sfx('shield'); busy(0.6); log(f.name + ' raises its shield.'); return; }
     const t = pick(); if (!t) return;
-    Chars.play(f.rig, 'shoot'); Sound.sfx('blast'); busy(0.9); shot(f, t, f.color); hitParty(t, Math.round(rand(...Tuning.enf.shot) * f.dmgMul), f); log(f.name + ' fires at ' + t.name + '.');
+    Chars.play(f.rig, 'shoot'); busy(hitT('shoot') + 0.4); const dmg = Math.round(rand(...Tuning.enf.shot) * f.dmgMul);
+    foeLater(f, 'shoot', 1, () => { Sound.sfx('blast'); shot(f, t, f.color); hitParty(t, dmg, f); }); log(f.name + ' fires at ' + t.name + '.');
   }
   function droneAct(f) {
     busy(1.0); Sound.sfx('blast');
@@ -424,8 +458,8 @@ const Combat = (() => {
       if (ph === 3) { Chars.morph(f.rig); f.shielded = true; f.shieldT = 0; f.rate *= Tuning.ceo.rate3; log('The singularity opens! Only a burst from Ruen can ground its shield.'); shake(0.45); Sound.sfx('nova'); FX.nova(f.rig.root.position, 0xffffff); }
     }
     const all = party.filter(u => u.alive); if (!all.length) return;
-    const sweep = () => { Chars.play(f.rig, 'brawlSwipe', false, 0.9); busy(1.4); for (const u of all) { shot(f, u, f.color); hitParty(u, Math.round((ph === 3 ? rand(...Tuning.ceo.pulse) : rand(...Tuning.ceo.sweep)) * f.dmgMul), f); } log(ph === 3 ? 'The singularity pulses through the crew!' : 'The CEO sweeps a wave of light across the crew!'); };
-    if (ph === 1) { if (f.turn % 3 === 0) sweep(); else { const t = pick(); if (t) { Chars.play(f.rig, 'brawlPunch'); busy(0.9); shot(f, t, f.color); hitParty(t, Math.round(rand(...Tuning.ceo.lance) * f.dmgMul), f); log('The CEO lances ' + t.name + ' with data.'); } } }
+    const sweep = () => { Chars.play(f.rig, 'brawlSwipe', false, 1.3); busy(hitT('brawlSwipe', 1.3) + 0.6); const dmgs = all.map(() => Math.round((ph === 3 ? rand(...Tuning.ceo.pulse) : rand(...Tuning.ceo.sweep)) * f.dmgMul)); foeLater(f, 'brawlSwipe', 1.3, () => all.forEach((u, i) => { shot(f, u, f.color); hitParty(u, dmgs[i], f); })); log(ph === 3 ? 'The singularity pulses through the crew!' : 'The CEO sweeps a wave of light across the crew!'); };
+    if (ph === 1) { if (f.turn % 3 === 0) sweep(); else { const t = pick(); if (t) { Chars.play(f.rig, 'brawlPunch'); busy(0.9); const dmg = Math.round(rand(...Tuning.ceo.lance) * f.dmgMul); foeLater(f, 'brawlPunch', 1, () => { shot(f, t, f.color); hitParty(t, dmg, f); }); log('The CEO lances ' + t.name + ' with data.'); } } }
     else if (ph === 2) {
       if (f.turn % 2 === 0) { const t = all.filter(u => !(u.locked > 0))[Math.floor(Math.random() * all.length)] || all[0]; if (t && !(t.locked > 0)) { t.locked = Tuning.ceo.lock; t.ready = false; menuFor = null; FX.shield(t.rig.root.position, 0xff3fb4); log('The CEO locks ' + t.name + '\'s commands! Yuna\'s Stagger can break the lock.'); busy(0.8); return; } }
       if (f.turn % 3 === 0) sweep(); else { const t = pick(); if (t) startWind(f, t, Math.round(rand(...Tuning.ceo.crush2) * f.dmgMul)); }
@@ -448,8 +482,8 @@ const Combat = (() => {
       log(f.name + ' winds up on ' + t.name + '!'); Sound.sfx('growl');
     } else {
       const t = pick(); if (!t) return;
-      Chars.play(f.rig, 'brawlPunch'); busy(0.9);
-      shot(f, t, f.color || HUSK.color); hitParty(t, Math.round(rand(...Tuning.husk.lash) * f.dmgMul), f);
+      Chars.play(f.rig, 'brawlPunch'); busy(0.9); const dmg = Math.round(rand(...Tuning.husk.lash) * f.dmgMul);
+      foeLater(f, 'brawlPunch', 1, () => { shot(f, t, f.color || HUSK.color); hitParty(t, dmg, f); });
       log(f.name + ' lashes ' + t.name + '.');
     }
   }
@@ -461,7 +495,7 @@ const Combat = (() => {
     w.ring.material.opacity = 0.4 + k * 0.5;
     if (w.t <= 0) {
       const t = w.target.alive ? w.target : pick();
-      if (t) { Chars.play(f.rig, 'brawlSwipe', false, f.brute ? 0.8 : 1); busy(f.brute ? 1.3 : 1.0); shot(f, t, f.color || HUSK.color); hitParty(t, w.dmg, f); log(f.name + ' crushes ' + t.name + '!'); }
+      if (t) { const rate = f.brute ? 1.1 : 1.3, dmg = w.dmg; Chars.play(f.rig, 'brawlSwipe', false, rate); busy(hitT('brawlSwipe', rate) + 0.6); foeLater(f, 'brawlSwipe', rate, () => { shot(f, t, f.color || HUSK.color); hitParty(t, dmg, f); }); log(f.name + ' crushes ' + t.name + '!'); }
       clearWind(f);
     }
   }
@@ -489,7 +523,7 @@ const Combat = (() => {
       f.from = f.rig.root.position.clone(); const sp = W(spots[i][0], spots[i][1]); f.to = new THREE.Vector3(sp.x, 0, sp.z);
       f.rig.root.rotation.set(0, stage.th, 0);
     });
-    cast = null; target = foes[Math.floor(foes.length / 2)]; menuFor = null;
+    cast = null; pending = []; target = foes[Math.floor(foes.length / 2)]; menuFor = null;
     ui.log.innerHTML = ''; ui.banner.hidden = true;
     log(g.text || 'Husks! They have seen you.'); Sound.sfx('growl'); shake(0.15);
   }
@@ -497,7 +531,7 @@ const Combat = (() => {
   let resultWait = RESULT_WAIT;
   function end(text) {
     phase = 'result'; phaseT = 0; resultWait = RESULT_WAIT;
-    cast = null; menuFor = null;
+    cast = null; pending = []; menuFor = null;
     for (const u of party) u.ready = false;
     const lvl = $('lvl'); lvl.hidden = true;
     if (text === 'Cleared') {                                                 // the spoils: XP for everyone, level-ups, and the pairs grow closer
@@ -633,7 +667,7 @@ const Combat = (() => {
     }
 
     if (phase === 'battle') {
-      actT = Math.max(0, actT - dt);
+      actT = Math.max(0, actT - dt); runPending(dt);
       const wait = isBusy();
       for (const u of party) {
         if (!u.alive) continue;
@@ -657,9 +691,9 @@ const Combat = (() => {
       if (cast && !wait) {
         cast.t = Math.min(1, cast.t + CAST_RATE * (cast.power === 2 ? 0.65 : 1) * dt);
         if (cast.t >= 1) {
-          Chars.play(ruenRig(), 'mgNova'); busy(1.4); Sound.sfx('nova'); shake(0.4);
-          for (const f of foesAlive()) { FX.nova(f.rig.root.position); breakShield(f); hitFoe(f, pdmg(ruenUnit(), cast.power === 2 ? 60 : 30)); }
-          log(cast.power === 2 ? 'Data Storm!' : 'Data Burst!');
+          const power = cast.power; Chars.play(ruenRig(), 'mgNova', false, FAST); busy(hitT('mgNova', FAST) + 0.7);
+          later(hitT('mgNova', FAST), () => { Sound.sfx('nova'); shake(0.4); for (const f of foesAlive()) { FX.nova(f.rig.root.position); breakShield(f); hitFoe(f, pdmg(ruenUnit(), power === 2 ? 60 : 30)); } });
+          log(power === 2 ? 'Data Storm!' : 'Data Burst!');
           cast = null;
         }
       }
