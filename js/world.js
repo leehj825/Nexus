@@ -78,6 +78,9 @@ const World = (() => {
   // A cylinder that is its own mesh (it moves: a landmark ring)
   function tubeSolid(g, r, h, m, x, y, z) { const o = new THREE.Mesh(cyl, m); o.scale.set(r, h, r); o.position.set(x, y, z); g.add(o); return o; }
 
+  // How strong a zone's patrols are: grows with the row, per the tuning numbers (js/tuning.js)
+  const tierFor = r => { const z = r >= HROWS ? Tuning.zoneTier.spire : r >= MROWS ? Tuning.zoneTier.hub : Tuning.zoneTier.market; return z.base + (r - z.row0) * z.perRow; };
+
   // ---------- one chunk ----------
   function kindOf(cx, r, rnd) {
     if (Math.abs(cx) === COLS || r === ROWS - 1 || r === HROWS - 1) return 'wall';
@@ -481,7 +484,7 @@ const World = (() => {
           const rig = Chars.create(roster ? roster[i] : i === n - 1 && r >= 2 && (r < MROWS || i > 0) ? 'brute' : 'husk'), a = i / n * Math.PI * 2 + 0.6;   // the deeper patrols are led by a Brute
           rig.root.position.set(px + Math.cos(a) * 1.5, 0, pz + Math.sin(a) * 1.5); rig.root.rotation.y = rnd() * 6.28; g.add(rig.root); rigs.push(rig);
         }
-        ch.pack = Combat.register({ id: 'w' + ch.key, x: px, z: pz, rigs, tier: r >= HROWS ? Math.min(4, r - 12) : r >= MROWS ? Math.min(4, r - 5) : Math.min(4, r), aggro: true, radius: 8, text: r >= HROWS ? 'Corporate security! Hold your ground.' : r >= MROWS ? 'The works are crawling with husks.' : 'Husks! A patrol blocks the street.', onClear: () => clearedPacks.add(ch.key) });
+        ch.pack = Combat.register({ id: 'w' + ch.key, x: px, z: pz, rigs, tier: tierFor(r), aggro: true, radius: 8, text: r >= HROWS ? 'Corporate security! Hold your ground.' : r >= MROWS ? 'The works are crawling with husks.' : 'Husks! A patrol blocks the street.', onClear: () => clearedPacks.add(ch.key) });
         break;
       }
     }
@@ -584,6 +587,17 @@ const World = (() => {
   }
   // The camps out in the districts (the alley's fire is in camp.js): where they are, known from the grid even when their chunk is not loaded
   const SITES = { spire: { name: 'Spire lobby', x: ARRIVE.x + 10, z: ARRIVE.z - 5 + 0 }, atrium: { name: 'Server atrium', x: ATRIUM.x - 8, z: ATRIUM.z + 6 }, market: { name: 'Market plaza', x: 7, z: Z0 - CH * 0.5 + 0.5 }, hub: { name: 'Hub checkpoint', x: -11, z: GATE.z + 10 }, foundry: { name: 'Foundry plaza', x: -8, z: FOUNDRY.z } };
+  // For balancing: builds every chunk once and reports what each holds (its kind, its patrol and the scrap lying in it), then clears the world
+  function census() {
+    for (const ch of [...chunks.values()]) drop(ch); queue.length = 0;
+    const out = [];
+    for (let r = 0; r < ROWS; r++) for (let cx = -COLS + 1; cx <= COLS - 1; cx++) {
+      build(cx, r); const ch = chunks.get(cx + ',' + r);
+      out.push({ cx, r, kind: ch.kind, patrol: ch.pack ? { id: ch.pack.id, tier: ch.pack.tier, rigs: ch.pack.rigs.map(q => q.name) } : null, scrap: ch.scrap.length, node: !!ch.node, camp: ch.camp ? ch.camp.id : null });
+      drop(ch);
+    }
+    return out;
+  }
   const coreAt = () => { for (const ch of chunks.values()) if (ch.core) return ch.core; return null; };
 
   // Quality levels 0 (full) to 2 (lean): fewer sign lights and a shorter load radius
@@ -635,5 +649,5 @@ const World = (() => {
   const allNpcs = () => { const out = []; for (const ch of chunks.values()) for (const n of ch.npcs) out.push(n); return out; };
   function nearNpc(p, r) { let best = null, bd = r; for (const n of allNpcs()) { const d = Math.hypot(p.x - n.x, p.z - n.z); if (d < bd) { bd = d; best = n; } } return best; }
 
-  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, GATE, FOUNDRY, HUB_Z, SITES, getState, setState, isTaken: k => taken.has(k), openShutter, armBoss, armCeo, ceoDown: () => spireBossDown, debugCeoDown: () => { spireBossDown = true; }, LIFT, ARRIVE, ATRIUM, SUMMIT, SPIRE_Z, liftAt: p => Math.hypot(p.x - LIFT.x, p.z - LIFT.z) < 2.6, nextNode, coreAt, nodeCount: () => nodesTaken.size, bossDown: () => bossDown, shutterOpen: () => shutterOpen, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
+  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, GATE, FOUNDRY, HUB_Z, census, SITES, getState, setState, isTaken: k => taken.has(k), openShutter, armBoss, armCeo, ceoDown: () => spireBossDown, debugCeoDown: () => { spireBossDown = true; }, LIFT, ARRIVE, ATRIUM, SUMMIT, SPIRE_Z, liftAt: p => Math.hypot(p.x - LIFT.x, p.z - LIFT.z) < 2.6, nextNode, coreAt, nodeCount: () => nodesTaken.size, bossDown: () => bossDown, shutterOpen: () => shutterOpen, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
 })();

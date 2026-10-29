@@ -1,0 +1,31 @@
+// Nexus - tuning: every number that sets how hard the game is, in one place. The game reads these (combat.js, growth.js, camp.js, world.js), and the
+// balance simulator (tools/balance_sim.js) reads the same file, so what it measures is what is played. Keep this file plain JSON-style data.
+const Tuning = {
+  "party": { "you": { "hp": 110, "rate": 0.12 }, "ruen": { "hp": 90, "rate": 0.13 }, "kyle": { "hp": 150, "rate": 0.1 }, "yuna": { "hp": 80, "rate": 0.2 } },
+  "xp": { "base": 40, "step": 25 },
+  "growth": { "hp": 0.14, "dmg": 0.12, "rate": 0.015 },
+  "gear": { "weapon": 1.15, "armor": 1.12, "wcost": [2, 4, 7], "acost": [3, 6] },
+  "bond": { "l2": 3, "l3": 8 },
+  "tier": { "hp": 0.22, "dmg": 0.14, "rate": 0.05, "xp": 0.2 },
+  "foes": {
+    "husk": { "hp": 60, "rate": 0.09, "xp": 14, "ai": "husk" },
+    "brute": { "hp": 110, "rate": 0.065, "xp": 38, "ai": "husk" },
+    "loader": { "hp": 440, "rate": 0.07, "xp": 220, "ai": "boss" },
+    "enforcer": { "hp": 90, "rate": 0.1, "xp": 40, "ai": "enforcer" },
+    "drone": { "hp": 40, "rate": 0.13, "xp": 22, "ai": "drone" },
+    "seraph": { "hp": 70, "rate": 0.1, "xp": 40, "ai": "seraph" },
+    "ceo": { "hp": 950, "rate": 0.085, "xp": 600, "ai": "ceo" }
+  },
+  "husk": { "crush": [30, 36], "lash": [11, 15] },
+  "brute": { "crush": [32, 40] },
+  "boss": { "sweep": [12, 16], "volley": [11, 15], "crush": [30, 38], "rate2": 1.35 },
+  "enf": { "guardChance": 0.3, "guard": 8, "shot": [12, 16] },
+  "drone": { "shot": [6, 9] },
+  "seraph": { "heal": 0.3, "guard": 6 },
+  "ceo": { "lance": [22, 28], "sweep": [10, 14], "pulse": [14, 18], "crush2": [34, 40], "crush3": [36, 44], "lock": 9, "rate2": 1.15, "rate3": 1.15, "shieldSoak": 0.15, "shieldDown": 12 },
+  "wind": 1.6, "castRate": 0.4, "stagger": 0.35, "guardTime": 8, "braceTime": 6, "weakTime": 14, "mend": 0.28, "patch": 0.3,
+  "delay": { "link": 0.2, "arc": 0.25, "edge": 0.4, "mend": 0.3, "bulwark": 0.3, "shock": 0.35, "barrage": 0.4, "weak": 0.1 },
+  "zoneTier": { "market": { "row0": 0, "base": 0.7, "perRow": 0.45 }, "hub": { "row0": 8, "base": 3.6, "perRow": 0.5 }, "spire": { "row0": 14, "base": 5.0, "perRow": 0.5 } },
+  "scale": { "foeHp": 1, "foeDmg": 1, "xp": 1, "bossDmg": 1, "ceoDmg": 1 },
+  "loot": { "base": 2, "perTier": 0.5 }
+};

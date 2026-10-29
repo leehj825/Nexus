@@ -17,7 +17,7 @@ const Camp = (() => {
     kyle: { w: ['Kinetic Gauntlet', 'Gauntlet Servos', 'Gauntlet Overdrive'], a: ['Plate Harness', 'Bulwark Plate'] },
     yuna: { w: ['Tuned Blasters', 'Plasma Coils', 'Dual Overclock'], a: ['Stealth Weave', 'Ghost Suit'] },
   };
-  const WCOST = [2, 4, 7], ACOST = [3, 6], WMULT = 1.15, AMULT = 1.12;
+  const WCOST = Tuning.gear.wcost, ACOST = Tuning.gear.acost, WMULT = Tuning.gear.weapon, AMULT = Tuning.gear.armor;
   const UPGRADES = [];
   for (const who of Object.keys(GEAR)) {
     GEAR[who].w.forEach((name, i) => UPGRADES.push({ id: who + '-w' + (i + 1), who, slot: 'w', tier: i + 1, name, cost: WCOST[i], text: '+15% damage' }));
