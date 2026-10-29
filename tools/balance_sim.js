@@ -47,9 +47,8 @@ function award(team, xp) {
 }
 
 // ---------- foes ----------
-const FOE = T.foes;
 function makeFoe(kind, tier) {
-  const K = FOE[kind], hp = Math.round(K.hp * (1 + T.tier.hp * tier) * T.scale.foeHp);
+  const K = T.foes[kind], hp = Math.round(K.hp * (1 + T.tier.hp * tier) * T.scale.foeHp);
   return { kind, ai: K.ai, name: kind, hp, hpMax: hp, dmgMul: (1 + T.tier.dmg * tier) * T.scale.foeDmg * (kind === 'loader' ? T.scale.bossDmg : kind === 'ceo' ? T.scale.ceoDmg : 1), rate: K.rate * (1 + T.tier.rate * tier), atb: Math.random() * 0.2, xp: Math.round(K.xp * (1 + T.tier.xp * tier) * T.scale.xp), alive: true, wind: null, guard: 0, weak: 0, turn: 0, phase: 1, shielded: false, shieldT: 0, brute: kind === 'brute' || kind === 'loader', phase2: false };
 }
 
@@ -122,7 +121,7 @@ function fight(team, foeSpecs, tier, opts = {}) {
   }
   // --- foe behaviour ---
   function foeAct(f) {
-    f.atb = 0; const F = FOE[f.kind];
+    f.atb = 0;
     if (f.ai === 'ceo') {
       f.turn++; const r = f.hp / f.hpMax, ph = r > 0.66 ? 1 : r > 0.33 ? 2 : 3;
       if (ph !== f.phase) { f.phase = ph; if (ph === 2) f.rate *= T.ceo.rate2; if (ph === 3) { f.shielded = true; f.shieldT = 0; f.rate *= T.ceo.rate3; } }

@@ -10,7 +10,7 @@ const PARAMS = [
   ['tier.hp', 0.1, 1.3], ['tier.dmg', 0.08, 0.9], ['tier.xp', 0.05, 0.6], ['scale.xp', 0.3, 1.6],
   ['growth.hp', 0.06, 0.2], ['growth.dmg', 0.05, 0.18],
   ['zoneTier.market.base', 0.2, 1.5], ['zoneTier.market.perRow', 0.15, 0.8], ['zoneTier.hub.base', 1.5, 6], ['zoneTier.hub.perRow', 0.15, 0.8], ['zoneTier.spire.base', 2.5, 9], ['zoneTier.spire.perRow', 0.15, 0.8],
-  ['foes.loader.hp', 300, 1400], ['scale.bossDmg', 0.6, 3.0], ['foes.ceo.hp', 500, 3000], ['scale.ceoDmg', 0.6, 3.0],
+  ['foes.loader.hp', 400, 2400], ['foes.loader.rate', 0.05, 0.22], ['foes.ceo.rate', 0.06, 0.26], ['tier.rate', 0, 0.12], ['foes.husk.rate', 0.07, 0.15], ['foes.brute.rate', 0.05, 0.12], ['foes.enforcer.rate', 0.08, 0.16], ['foes.drone.rate', 0.1, 0.2], ['scale.bossDmg', 0.6, 3.0], ['foes.ceo.hp', 800, 5000], ['scale.ceoDmg', 0.6, 3.0],
   ['gear.wmul', 1, 3], ['gear.amul', 1, 3], ['loot.base', 1, 3], ['xp.step', 10, 50],
 ];
 const get = (o, path) => path.split('.').reduce((a, k) => a[k], o);
