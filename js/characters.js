@@ -414,6 +414,17 @@ const Chars = (() => {
   }
   const drone = () => dronish({ r: 0.5, body: 0xd8dee6, glow: 0x3ff0ff, lens: 0x3ff0ff, seed: 2.2, pods: true });
   const seraph = () => dronish({ r: 0.75, body: 0xf2f4f8, glow: 0xffe9a8, lens: 0xffe9a8, seed: 4.6, sides: 14, halo: true, y: 1.9 });
+  // The singularity form's shards: a column of gold and pink fragments circling a bright core, hidden until the CEO morphs
+  function addShards(c) {
+    c.shards = new THREE.Group(); c.shards.visible = false; c.root.add(c.shards);
+    const gold = lit(0xffe3a0, 2.2), pink = lit(0xff3fb4, 1.8);
+    for (let i = 0; i < 16; i++) {
+      const sh = add(c.shards, new THREE.OctahedronGeometry(0.16 + (i % 4) * 0.06, 0), i % 5 === 0 ? pink : gold, 0, 0, 0);
+      sh.userData = { a: i / 16 * Math.PI * 2, r: 0.5 + (i % 4) * 0.28, y: 0.4 + (i * 0.37) % 3.2, v: 0.6 + (i % 3) * 0.3 };
+    }
+    add(c.shards, new THREE.OctahedronGeometry(0.55, 1), lit(0xffffff, 3.0), 0, 1.8, 0).userData = { core: true };
+    const ring = add(c.shards, new THREE.TorusGeometry(1.4, 0.05, 6, 32), gold, 0, 3.7, 0); ring.rotation.x = Math.PI / 2; ring.userData = { ring: true };
+  }
   // The CEO: a tall figure in a long white coat with gold seams. morph() turns them into the singularity: the body goes and a column of shards takes over.
   function ceo() {
     const p = { thigh: 0.46, shin: 0.46, shoulderW: 0.22, torsoH: 0.64, armR: 0.06, legR: 0.075, hipW: 0.1, headS: 1.05 };
@@ -427,14 +438,7 @@ const Chars = (() => {
     face(c.head, m, { w: 0.25, d: 0.25, simple: true });
     add(c.head, tb(0.27, 0.26, 0.14, 0.27, 0.27), m.hair, 0, 0.3, -0.01);
     c.body = [T, c.head, c.j.shL, c.j.shR, c.j.hipL, c.j.hipR];
-    c.shards = new THREE.Group(); c.shards.visible = false; c.root.add(c.shards);
-    const gold = lit(0xffe3a0, 2.2), pink = lit(0xff3fb4, 1.8);
-    for (let i = 0; i < 16; i++) {
-      const sh = add(c.shards, new THREE.OctahedronGeometry(0.16 + (i % 4) * 0.06, 0), i % 5 === 0 ? pink : gold, 0, 0, 0);
-      sh.userData = { a: i / 16 * Math.PI * 2, r: 0.5 + (i % 4) * 0.28, y: 0.4 + (i * 0.37) % 3.2, v: 0.6 + (i % 3) * 0.3 };
-    }
-    add(c.shards, new THREE.OctahedronGeometry(0.55, 1), lit(0xffffff, 3.0), 0, 1.8, 0).userData = { core: true };
-    const ring = add(c.shards, new THREE.TorusGeometry(1.4, 0.05, 6, 32), gold, 0, 3.7, 0); ring.rotation.x = Math.PI / 2; ring.userData = { ring: true };
+    addShards(c);
     return c;
   }
   function morph(c, on = true) {                                                                             // the CEO's second form (and back, after a defeat)
@@ -485,6 +489,9 @@ const Chars = (() => {
     yuna: { kind: 'seated', seatH: 0.62, seed: 4.0, extra: c => blasters(c),
       seat: { torso: [0.08, 0, 0], shL: [-0.5, 0, 0.1], shR: [-0.5, 0, -0.05], elL: [-0.6, 0, 0], elR: [-0.6, 0, 0] } },
     husk: { kind: 'stand', seed: 5.5, extra: () => {} },
+    loader: { kind: 'stand', seed: 9.2, extra: () => {} },
+    enforcer: { kind: 'stand', seed: 8.1, extra: () => {} },
+    ceo: { kind: 'stand', seed: 9.4, extra: c => { c.body = [c.root.children.find(o => o.isSkinnedMesh)]; addShards(c); } },
     brute: { kind: 'stand', seed: 7.2, extra: () => {} },
     player: { kind: 'stand', seed: 0.6, extra: c => addBlade(c, { steelD: std(0x464b54, { roughness: 0.45, metalness: 0.45 }), bladeEdge: lit(0x3ff0ff, 1.6), bladeCore: lit(0xe6feff, 2.4) }) },
   };
@@ -606,7 +613,6 @@ const Chars = (() => {
   // roll in the hips and twitch their heads. The clips (mostly walking and brawling) supply the legs and the strikes; this bends them out of human shape.
   const CREATURE = {
     husk: { hunch: 0.2, head: 0.12, armsOut: 0.05, armFwd: 0.22, roll: 0.1, lurch: 0.035, twitch: 1, breath: 0.03 },
-    loader: { hunch: 0.08, head: 0.05, armsOut: 0.25, armFwd: 0.05, roll: 0.03, lurch: 0.02, twitch: 0, breath: 0.015 },
     brute: { hunch: 0.14, head: 0.12, armsOut: 0.2, armFwd: 0.1, roll: 0.07, lurch: 0.05, twitch: 0.3, breath: 0.045 },
   };
   function creature(c, t, dt, speed) {
