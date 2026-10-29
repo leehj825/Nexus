@@ -9,14 +9,23 @@ const Sound = (() => {
   try { muted = localStorage.getItem('nexus.muted') === '1'; if (localStorage.getItem('nexus.music') === '0') musicOn = false; if (localStorage.getItem('nexus.sfx') === '0') sfxOn = false; } catch (e) { /* storage can be blocked */ }
   const layers = {};                                                          // pad, arp, bass, kick, snare, hat: each a gain node
   const LEVEL = {
-    explore: { pad: 0.5, arp: 0.22, bass: 0, kick: 0, snare: 0, hat: 0 },
-    market: { pad: 0.45, arp: 0.32, bass: 0.35, kick: 0.3, snare: 0, hat: 0.14 },
-    battle: { pad: 0.3, arp: 0.42, bass: 0.65, kick: 0.75, snare: 0.55, hat: 0.3 },
-    scene: { pad: 0.5, arp: 0.08, bass: 0, kick: 0, snare: 0, hat: 0 },
+    explore: { pad: 0.5, arp: 0.22, bass: 0, kick: 0, snare: 0, hat: 0, clank: 0, bell: 0 },
+    market: { pad: 0.45, arp: 0.32, bass: 0.35, kick: 0.3, snare: 0, hat: 0.14, clank: 0, bell: 0 },
+    hub: { pad: 0.42, arp: 0.2, bass: 0.55, kick: 0.45, snare: 0, hat: 0.08, clank: 0.55, bell: 0 },          // the Industrial Hub: a heavy, driving pulse with metal hits
+    spire: { pad: 0.5, arp: 0.34, bass: 0.22, kick: 0.1, snare: 0, hat: 0.1, clank: 0, bell: 0.55 },           // the Corporate Spire: cold, airy, glassy bells
+    battle: { pad: 0.3, arp: 0.42, bass: 0.65, kick: 0.75, snare: 0.55, hat: 0.3, clank: 0, bell: 0 },
+    scene: { pad: 0.5, arp: 0.08, bass: 0, kick: 0, snare: 0, hat: 0, clank: 0, bell: 0 },
   };
-  const BPM = { explore: 88, market: 96, battle: 132, scene: 80 };
-  const ROOTS = [57, 53, 60, 55];                                              // A3 F3 C4 G3 as midi notes
-  const CHORD = [[0, 3, 7], [0, 4, 7], [0, 4, 7], [0, 4, 7]];                   // minor, then majors
+  const BPM = { explore: 88, market: 96, hub: 84, spire: 102, battle: 132, scene: 80 };
+  // The notes, by zone: the alley and Market share one score; the Hub and Spire have their own (battles in a zone use its notes at battle speed)
+  const R = -1;
+  const SCORE = {
+    default: { roots: [57, 53, 60, 55], chords: [[0, 3, 7], [0, 4, 7], [0, 4, 7], [0, 4, 7]], pad: 'sawtooth', padCut: 900, arpType: 'square', arpOct: 24, arpPat: [0, 1, 2, 1, 2, 0, 1, 2, 0, 2, 1, 2, 0, 1, 2, 1], bass: [0, 3, 6, 8, 11, 14], bassType: 'sawtooth', bassCut: 420 },
+    hub: { roots: [50, 50, 53, 48], chords: [[0, 3, 7], [0, 3, 7], [0, 4, 7], [0, 4, 7]], pad: 'sawtooth', padCut: 520, arpType: 'sawtooth', arpOct: 12, arpPat: [0, R, R, 1, R, R, 2, R, 0, R, R, 1, R, 2, R, R], bass: [0, 2, 4, 6, 8, 10, 12, 14], bassType: 'sawtooth', bassCut: 300 },
+    spire: { roots: [64, 60, 57, 62], chords: [[0, 4, 7, 11], [0, 4, 7, 11], [0, 3, 7, 10], [0, 4, 7, 10]], pad: 'triangle', padCut: 2600, arpType: 'triangle', arpOct: 36, arpPat: [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 3, 2, 1, 0], bass: [0, 8], bassType: 'sine', bassCut: 500 },
+  };
+  let zone = 'default';
+  const setZone = z => { zone = SCORE[z] ? z : 'default'; };
   const hz = m => 440 * Math.pow(2, (m - 69) / 12);
   let step = 0, nextT = 0;
 
@@ -54,18 +63,20 @@ const Sound = (() => {
   function schedule() {
     if (!ctx || ctx.state !== 'running') return;
     while (nextT < ctx.currentTime + 0.18) {
-      const s = step % 16, bar = Math.floor(step / 16) % 4, root = ROOTS[bar], ch = CHORD[bar], sd = 60 / BPM[mood] / 4;
+      const P = SCORE[zone], s = step % 16, bar = Math.floor(step / 16) % 4, root = P.roots[bar], ch = P.chords[bar], sd = 60 / BPM[mood] / 4;
       if (s === 0) {                                                            // a new bar: the pad
         for (const dt of [-0.12, 0, 0.12]) for (const iv of ch) {
           const o = ctx.createOscillator(), g = ctx.createGain(), fl = ctx.createBiquadFilter();
-          o.type = 'sawtooth'; o.frequency.value = hz(root + iv); o.detune.value = dt * 100; fl.type = 'lowpass'; fl.frequency.value = 900;
+          o.type = P.pad; o.frequency.value = hz(root + iv); o.detune.value = dt * 100; fl.type = 'lowpass'; fl.frequency.value = P.padCut;
           g.gain.setValueAtTime(0.0001, nextT); g.gain.linearRampToValueAtTime(0.045, nextT + sd * 4); g.gain.linearRampToValueAtTime(0.0001, nextT + sd * 16);
           o.connect(fl); fl.connect(g); g.connect(layers.pad); o.start(nextT); o.stop(nextT + sd * 16 + 0.05);
         }
       }
-      const arp = [0, 1, 2, 1, 2, 0, 1, 2, 0, 2, 1, 2, 0, 1, 2, 1][s];             // a rising and falling figure over the chord
-      note(nextT, 'square', hz(root + 24 + ch[arp] + (s % 8 === 7 ? 12 : 0)), sd * 1.6, 0.06, layers.arp, 2200, 2);
-      if ([0, 3, 6, 8, 11, 14].includes(s)) note(nextT, 'sawtooth', hz(root - 24), sd * 2.2, 0.16, layers.bass, 420, 3);
+      const arp = P.arpPat[s];                                                       // a figure over the chord (a rest where the pattern says so)
+      if (arp >= 0) note(nextT, P.arpType, hz(root + P.arpOct + ch[arp % ch.length] + (s % 8 === 7 ? 12 : 0)), sd * 1.6, 0.06, layers.arp, 2200, 2);
+      if (P.bass.includes(s)) note(nextT, P.bassType, hz(root - 24), sd * 2.2, zone === 'spire' ? 0.2 : 0.16, layers.bass, P.bassCut, 3);
+      if (zone === 'hub' && [2, 6, 10, 13].includes(s)) { noise(nextT, 0.1, 0.22, layers.clank, 'bandpass', 640 + (s % 3) * 180, 7); note(nextT, 'square', 170 + (s % 3) * 40, 0.06, 0.05, layers.clank, 1500, 6); }     // metal hits off the beat
+      if (zone === 'spire' && s % 4 === 0) { note(nextT, 'sine', hz(root + 36 + ch[(s / 4) % ch.length]), 1.6, 0.08, layers.bell, 7000); note(nextT, 'sine', hz(root + 48 + ch[(s / 4 + 1) % ch.length]), 1.0, 0.04, layers.bell, 8000); }   // glassy bells
       if (s % 4 === 0) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(140, nextT); o.frequency.exponentialRampToValueAtTime(40, nextT + 0.16); g.gain.setValueAtTime(0.5, nextT); g.gain.exponentialRampToValueAtTime(0.0001, nextT + 0.22); o.connect(g); g.connect(layers.kick); o.start(nextT); o.stop(nextT + 0.25); }
       if (s === 4 || s === 12) noise(nextT, 0.16, 0.18, layers.snare, 'bandpass', 1900, 0.8);
       if (s % 2 === 1) noise(nextT, 0.04, 0.07, layers.hat, 'highpass', 7000);
@@ -125,5 +136,5 @@ const Sound = (() => {
   window.addEventListener('pagehide', suspend); window.addEventListener('pageshow', resume);
   window.nexusSuspend = suspend; window.nexusResume = resume;               // the Android app calls these when it is paused and resumed
 
-  return { init, sfx, blip, setMood, update, setMuted, setMusic, setSfx, get muted() { return muted; }, get music() { return musicOn; }, get fx() { return sfxOn; }, get mood() { return mood; }, running: () => !!ctx && ctx.state === 'running' };
+  return { init, sfx, blip, setMood, setZone, update, setMuted, setMusic, setSfx, get muted() { return muted; }, get music() { return musicOn; }, get fx() { return sfxOn; }, get mood() { return mood; }, running: () => !!ctx && ctx.state === 'running' };
 })();

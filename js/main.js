@@ -68,8 +68,10 @@
   // The score follows the situation; the fire crackles near the camp; glitches crackle too; buttons click
   let lastMood = '', glitchT = 0;
   function soundtrack(dt) {
-    const p = Player.state(), m = Cutscene.active() ? 'scene' : Combat.active() ? 'battle' : p.z < World.Z0 - 2 ? 'market' : 'explore';
+    const p = Player.state(), zn = p.z < World.SPIRE_Z - 2 ? 'spire' : p.z < World.HUB_Z - 2 ? 'hub' : p.z < World.Z0 - 2 ? 'market' : 'explore';
+    const m = Cutscene.active() ? 'scene' : Combat.active() ? 'battle' : zn;
     if (m !== lastMood) { lastMood = m; Sound.setMood(m); }
+    Sound.setZone(zn === 'hub' || zn === 'spire' ? zn : 'default');
     Sound.update(dt, p);
     glitchT -= dt; if (glitchT <= 0 && City.glitch() > 0.25) { Sound.sfx('glitch', { vol: City.glitch() }); glitchT = 0.5 + Math.random() * 1.2; }
   }
