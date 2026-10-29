@@ -114,9 +114,9 @@ const Chars = (() => {
   }
   // The energy blade in the right hand: a dark grip in the fist, a short guard, and a cyan blade with a white core
   // running on forward and down from the hand. m needs steelD, bladeEdge and bladeCore
-  const BLADE_READY = -0.6, BLADE_CARRY = -1.6;                                  // the blade's tilt from the forearm: held up for a fight, pointing forward from the fist while walking about
+  const BLADE_DIR = { walk: [0.12, -0.12, 1], run: [0.4, -0.3, 1], fight: [0.1, 0.35, 1] };      // where the blade points (right side outward, up, forward) as the figure walks, runs and fights
   function addBlade(c, m) {
-    const blade = joint(c.j.wrR, 0, -0.08, 0.01); blade.rotation.x = BLADE_READY; c.blade = blade;
+    const blade = joint(c.j.wrR, 0, -0.08, 0.01); c.blade = blade; c.bladeDir = new THREE.Vector3(...BLADE_DIR.walk);
     add(blade, box(0.034, 0.2, 0.034), m.steelD, 0, -0.04, 0);                                                 // the grip
     add(blade, box(0.12, 0.025, 0.055), m.steelD, 0, -0.145, 0);                                               // the guard
     add(blade, box(0.03, 0.9, 0.01), m.bladeEdge, 0, -0.6, 0);                                                 // the blade
@@ -545,7 +545,18 @@ const Chars = (() => {
     const fight = c.idleClip === c.loco.battle || !!c.clip, want = fight ? 0 : (speed > 0.15 ? 1 : 0.45) * SPREAD[c.name];
     c.spread = (c.spread || 0) + (want - (c.spread || 0)) * Math.min(1, dt * 7);
     for (const k of ['L', 'R']) c.j['sh' + k].quaternion.multiply(zn.setFromAxisAngle(Z, Math.sign(c.armFix[k][0]) * c.spread));
-    if (c.blade) { const b = fight ? BLADE_READY : BLADE_CARRY; c.blade.rotation.x += (b - c.blade.rotation.x) * Math.min(1, dt * 7); }
+  }
+
+  // Jin's blade is aimed in the figure's own space rather than fixed to the hand: whatever the arm is doing (swinging in a run, raised in a stance,
+  // slashing) the sword points forward and away from his body like one held in a fist, never along the forearm like a baton
+  const wq = new THREE.Quaternion(), rq = new THREE.Quaternion(), qd = new THREE.Quaternion(), tgt = new THREE.Vector3(), DOWN = new THREE.Vector3(0, -1, 0);
+  function aimBlade(c, speed, dt) {
+    const fight = c.idleClip === c.loco.battle || !!c.clip, d = BLADE_DIR[fight ? 'fight' : speed > 4.2 ? 'run' : 'walk'];
+    c.root.updateMatrixWorld(true);
+    const out = Math.sign(c.root.worldToLocal(gv.setFromMatrixPosition(c.j.wrR.matrixWorld)).x) || -1;
+    c.bladeDir.lerp(tgt.set(d[0] * out, d[1], d[2]), Math.min(1, dt * 8));
+    c.j.wrR.getWorldQuaternion(wq); c.root.getWorldQuaternion(rq);
+    c.blade.quaternion.copy(wq.invert()).multiply(rq).multiply(qd.setFromUnitVectors(DOWN, tgt.copy(c.bladeDir).normalize()));
   }
 
   // ---------------- Talking: gestures laid on top of whatever pose the figure is in (seated, idle clip), used by cutscenes ----------------
@@ -678,6 +689,7 @@ const Chars = (() => {
       for (const o of c.shards.children) { const u = o.userData; if (u.core) { o.rotation.y = t; o.scale.setScalar(1 + Math.sin(t * 3) * 0.08); } else if (u.ring) o.rotation.z = t * 0.6; else { u.a += dt * u.v; o.position.set(Math.cos(u.a) * u.r, u.y + Math.sin(t * 1.7 + u.a) * 0.15, Math.sin(u.a) * u.r); o.rotation.y += dt * 2; } }
     }
     if (c.talkMood || c.talkAmp > 0.01 || c.lookPt || c.lookAmp > 0.01) gesture(c, t, dt);
+    if (c.blade) aimBlade(c, speed, dt);
     if (c.name === 'ruen') {                                                     // the orb floats over her left palm, specks circling it
       c.root.updateMatrixWorld(true);
       c.j.wrL.getWorldPosition(orbAt); c.root.worldToLocal(orbAt);
