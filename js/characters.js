@@ -114,7 +114,7 @@ const Chars = (() => {
   }
   // The energy blade in the right hand: a dark grip in the fist, a short guard, and a cyan blade with a white core
   // running on forward and down from the hand. m needs steelD, bladeEdge and bladeCore
-  const BLADE_DIR = { walk: [0.12, -0.12, 1], run: [0.4, -0.3, 1], fight: [0.1, 0.35, 1] };      // where the blade points (right side outward, up, forward) as the figure walks, runs and fights
+  const BLADE_DIR = { walk: [0.12, -0.12, 1], run: [0.5, -0.6, -0.7], fight: [0.1, 0.35, 1] };      // where the blade points (right side outward, up, forward) as the figure walks, runs and fights
   function addBlade(c, m) {
     const blade = joint(c.j.wrR, 0, -0.08, 0.01); c.blade = blade; c.bladeDir = new THREE.Vector3(...BLADE_DIR.walk);
     add(blade, box(0.034, 0.2, 0.034), m.steelD, 0, -0.04, 0);                                                 // the grip
