@@ -22,6 +22,7 @@
   <div class="zone"><span>Neon District &middot; Night</span></div>
 
   <div class="corner">
+    <button id="btnRun" type="button" aria-label="Run" title="Running (R)">&raquo;</button>
     <button id="btnCrew" type="button" aria-label="Crew" title="Crew (I)">&#9786;</button>
     <button id="btnMap" type="button" aria-label="Map" title="Map">&#9638;</button>
     <button id="btnPause" type="button" aria-label="Pause" title="Pause (P)">&#10074;&#10074;</button>
@@ -34,9 +35,10 @@
     <div class="sector">Sector 9</div>
   </div>
 
-  <div class="hints">Tap or click a spot to walk &middot; Drag to turn the camera &middot; Wheel or pinch to zoom &middot; WASD move &middot; Arrows turn &middot; Shift run &middot; P pause</div>
+  <div class="hints">WASD or the stick to move &middot; Drag to turn the camera &middot; Wheel or pinch to zoom &middot; R toggles run, Shift swaps it &middot; Arrows turn &middot; P pause</div>
   <div id="pauseTag" class="tag" hidden>Paused</div>
-  <div class="prompt">Tap a spot to walk &middot; drag to look</div>
+  <div class="prompt">Stick to move &middot; drag to look</div>
+  <div id="stick" class="stick" aria-label="Move"><i></i></div>
   <button id="engage" class="engage" type="button" hidden>Engage</button>
   <button id="talkBtn" class="engage" type="button" hidden>Talk</button>
   <button id="campBtn" class="engage" type="button" hidden>Camp</button>
