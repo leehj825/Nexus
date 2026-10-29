@@ -114,8 +114,9 @@ const Chars = (() => {
   }
   // The energy blade in the right hand: a dark grip in the fist, a short guard, and a cyan blade with a white core
   // running on forward and down from the hand. m needs steelD, bladeEdge and bladeCore
+  const BLADE_READY = -0.6, BLADE_CARRY = -1.6;                                  // the blade's tilt from the forearm: held up for a fight, pointing forward from the fist while walking about
   function addBlade(c, m) {
-    const blade = joint(c.j.wrR, 0, -0.08, 0.01); blade.rotation.x = -0.6;
+    const blade = joint(c.j.wrR, 0, -0.08, 0.01); blade.rotation.x = BLADE_READY; c.blade = blade;
     add(blade, box(0.034, 0.2, 0.034), m.steelD, 0, -0.04, 0);                                                 // the grip
     add(blade, box(0.12, 0.025, 0.055), m.steelD, 0, -0.145, 0);                                               // the guard
     add(blade, box(0.03, 0.9, 0.01), m.bladeEdge, 0, -0.6, 0);                                                 // the blade
@@ -537,6 +538,16 @@ const Chars = (() => {
     }
   }
 
+  // Jin and Yuna carry a weapon in each hand, and with the arms straight down it cuts through their legs: out of battle the arms stand a
+  // little away from the body (more when walking), and Jin's blade points forward from his fist like a sword held at his side
+  const SPREAD = { player: 0.32, yuna: 0.32 };
+  function spreadArms(c, speed, dt) {
+    const fight = c.idleClip === c.loco.battle || !!c.clip, want = fight ? 0 : (speed > 0.15 ? 1 : 0.45) * SPREAD[c.name];
+    c.spread = (c.spread || 0) + (want - (c.spread || 0)) * Math.min(1, dt * 7);
+    for (const k of ['L', 'R']) c.j['sh' + k].quaternion.multiply(zn.setFromAxisAngle(Z, Math.sign(c.armFix[k][0]) * c.spread));
+    if (c.blade) { const b = fight ? BLADE_READY : BLADE_CARRY; c.blade.rotation.x += (b - c.blade.rotation.x) * Math.min(1, dt * 7); }
+  }
+
   // ---------------- Talking: gestures laid on top of whatever pose the figure is in (seated, idle clip), used by cutscenes ----------------
   // setTalk(c, mood, speaking): mood is one of talk / worry / firm / think / alert / nod / wipe (or null to stop); speaking is true while the
   // words are coming out (full movement) and false once the line is done (the figure settles). setLook(c, worldPoint) turns the head to a point.
@@ -655,7 +666,7 @@ const Chars = (() => {
         if (c.lean) c.torso.rotation.x = c.lean;
       }
     }
-    if (c.armFix) undoAPose(c);
+    if (c.armFix) { undoAPose(c); if (SPREAD[c.name]) spreadArms(c, speed, dt); }
     if (LEGDAMP[c.name]) for (const k of ['hipL', 'hipR', 'kneeL', 'kneeR']) c.j[k].quaternion.slerp(IDQ, 1 - LEGDAMP[c.name]);      // a long coat: shorter strides, so the legs stay inside it
     if (CREATURE[c.name] && c.armFix) creature(c, t, dt, speed);
     if (c.hover) {                                                                // drones bob in the air, and sink when destroyed
