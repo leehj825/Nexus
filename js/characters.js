@@ -115,12 +115,19 @@ const Chars = (() => {
   // The energy blade in the right hand: a dark grip in the fist, a short guard, and a cyan blade with a white core
   // running on forward and down from the hand. m needs steelD, bladeEdge and bladeCore
   const BLADE_FIGHT = [0.1, 0.35, 1];                                               // where the drawn blade points (right side outward, up, forward)
+  // While Jin swings, the blade follows a path by clip time: [seconds into the clip, [outward, up, forward]]. A punch is a cut from his right across to
+  // his left, the swipe lifts the blade over his shoulder and brings it down through the front. The blow lands at HIT (see combat.js).
+  const BLADE_KEYS = {
+    brawlPunch: [[0, BLADE_FIGHT], [0.12, [0.9, 0.3, 0.4]], [0.29, [0.1, 0.1, 1]], [0.45, [-0.9, 0.1, 0.5]], [0.65, [-0.6, 0.2, 0.8]], [0.95, BLADE_FIGHT]],
+    brawlSwipe: [[0, BLADE_FIGHT], [0.45, BLADE_FIGHT], [0.75, [-0.4, 1, -0.3]], [1.0, [-0.5, 0.9, 0.1]], [1.12, [-0.7, 0.3, 0.7]], [1.2, [0, 0.1, 1]], [1.3, [0.9, 0, 0.4]], [1.45, [0.9, -0.3, -0.2]], [1.8, [0.6, 0, 0.3]], [2.3, BLADE_FIGHT]],
+  };
   function addBlade(c, m) {
     const blade = joint(c.j.wrR, 0, -0.08, 0.01); c.blade = blade; c.weapons = [blade]; c.bladeDir = new THREE.Vector3(...BLADE_FIGHT);
-    add(blade, box(0.034, 0.2, 0.034), m.steelD, 0, -0.04, 0);                                                 // the grip
-    add(blade, box(0.12, 0.025, 0.055), m.steelD, 0, -0.145, 0);                                               // the guard
-    add(blade, box(0.03, 0.9, 0.01), m.bladeEdge, 0, -0.6, 0);                                                 // the blade
-    add(blade, box(0.01, 0.88, 0.012), m.bladeCore, 0, -0.6, 0);                                               // its white core
+    add(blade, box(0.042, 0.27, 0.042), m.steelD, 0, -0.04, 0);                                                // the grip
+    add(blade, box(0.04, 0.05, 0.05), m.steelD, 0, 0.1, 0);                                                    // the pommel
+    add(blade, box(0.16, 0.03, 0.075), m.steelD, 0, -0.19, 0);                                                 // the guard
+    add(blade, box(0.075, 0.9, 0.016), m.bladeEdge, 0, -0.65, 0);                                              // the blade, broad enough to read as a sword
+    add(blade, box(0.026, 0.88, 0.022), m.bladeCore, 0, -0.65, 0);                                             // its white core
   }
 
   // ---------------- Ruen: the Intuitive Hacker. Slender, a brown chin-length bob with a fringe, an open navy jacket over an
@@ -488,7 +495,7 @@ const Chars = (() => {
     ruen: { kind: 'seated', seatH: 0.62, seed: 1.3, seat: SEAT_POSE.ruen, extra: c => addOrb(c) },
     kyle: { kind: 'seated', seatH: 0.72, seed: 2.1, seat: SEAT_POSE.kyle, extra: () => {} },
     yuna: { kind: 'seated', seatH: 0.62, seed: 4.0, extra: c => blasters(c),
-      seat: { torso: [0.08, 0, 0], shL: [-0.5, 0, 0.1], shR: [-0.5, 0, -0.05], elL: [-0.6, 0, 0], elR: [-0.6, 0, 0] } },
+      seat: { torso: [0.1, 0, 0], shL: [-0.3, 0, -0.02], shR: [-0.3, 0, 0.02], elL: [-1.0, 0, 0], elR: [-1.0, 0, 0], wrL: [0.1, 0, 0], wrR: [0.1, 0, 0] } },
     husk: { kind: 'stand', seed: 5.5, extra: () => {} },
     loader: { kind: 'stand', seed: 9.2, extra: () => {} },
     enforcer: { kind: 'stand', seed: 8.1, extra: () => {} },
@@ -551,10 +558,14 @@ const Chars = (() => {
   // slashing) the sword points forward and away from his body like one held in a fist, never along the forearm like a baton
   const wq = new THREE.Quaternion(), rq = new THREE.Quaternion(), qd = new THREE.Quaternion(), tgt = new THREE.Vector3(), DOWN = new THREE.Vector3(0, -1, 0);
   function aimBlade(c, dt) {
-    const d = BLADE_FIGHT;
     c.root.updateMatrixWorld(true);
-    const out = Math.sign(c.root.worldToLocal(gv.setFromMatrixPosition(c.j.wrR.matrixWorld)).x) || -1;
-    c.bladeDir.lerp(tgt.set(d[0] * out, d[1], d[2]), Math.min(1, dt * 8));
+    const out = -1, keys = c.clip && BLADE_KEYS[c.clip.name];                    // his right hand is on -x
+    let d = BLADE_FIGHT;
+    if (keys) {                                                                   // on a swing's path
+      const t = c.clip.t; let i = 0; while (i < keys.length - 2 && t > keys[i + 1][0]) i++;
+      const [t0, a0] = keys[i], [t1, a1] = keys[i + 1], k = Math.min(1, Math.max(0, (t - t0) / (t1 - t0)));
+      tgt.set(a0[0] + (a1[0] - a0[0]) * k, a0[1] + (a1[1] - a0[1]) * k, a0[2] + (a1[2] - a0[2]) * k); c.bladeDir.set(tgt.x * out, tgt.y, tgt.z);
+    } else c.bladeDir.lerp(tgt.set(d[0] * out, d[1], d[2]), Math.min(1, dt * 8));
     c.j.wrR.getWorldQuaternion(wq); c.root.getWorldQuaternion(rq);
     c.blade.quaternion.copy(wq.invert()).multiply(rq).multiply(qd.setFromUnitVectors(DOWN, tgt.copy(c.bladeDir).normalize()));
   }
