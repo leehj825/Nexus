@@ -231,3 +231,6 @@ body.cutscene #hud, body.cutscene #labels { display: none; }
 .cc-list li.on, .cc-list li:not([class]) { opacity: 1; }
 .cc-list b { display: block; font-size: 12px; }
 .cc-list span { display: block; color: var(--dim); font-size: 11px; }
+
+.lbl.guarded .lbar { box-shadow: 0 0 0 2px rgba(159, 216, 255, 0.9); }
+.bar.locked { outline: 1px solid #ff3fb4; opacity: 0.6; }

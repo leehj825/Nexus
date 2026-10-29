@@ -153,6 +153,28 @@ const Cutscene = (() => {
         { shot: 'who', who: 'yuna', mood: 'talk', text: '...Fine. But if the drones wake, I\'m choosing which one to shoot first.' },
       ],
     },
+    spire: {
+      bonds: [['ruen', 'yuna', 2], ['you', 'ruen', 1]],
+      steps: [
+        { shot: 'wide', caption: 'The Spire lobby camp\nA scrap fire in a hall of white marble. It looks like a stain, and nobody minds.' },
+        { shot: 'who', who: 'ruen', mood: 'think', note: 'Looking at her hands.', text: 'Yuna, can I ask you something? Were you ever afraid of this place? When you worked for them?' },
+        { shot: 'who', who: 'yuna', mood: 'firm', text: 'Every day. I told myself fear was just a diagnostic. A sign that something wanted attention.' },
+        { shot: 'who', who: 'yuna', mood: 'talk', text: 'It turns out it was. And I spent two years ignoring it. I don\'t plan to do that again.' },
+        { shot: 'who', who: 'ruen', mood: 'nod', text: 'Then maybe being afraid isn\'t the problem. It\'s what we do with it.' },
+        { shot: 'who', who: 'yuna', mood: 'nod', text: '...Stay behind me when it starts. I mean it. And keep that orb ready.' },
+      ],
+    },
+    atrium: {
+      bonds: [['you', 'ruen', 2], ['you', 'kyle', 1], ['kyle', 'ruen', 1]],
+      steps: [
+        { shot: 'wide', caption: 'The Server Atrium camp\nUnder the glass dome, the tower of data hums its one long note. The crew sit with their backs to it.' },
+        { shot: 'who', who: 'jin', mood: 'think', text: 'Ruen. Whatever happens up there, I need you to hear me. You\'re not a piece, and you aren\'t a key. You\'re the one who got us this far.' },
+        { shot: 'who', who: 'ruen', mood: 'worry', text: 'I\'m scared of what I\'ll have to do. I think I\'ll have to hold the whole thing, Jin. All of it. And I don\'t know if I can.' },
+        { shot: 'who', who: 'kyle', mood: 'firm', text: 'You won\'t hold it alone. I don\'t say much, but I\'ll say that.' },
+        { shot: 'who', who: 'jin', mood: 'nod', text: 'You\'ve been the compass the whole way. Now we\'re yours.' },
+        { shot: 'who', who: 'ruen', mood: 'nod', text: 'Then I can do it. Thank you. Both of you.' },
+      ],
+    },
     foundry: {
       bonds: [['you', 'kyle', 2], ['you', 'ruen', 1]],
       steps: [
@@ -165,15 +187,86 @@ const Cutscene = (() => {
       ],
     },
   };
+  // The lift: a short scene, a fade, and the Spire's lobby, where the arrival scene plays
+  function rideLift() {
+    begin(LIFT_SCENE, () => {
+      Camp.fadeThen(() => { Player.teleport(World.ARRIVE.x, World.ARRIVE.z); Player.faceTowards(World.ARRIVE.x, World.ARRIVE.z - 20); Camp.restoreCrew(Player.state()); });
+      const go = () => { if (active) setTimeout(go, 250); else begin(SPIRE_ARRIVAL, () => setStage(14), { anchor: 'here' }); };
+      setTimeout(go, 1400);
+    }, { anchor: 'here' });
+  }
+  // The end card: the story is told; the world stays open
+  function showEnd() { const el = $('endcard'); if (el) el.hidden = false; Sound.sfx('win'); }
   const bondUp = list => { if (typeof Growth !== 'undefined') for (const [a, b, n] of list) Growth.addBond(a, b, n); };
 
+  // ---------------- Act 3: the Corporate Spire ----------------
+  const CEO_WHO = { name: 'The CEO', color: '#fff0c0' };
+  const LIFT_SCENE = [
+    { shot: 'point', look: [World.LIFT.x, 6, World.LIFT.z], caption: 'The freight lift hums, its cage still powered. Above it, a shaft runs up into a column of pale light.' },
+    { shot: 'who', who: 'kyle', mood: 'think', text: 'Everything above this floor is theirs. No more husks. People who know exactly what they\'re doing.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', text: 'Enforcers, sentry drones, cameras that don\'t blink. Nobody breaks ranks up there, and nobody falls behind.' },
+    { shot: 'who', who: 'ruen', mood: 'alert', note: 'Her orb steady, almost bright.', text: 'I can hear it clearly now. It isn\'t whispering any more. It\'s waiting.' },
+    { shot: 'who', who: 'jin', mood: 'firm', text: 'Then we don\'t keep it waiting. All aboard.' },
+    { shot: 'point', look: [World.LIFT.x, 22, World.LIFT.z], caption: 'The lift climbs through the dark. For a long time there is only the hum, and the glow above growing brighter.' },
+  ];
+  const SPIRE_ARRIVAL = [
+    { shot: 'point', look: [World.ARRIVE.x, 8, World.ARRIVE.z - 18], fx: { glitch: 0.25, resonance: 0.6 }, caption: 'The Corporate Spire · The Lobby\nThe lift opens onto white marble, glass, and a silence that costs a great deal of money.' },
+    { shot: 'who', who: 'yuna', mood: 'alert', text: 'Clean. Too clean. They\'ve been scrubbing this place while the rest of the city came apart.' },
+    { shot: 'point', look: [World.ARRIVE.x, 8, World.ARRIVE.z - 18], fx: { glitch: 0.6 }, caption: 'Shards of light hang in the air like frozen sparks. The company\'s mark on the far wall tears along its seams, then knits itself shut.' },
+    { shot: 'who', who: 'ruen', mood: 'worry', text: 'The singularity is bleeding through. The whole Spire is coming apart at the edges, and no one up here is allowed to say so.' },
+    { shot: 'who', who: 'jin', mood: 'firm', fx: { glitch: 0.2 }, text: 'We keep the pace and we stay together. The atrium is straight ahead; the servers there run everything above us.' },
+  ];
+  const ATRIUM_SCENE = [
+    { shot: 'point', look: [World.ATRIUM.x, 8, World.ATRIUM.z], fx: { resonance: 0.8 }, caption: 'The Server Atrium\nA dome of glass over a ring of light, and in the middle a tower of data humming like a held note.' },
+    { shot: 'point', look: [World.ATRIUM.x, 6, World.ATRIUM.z], name: 'Recorded message', color: '#ffe3a0', text: 'Executive briefing, final session. The cores are aligned. At the summit the singularity will open, and every system, every sign and every person will answer to the new order.' },
+    { shot: 'point', look: [World.ATRIUM.x, 6, World.ATRIUM.z], name: 'Recorded message', color: '#ffe3a0', text: 'Do not interfere. The CEO will be at the summit. This is not an invitation.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', text: 'That\'s the CEO\'s voice. They\'re going to merge with it and rewrite the city with themselves as the author.' },
+    { shot: 'who', who: 'ruen', mood: 'worry', text: 'It isn\'t only the cores. They want me. The resonance, my intuition. I\'m the piece that tunes it.' },
+    { shot: 'who', who: 'kyle', mood: 'firm', note: 'Stepping in front of her.', text: 'Then the first thing they\'ll find at the summit is me, standing in front of you.' },
+    { shot: 'who', who: 'jin', mood: 'nod', fx: { resonance: 0.3 }, text: 'And me. And Yuna. All of us, or none. Rest at the camp if you need to, then we climb.' },
+  ];
+  const SUMMIT_SIGHT = [
+    { shot: 'point', look: [World.SUMMIT.x, 10, World.SUMMIT.z], fx: { resonance: 1, glitch: 0.5 }, caption: 'The Summit\nAt the top of the city the sky is torn open: a ring of gold light turning over a platform, and at its heart, one small figure in white.' },
+    { shot: 'who', who: 'ruen', mood: 'alert', text: 'That\'s the whole door. Every core, every piece, all of it in one place.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', text: 'And the CEO in the middle, as if they owned it.' },
+    { shot: 'who', who: 'jin', mood: 'firm', fx: { glitch: 0.2 }, text: 'When it starts, spread out. Kyle takes the sweep. Yuna, keep the locks off us. Ruen, when the singularity opens, you ground it.' },
+    { shot: 'who', who: 'ruen', mood: 'nod', text: 'I know what to do. I think I\'ve known since the alley.' },
+  ];
+  const CEO_CONFRONT = [
+    { shot: 'point', look: [World.SUMMIT.x, 4, World.SUMMIT.z - 5], fx: { resonance: 1 }, caption: 'The platform hums. The CEO turns, unhurried, and the light bends round them.' },
+    { shot: 'who', ...CEO_WHO, ceo: true, mood: 'talk', text: 'Four of you. I expected an army, and what arrives are the pieces I was missing. Thank you for bringing her.' },
+    { shot: 'who', who: 'jin', mood: 'firm', text: 'She isn\'t a piece. And you aren\'t opening anything.' },
+    { shot: 'who', ...CEO_WHO, ceo: true, mood: 'talk', text: 'You think you came to stop me. You came because the resonance pulled you here. Everything you did was already written.' },
+    { shot: 'who', who: 'ruen', mood: 'firm', text: 'Then I\'m going to write something over it.' },
+    { shot: 'point', look: [World.SUMMIT.x, 8, World.SUMMIT.z], fx: { glitch: 0.6 }, caption: 'The ring of light spins faster. The fight begins.' },
+  ];
+  const RESOLUTION = [
+    { shot: 'point', look: [World.SUMMIT.x, 8, World.SUMMIT.z], fx: { glitch: 0.9, resonance: 1 }, caption: 'The CEO\'s light tears open. The singularity, shield grounded at last, shudders and bends toward the floor.' },
+    { shot: 'point', look: [World.SUMMIT.x, 3, World.SUMMIT.z], ...CEO_WHO, mood: 'worry', text: 'You can\'t ground it. It will take the whole city with it.' },
+    { shot: 'who', who: 'ruen', mood: 'firm', note: 'Stepping forward, her orb white-hot.', text: 'It was never meant to be a door. It\'s energy, and it needs somewhere to go. We give it back to the city\'s old grid, the dead one.' },
+    { shot: 'who', who: 'kyle', mood: 'nod', text: 'Tell me what to do.' },
+    { shot: 'who', who: 'ruen', mood: 'nod', text: 'Just stay close. All of you.' },
+    { shot: 'who', who: 'jin', mood: 'firm', text: 'Ruen. We\'ve got you.' },
+    { shot: 'point', look: [World.SUMMIT.x, 8, World.SUMMIT.z], fx: { glitch: 0.4, resonance: 1, aim: false }, caption: 'Ruen lays her hand on the heart of the light. Kyle\'s shield, Yuna\'s pulse, Jin\'s blade: they each give her something to lean on. Pale gold pours down through the floor into the dead grid, and in every district the lights flicker back on.' },
+    { shot: 'point', look: [World.SUMMIT.x, 3, World.SUMMIT.z], ...CEO_WHO, mood: 'worry', text: 'Forty years of work.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', text: 'Forty years of other people\'s lives.' },
+    { shot: 'point', look: [World.SUMMIT.x, 14, World.SUMMIT.z], fx: { glitch: 0, resonance: 0 }, caption: 'The Spire\'s hold on the city is broken. Far below, the signs stop spelling things that aren\'t ads.' },
+  ];
+  const EPILOGUE = [
+    { shot: 'wide', caption: 'Epilogue\nThe megacity is changed for ever: free of the Corporation\'s grip, but wild and unpredictable.' },
+    { shot: 'who', who: 'kyle', mood: 'talk', text: 'So. What now?' },
+    { shot: 'who', who: 'yuna', mood: 'firm', text: 'Now we find out who else has a Core in their pocket, and what they plan to do with it.' },
+    { shot: 'who', who: 'ruen', mood: 'nod', note: 'Listening, then smiling.', text: 'The whispering has stopped. For the first time since the alley, it\'s quiet.' },
+    { shot: 'who', who: 'jin', mood: 'nod', text: 'Then we pack up the camp, and we walk.' },
+    { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], caption: 'The crew of four, battered but unbroken, shoulders their gear and walks into the glowing, glitching horizon, ready for whatever comes next.' },
+  ];
   const moodOf = st => st.mood || 'talk';
   const typed = () => steps && steps[i] ? (steps[i].text || steps[i].caption || steps[i].note || '') : '';
 
   // A shot's target camera pose
   function shotFor(st) {
     if (st.shot === 'who') {
-      const rg = st.rig || rigOf(st.who), p = rg ? rg.root.position : tmp.set(Player.state().x, 0, Player.state().z);
+      const rg = rigFor(st), p = rg ? rg.root.position : tmp.set(Player.state().x, 0, Player.state().z);
       const sx = p.x, sz = p.z, h = rg === Player.rig() ? 1.4 : 1.2, d = Math.hypot(center.x - sx, center.z - sz) || 1, fx = (center.x - sx) / d, fz = (center.z - sz) / d, rx = -fz, rz = fx;
       goalP.set(sx - fx * 0.3 + rx * 2.5, h + 0.55, sz - fz * 0.3 + rz * 2.5);
       goalL.set(sx, h, sz);
@@ -188,11 +281,13 @@ const Cutscene = (() => {
     goalP.x += Math.sin(t * 0.25) * 0.18; goalP.y += Math.sin(t * 0.19) * 0.06;
   }
 
+  const ceoRig = () => { const g = Combat.groupList().find(x => x.id === 'ceo'); return g ? g.rigs[0] : null; };
+  const rigFor = st => st.rig || (st.ceo ? ceoRig() : st.who ? rigOf(st.who) : null);
   const rigOf = key => key === 'jin' ? Player.rig() : (Camp.crew.find(q => q.name === key) || {}).rig;
   // Everyone in the scene: the speaker acts out the line's mood, the rest turn their heads toward the speaker
   let npcRig = null;
   function acting(on) {
-    const st = on && steps && steps[i] ? steps[i] : null, sp = st ? (st.rig || (st.who ? rigOf(st.who) : null)) : null;
+    const st = on && steps && steps[i] ? steps[i] : null, sp = st ? rigFor(st) : null;
     const all = Object.keys(WHO).map(rigOf).filter(Boolean); if (npcRig) all.push(npcRig);
     for (const r of all) {
       if (st && r === sp) { Chars.setTalk(r, moodOf(st), shown < typed().length); Chars.setLook(r, null); }
@@ -276,7 +371,7 @@ const Cutscene = (() => {
   // The story stage: 0 the campfire, 1 the resonance (both at the fire), 2 go through the gate, 3 follow the orb up the avenue,
   // 4 reach the tower, 5 Act 2 done. Stages 2-4 each end with a scene that plays where the crew stands when they reach a place.
   let stage = 0;
-  const QUEST = ['\u25c6 Speak with the crew', '\u25c6 Rest by the fire and feel for the resonance', '\u25c6 Go through the gate into the Neon Market', '\u25c6 Follow the orb up the avenue', '\u25c6 Reach the foot of the tower', '\u25c6 Follow the pull to the Industrial Hub gate', '\u25c6 Cross the Hub to the Foundry', '\u25c6 Reach the Foundry\'s shutter', '\u25c6 Find the three access nodes', '\u25c6 Return to the Foundry\'s shutter', '\u25c6 Enter the Foundry', '\u25c6 Defeat the Loader Mech', '\u25c6 Take the Data Core', '\u25c6 Act 2 complete: the Spire waits in Act 3'];
+  const QUEST = ['\u25c6 Speak with the crew', '\u25c6 Rest by the fire and feel for the resonance', '\u25c6 Go through the gate into the Neon Market', '\u25c6 Follow the orb up the avenue', '\u25c6 Reach the foot of the tower', '\u25c6 Follow the pull to the Industrial Hub gate', '\u25c6 Cross the Hub to the Foundry', '\u25c6 Reach the Foundry\'s shutter', '\u25c6 Find the three access nodes', '\u25c6 Return to the Foundry\'s shutter', '\u25c6 Enter the Foundry', '\u25c6 Defeat the Loader Mech', '\u25c6 Take the Data Core', '\u25c6 Ride the freight lift to the Corporate Spire', '\u25c6 Cross the Spire lobby to the server atrium', '\u25c6 Climb to the summit', '\u25c6 Face the CEO at the summit', '\u25c6 Defeat the CEO', '\u25c6 The city is free. The road goes on.'];
   function setQuest(n) {
     const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; if (n > 0) Sound.sfx('quest');
     const toast = $('toast'); if (toast && n > 0) { toast.textContent = 'Quest updated'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
@@ -299,6 +394,9 @@ const Cutscene = (() => {
     if (stage === 6 || stage === 7 || stage === 9) return { x: World.FOUNDRY.x, z: World.FOUNDRY.z, label: stage === 9 ? 'the shutter' : 'the Foundry' };
     if (stage === 8) { const n = World.nextNode(Player.state()); return n ? { x: n.x, z: n.z, label: 'an access node' } : null; }
     if (stage === 10 || stage === 11) { const c = World.coreAt(); return c ? { x: c.x, z: c.z + 5, label: 'the Foundry floor' } : null; }
+    if (stage === 13) return { x: World.LIFT.x, z: World.LIFT.z, label: 'the freight lift' };
+    if (stage === 14) return { x: World.ATRIUM.x, z: World.ATRIUM.z, label: 'the server atrium' };
+    if (stage === 15 || stage === 16 || stage === 17) return { x: World.SUMMIT.x, z: World.SUMMIT.z, label: 'the summit' };
     if (stage === 12) { const c = World.coreAt(); return c ? { x: c.x, z: c.z, label: 'the Data Core' } : null; }
     return null;
   }
@@ -316,6 +414,10 @@ const Cutscene = (() => {
     else if (stage === 10 && p.z < World.FOUNDRY.z - 9 && Math.abs(p.x - World.FOUNDRY.x) < 11) begin(LOADER_SIGHT, () => { World.armBoss(); setStage(11); }, { anchor: 'here' });
     else if (stage === 11 && World.bossDown()) { setStage(12); }
     else if (stage === 12 && World.coreAt() && Math.hypot(p.x - World.coreAt().x, p.z - World.coreAt().z) < 5) begin(CORE_SCENE, () => setStage(13), { anchor: 'here' });
+    else if (stage === 14 && Math.hypot(p.x - World.ATRIUM.x, p.z - World.ATRIUM.z) < 26) begin(ATRIUM_SCENE, () => setStage(15), { anchor: 'here' });
+    else if (stage === 15 && Math.hypot(p.x - World.SUMMIT.x, p.z - World.SUMMIT.z) < 62) begin(SUMMIT_SIGHT, () => setStage(16), { anchor: 'here' });
+    else if (stage === 16 && Math.hypot(p.x - World.SUMMIT.x, p.z - World.SUMMIT.z) < 20) begin(CEO_CONFRONT, () => { World.armCeo(); setStage(17); }, { anchor: 'here' });
+    else if (stage === 17 && World.ceoDown()) begin(RESOLUTION, () => begin(EPILOGUE, () => { setStage(18); showEnd(); }, { anchor: 'here' }), { anchor: 'here' });
   }
   const NPC_LINES = {
     vendor: ['Scrap is as good as credit here. Show me what you\'ve got.', 'Fresh circuits, honest prices. Mostly honest.', 'Nobody\'s buying tonight. The signs keep lying about what\'s open.'],
@@ -335,12 +437,14 @@ const Cutscene = (() => {
     const camp = Camp.nearCamp(p);
     if (camp === 'fire') return { kind: 'story', label: LABEL[Math.min(stage, 2)] };
     if (camp && SKITS[camp] && !Camp.skitSeen(camp)) return { kind: 'skit', id: camp, label: 'Talk' };
+    if (stage === 13 && World.liftAt(p)) return { kind: 'lift', label: 'Ride the lift' };
     const n = World.nearNpc(p, 2.8); return n ? { kind: 'npc', npc: n, label: n.shop ? 'Trade \u00b7 ' + n.name : 'Talk \u00b7 ' + n.name } : null;
   }
   function start() {
     if (active || Combat.active()) return;
     const it = interactable(); if (!it) return;
     if (it.kind === 'npc') return chat(it.npc);
+    if (it.kind === 'lift') return rideLift();
     if (it.kind === 'skit') { Camp.markSkit(it.id); Camp.rest(it.id); return begin(SKITS[it.id].steps, () => { bondUp(SKITS[it.id].bonds); Save.save(); }, { anchor: 'here' }); }
     if (stage === 0) begin(CAMPFIRE, () => setStage(1));
     else begin(RESONANCE, () => { if (stage < 2) setStage(2); });
@@ -348,6 +452,8 @@ const Cutscene = (() => {
   const LABEL = ['Talk', 'Resonance', 'Replay'];
 
   function init() {
+    $('endKeep').addEventListener('click', () => { $('endcard').hidden = true; Save.save(); });
+    $('endTitle').addEventListener('click', () => { Save.save(true); location.reload(); });
     $('talkBtn').addEventListener('click', start);
     $('dlg').addEventListener('click', e => { if (e.target.id === 'dlgSkip') skip(); else advance(); });
     window.addEventListener('keydown', e => {

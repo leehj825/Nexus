@@ -52,10 +52,11 @@ Status key: ✅ done · 🟡 partly done · ⬜ not started. Last updated after 
 *   ✅ **Camps:** a fire in the alley, the Market plaza, the Hub checkpoint and the Foundry plaza. Opening the camp rests (full heal) and saves. Camps are found by walking up to them, and found camps are fast-travel stops. Each has a one-time skit.
 *   ✅ **HP carries between fights.** A win patches the crew up 30%, a defeat wakes them at the last camp.
 *   ✅ **Growth:** XP and levels (cap 10), skills at Lv 3 and 6 for each of the four, a crew screen (I key or the Crew button), gear in tiers (weapon +15% damage, armour +12% health), and bonds that unlock link attacks.
+*   ✅ **Act 3 (the Corporate Spire):** the Foundry's freight lift, a white-and-glass district of six more rows (lobby, server atrium, offices, server halls, glitch voids) with Enforcers, Sentry Drones and Seraph Drones as guards, two camps with skits, and the summit where the CEO fights in three forms. The ending and an end card follow. Enemy stand-ins are built from code until models arrive.
 *   ✅ **Camera and followers:** a third-person orbit camera; followers feel their way round obstacles and rejoin Jin if stuck or left behind; the minimap arrow points where Jin faces.
 
 ## Next steps (in order)
-1. **Act 3:** freight lift, the Corporate Spire, Enforcers and drones (stand-ins until models arrive), the CEO.
-2. **Props for the new models:** Yuna's blasters, Jin's blade, Ruen's orb.
-3. **Enemy models (yours):** Enforcer, Sentry Drone, a real Loader Mech and the rest of `Enemies.md`.
+1. **Enemy models (yours):** Enforcer, Sentry Drone, Seraph Drone, the CEO (two forms), a real Loader Mech and the rest of `Enemies.md`. Name the files `enforcer`, `drone`, `seraph`, `ceo`, `loader`, and I wire them in.
+2. **Balance pass:** play through and tune XP, enemy health and damage, scrap costs and pacing.
+3. **Polish:** music for the Hub and Spire, more NPCs and side content, a custom Stranger model, and sound for the new skills.
 4. **Phone test and release (yours).**
