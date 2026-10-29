@@ -110,13 +110,13 @@ const Chars = (() => {
       const g = new THREE.Sprite(new THREE.SpriteMaterial({ map: Tex.glow(), color: 0x37d8ff, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.6, toneMapped: false }));
       g.scale.set(0.7, 0.7, 1); orb.add(g);
     }
-    c.orb = orb; c.orbit = orbit;
+    c.orb = orb; c.orbit = orbit; c.weapons = [orbit];
   }
   // The energy blade in the right hand: a dark grip in the fist, a short guard, and a cyan blade with a white core
   // running on forward and down from the hand. m needs steelD, bladeEdge and bladeCore
-  const BLADE_READY = -0.6, BLADE_CARRY = -1.6;                                  // the blade's tilt from the forearm: held up for a fight, pointing forward from the fist while walking about
+  const BLADE_FIGHT = [0.1, 0.35, 1];                                               // where the drawn blade points (right side outward, up, forward)
   function addBlade(c, m) {
-    const blade = joint(c.j.wrR, 0, -0.08, 0.01); blade.rotation.x = BLADE_READY; c.blade = blade;
+    const blade = joint(c.j.wrR, 0, -0.08, 0.01); c.blade = blade; c.weapons = [blade]; c.bladeDir = new THREE.Vector3(...BLADE_FIGHT);
     add(blade, box(0.034, 0.2, 0.034), m.steelD, 0, -0.04, 0);                                                 // the grip
     add(blade, box(0.12, 0.025, 0.055), m.steelD, 0, -0.145, 0);                                               // the guard
     add(blade, box(0.03, 0.9, 0.01), m.bladeEdge, 0, -0.6, 0);                                                 // the blade
@@ -503,8 +503,9 @@ const Chars = (() => {
       gun: std(0x77808c, { metalness: 0.35, roughness: 0.45 }), gunD: std(0x23282f, { metalness: 0.4, roughness: 0.4 }),
       gunTop: std(0xb4aaa6, { metalness: 0.3, roughness: 0.45 }), plasma: lit(0x3ff0ff, 1.7), glove: std(0x2b2629),
     };
+    c.weapons = [];
     for (const k of ['L', 'R']) {
-      const gun = joint(c.j['wr' + k], 0, -0.11, 0.045); gun.rotation.x = Math.PI / 2 - 0.1;
+      const gun = joint(c.j['wr' + k], 0, -0.11, 0.045); gun.rotation.x = Math.PI / 2 - 0.1; c.weapons.push(gun);
       add(gun, box(0.06, 0.09, 0.07), m.gunD, 0, -0.045, -0.055);                                             // grip, in the fist
       add(gun, box(0.1, 0.1, 0.085), m.glove, 0, -0.055, -0.055);                                             // a glove round the grip (the model's own hand is torn)
       add(gun, box(0.085, 0.11, 0.34), m.gunD, 0, 0.055, 0.12);                                               // dark body
@@ -538,14 +539,24 @@ const Chars = (() => {
     }
   }
 
-  // Jin and Yuna carry a weapon in each hand, and with the arms straight down it cuts through their legs: out of battle the arms stand a
-  // little away from the body (more when walking), and Jin's blade points forward from his fist like a sword held at his side
-  const SPREAD = { player: 0.32, yuna: 0.32 };
-  function spreadArms(c, speed, dt) {
-    const fight = c.idleClip === c.loco.battle || !!c.clip, want = fight ? 0 : (speed > 0.15 ? 1 : 0.45) * SPREAD[c.name];
-    c.spread = (c.spread || 0) + (want - (c.spread || 0)) * Math.min(1, dt * 7);
-    for (const k of ['L', 'R']) c.j['sh' + k].quaternion.multiply(zn.setFromAxisAngle(Z, Math.sign(c.armFix[k][0]) * c.spread));
-    if (c.blade) { const b = fight ? BLADE_READY : BLADE_CARRY; c.blade.rotation.x += (b - c.blade.rotation.x) * Math.min(1, dt * 7); }
+  // Weapons are only out when they are needed: drawn (scaled up from nothing) for a fight, away while the crew walk, run or sit at camp.
+  // Ruen's orb is the exception: it also stays out while she is seated at camp, and while a scene has it hover ahead of her.
+  function armWeapons(c, dt) {
+    const want = c.combat || (c.kind === 'seated' && c.orb) || c.orbAimOn ? 1 : 0;
+    c.armT = (c.armT === undefined ? want : c.armT) + (want - (c.armT === undefined ? want : c.armT)) * Math.min(1, dt * 9);
+    for (const w of c.weapons) { w.visible = c.armT > 0.03; w.scale.setScalar(Math.max(0.001, c.armT)); }
+  }
+
+  // Jin's blade is aimed in the figure's own space rather than fixed to the hand: whatever the arm is doing (swinging in a run, raised in a stance,
+  // slashing) the sword points forward and away from his body like one held in a fist, never along the forearm like a baton
+  const wq = new THREE.Quaternion(), rq = new THREE.Quaternion(), qd = new THREE.Quaternion(), tgt = new THREE.Vector3(), DOWN = new THREE.Vector3(0, -1, 0);
+  function aimBlade(c, dt) {
+    const d = BLADE_FIGHT;
+    c.root.updateMatrixWorld(true);
+    const out = Math.sign(c.root.worldToLocal(gv.setFromMatrixPosition(c.j.wrR.matrixWorld)).x) || -1;
+    c.bladeDir.lerp(tgt.set(d[0] * out, d[1], d[2]), Math.min(1, dt * 8));
+    c.j.wrR.getWorldQuaternion(wq); c.root.getWorldQuaternion(rq);
+    c.blade.quaternion.copy(wq.invert()).multiply(rq).multiply(qd.setFromUnitVectors(DOWN, tgt.copy(c.bladeDir).normalize()));
   }
 
   // ---------------- Talking: gestures laid on top of whatever pose the figure is in (seated, idle clip), used by cutscenes ----------------
@@ -666,7 +677,7 @@ const Chars = (() => {
         if (c.lean) c.torso.rotation.x = c.lean;
       }
     }
-    if (c.armFix) { undoAPose(c); if (SPREAD[c.name]) spreadArms(c, speed, dt); }
+    if (c.armFix) undoAPose(c);
     if (LEGDAMP[c.name]) for (const k of ['hipL', 'hipR', 'kneeL', 'kneeR']) c.j[k].quaternion.slerp(IDQ, 1 - LEGDAMP[c.name]);      // a long coat: shorter strides, so the legs stay inside it
     if (CREATURE[c.name] && c.armFix) creature(c, t, dt, speed);
     if (c.hover) {                                                                // drones bob in the air, and sink when destroyed
@@ -678,6 +689,8 @@ const Chars = (() => {
       for (const o of c.shards.children) { const u = o.userData; if (u.core) { o.rotation.y = t; o.scale.setScalar(1 + Math.sin(t * 3) * 0.08); } else if (u.ring) o.rotation.z = t * 0.6; else { u.a += dt * u.v; o.position.set(Math.cos(u.a) * u.r, u.y + Math.sin(t * 1.7 + u.a) * 0.15, Math.sin(u.a) * u.r); o.rotation.y += dt * 2; } }
     }
     if (c.talkMood || c.talkAmp > 0.01 || c.lookPt || c.lookAmp > 0.01) gesture(c, t, dt);
+    if (c.weapons) armWeapons(c, dt);
+    if (c.blade && c.blade.visible) aimBlade(c, dt);
     if (c.name === 'ruen') {                                                     // the orb floats over her left palm, specks circling it
       c.root.updateMatrixWorld(true);
       c.j.wrL.getWorldPosition(orbAt); c.root.worldToLocal(orbAt);
