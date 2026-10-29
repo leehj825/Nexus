@@ -6,7 +6,6 @@ name: Android debug APK
 
 on:
   push:
-    branches: [main, 'claude/**']
     paths: ['index.html', 'css/**', 'js/**', 'vendor/**', 'android/**', '.github/workflows/android-debug.yml']
   pull_request:
     paths: ['index.html', 'css/**', 'js/**', 'vendor/**', 'android/**', '.github/workflows/android-debug.yml']
