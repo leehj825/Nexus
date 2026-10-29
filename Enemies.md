@@ -57,14 +57,18 @@ Theme: the first corrupted district. Holograms and signs turn on the people who 
 
 Theme: the grid is still running machines, with nobody to watch them. Corporate enforcers show up here, tracking the Core ("every corporate drone in the sector will be tracking it soon").
 
-### Sentry Drone (new, corporate)
+### Sentry Drone (stand-in in the game: a floating disc with a lens)
+*In the game now:* 40 HP, fires two quick shots (6 to 9 each) per action.
+
 * **Who:** the Corporation's scouts, mentioned in the Market's rumours ("drones sweep the upper sectors at dawn").
 * **Look:** a floating white-and-steel disc, 0.9 m wide, with a single cyan lens, two small gun pods and a corporate logo. Clean and well kept, which stands out against the grime.
 * **Behaviour:** hovers over the ground and fires a stream of shots at one target. On death it explodes and damages nearby foes. Stagger knocks it out of the air for a turn.
 * **Stats:** 40 HP, medium-fast gauge, burst 8 to 11.
 * **Model needs:** flying, `hover`, `fire`, `hit react`, `death`.
 
-### Enforcer (new, corporate, humanoid)
+### Enforcer (stand-in in the game: a code-built soldier in white plates with a rifle and riot shield)
+*In the game now:* 90 HP, fires a rifle (12 to 16), and raises a shield (half damage for 8 s) that Stagger, Weak Point and Shockwave break. Guards the Spire in mixed groups.
+
 * **Who:** the "corporate enforcers" Yuna warns about in the alley. Armoured human soldiers.
 * **Look:** human, 1.85 m, white and steel armour plates over a black suit, a full visor that glows cyan, a rifle and a riot shield on the left arm. Clean lines, no rags. A shoulder light blinks red when it is about to attack.
 * **Behaviour:** the first enemy that **uses Guard**. It raises the shield and takes half damage until Yuna's Stagger breaks the stance. It calls drones as reinforcements in longer fights.
@@ -106,12 +110,16 @@ Theme: pristine corporate space tearing at the seams. Clean white halls with raw
 * **Stats:** 140 HP, fast gauge, blade 16 to 20, lunge 35.
 * **Model needs:** Enforcer skeleton, `run`, `slash`, `parry`.
 
-### Seraph Drone (new)
+### Seraph Drone (stand-in in the game: a larger disc with a halo of blades)
+*In the game now:* 70 HP, heals the most hurt foe by 30% or shields one. Kill it first.
+
 * **Look:** a larger white drone with four wing-like blades arranged like a halo, 1.6 m, a soft glow. Beautiful and unsettling.
 * **Behaviour:** heals other enemies, and shields them for a turn. Kill it first.
 * **Stats:** 70 HP, medium gauge, heals 30.
 
-### The CEO (final boss: the Paradox)
+### The CEO (final boss: the Paradox; stand-in in the game)
+*In the game now:* 950 HP in three forms. Command: data lances and sweeps. Rewrite (below 66%): locks a crew member's commands (Yuna's Stagger breaks the locks) and winds up crushes. Singularity (below 33%): the body gives way to a column of shards, the shield soaks 85% of damage until a burst from Ruen grounds it for 12 seconds. The stand-in is a tall figure in a long white coat; send a model for each form when ready.
+
 * **Who:** the Mega-Corporation's head, merging with the primary singularity. Never named so far (the writing can name them).
 * **Look, phase 1 (human):** a tall man or woman, 1.9 m, in a white tailored coat with gold-white light along the seams, floating slightly above the floor, calm face. Lit from behind by the singularity, a swirl of gold-white and pink behind them.
 * **Look, phase 2 (merged):** the coat tears open, the body is replaced by a column of floating shards around a bright core. 5 m tall, crowned by a ring. The Corporate Spire's glass breaks around them.

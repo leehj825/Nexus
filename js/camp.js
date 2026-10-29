@@ -10,12 +10,20 @@ const Camp = (() => {
   const FIRE_R = 4.0, PICK_R = 1.1;                  // metres: how close to the drum counts as at the camp, and to a scrap
   const SCRAP_AT = [[-4.6, 0.8], [4.2, 2.0], [-2.0, -8.0], [3.6, -9.5], [-6.0, -13.0], [5.6, -16.0], [-1.0, -19.0], [-4.0, -21.0]];
   const scrap = [];                                  // { x, z, mesh, taken, phase }
-  const UPGRADES = [
-    { id: 'orb', who: 'ruen', name: 'Data-Orb Core', cost: 2, text: 'Ruen\'s Data Bolt hits 25% harder' },
-    { id: 'gauntlet', who: 'kyle', name: 'Kinetic Gauntlet', cost: 2, text: 'Kyle\'s Strike hits 25% harder' },
-    { id: 'blasters', who: 'yuna', name: 'Tuned Blasters', cost: 3, text: 'Yuna\'s Blast hits 25% harder' },
-  ];
-  const UPGRADE_MULT = 1.25;
+  // Gear: each of the four has a weapon (3 tiers, +15% damage each) and armour (2 tiers, +12% health each). A tier needs the one before it.
+  const GEAR = {
+    you: { w: ['Tempered Katana', 'Resonant Katana', 'Spire-Cut Katana'], a: ['Reinforced Coat', 'Plated Jacket'] },
+    ruen: { w: ['Data-Orb Core', 'Orb Lattice', 'Orb Singularity'], a: ['Stitched Coat', 'Hardlight Weave'] },
+    kyle: { w: ['Kinetic Gauntlet', 'Gauntlet Servos', 'Gauntlet Overdrive'], a: ['Plate Harness', 'Bulwark Plate'] },
+    yuna: { w: ['Tuned Blasters', 'Plasma Coils', 'Dual Overclock'], a: ['Stealth Weave', 'Ghost Suit'] },
+  };
+  const WCOST = [2, 4, 7], ACOST = [3, 6], WMULT = 1.15, AMULT = 1.12;
+  const UPGRADES = [];
+  for (const who of Object.keys(GEAR)) {
+    GEAR[who].w.forEach((name, i) => UPGRADES.push({ id: who + '-w' + (i + 1), who, slot: 'w', tier: i + 1, name, cost: WCOST[i], text: '+15% damage' }));
+    GEAR[who].a.forEach((name, i) => UPGRADES.push({ id: who + '-a' + (i + 1), who, slot: 'a', tier: i + 1, name, cost: ACOST[i], text: '+12% health' }));
+  }
+  const LEGACY = { orb: 'ruen-w1', gauntlet: 'kyle-w1', blasters: 'yuna-w1' };       // ids from the first saves
   const owned = new Set();
   let parts = 0;
 
@@ -152,30 +160,103 @@ const Camp = (() => {
   // The upgrades: buying one spends its scrap and keeps it for good
   function buy(id) {
     const u = UPGRADES.find(x => x.id === id);
-    if (!u || owned.has(id) || parts < u.cost) return false;
+    if (!u || owned.has(id) || parts < u.cost || (u.tier > 1 && !owned.has(u.who + '-' + u.slot + (u.tier - 1)))) return false;
     parts -= u.cost; owned.add(id);
     return true;
   }
   // The damage multiplier a crew member's attacks get from their upgrade (1 when there is none)
-  function damageMult(who) {
-    return UPGRADES.some(u => u.who === who && owned.has(u.id)) ? UPGRADE_MULT : 1;
+  const tiersOwned = (who, slot) => UPGRADES.filter(u => u.who === who && u.slot === slot && owned.has(u.id)).length;
+  const damageMult = who => Math.pow(WMULT, tiersOwned(who, 'w'));
+  const hpMult = who => Math.pow(AMULT, tiersOwned(who, 'a'));
+  // The next piece of gear to craft for a slot (null once maxed), and the name of what is worn now
+  const nextGear = (who, slot) => UPGRADES.find(u => u.who === who && u.slot === slot && !owned.has(u.id)) || null;
+  const wornName = (who, slot) => { const n = tiersOwned(who, slot); return n ? GEAR[who][slot][n - 1] : null; };
+  // Camps: the alley's fire and the ones in the districts (World.SITES). Found by walking up to them; resting there heals the crew and saves.
+  const found = new Set(['fire']), skits = new Set(); let lastCamp = 'fire';
+  const SITE_R = 3.6;
+  const siteList = () => [{ id: 'fire', name: 'The Underbelly fire', x: 0, z: 0 }, ...Object.entries(World.SITES).map(([id, s]) => ({ id, name: s.name, x: s.x, z: s.z }))];
+  function nearCamp(p) {
+    if (Math.hypot(p.x, p.z) < FIRE_R) return 'fire';
+    for (const s of siteList()) if (s.id !== 'fire' && Math.hypot(p.x - s.x, p.z - s.z) < SITE_R) return s.id;
+    return null;
   }
-  const nearFire = p => Math.hypot(p.x, p.z) < FIRE_R;
+  const nearFire = p => nearCamp(p) !== null;
+  const discover = id => { if (!found.has(id)) { found.add(id); return true; } return false; };
+  // Where the crew stand when they arrive at a camp (travel, or waking after a defeat)
+  const campSpot = id => { const s = siteList().find(q => q.id === id); return id === 'fire' ? { x: -2.4, z: 2.4 } : { x: s.x, z: s.z + 3.0 }; };
+  let fadeEl = null;
+  function fadeThen(cb) {                                          // a short fade to black and back around a jump
+    if (!fadeEl) { fadeEl = document.createElement('div'); fadeEl.className = 'fade'; document.body.appendChild(fadeEl); }
+    fadeEl.classList.add('on');
+    setTimeout(() => { cb(); setTimeout(() => fadeEl.classList.remove('on'), 150); }, 450);
+  }
+  function arriveAt(id) {
+    const sp = campSpot(id), n = Player.collidePoint(sp.x, sp.z);
+    Player.teleport(n.x, n.z); Player.faceTowards(id === 'fire' ? 0 : siteList().find(q => q.id === id).x, id === 'fire' ? 0 : siteList().find(q => q.id === id).z);
+    Camp.restoreCrew(Player.state());
+  }
+  // Resting at a camp (opening its menu): the crew are healed, the camp becomes the place they wake at, and the game saves
+  function rest(id) {
+    if (!id) return;
+    discover(id); lastCamp = id; Combat.restAll(); Save.save();
+    const toast = document.getElementById('toast'); if (toast) { toast.textContent = 'The crew rest. Everyone is back on their feet.'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+    Sound.sfx('quest');
+  }
+  function travel(id) { if (!found.has(id)) return; lastCamp = id; fadeThen(() => { arriveAt(id); Save.save(); }); }
+  function wake() { fadeThen(() => { arriveAt(lastCamp); Combat.restAll(); Save.save(); }); }
 
   // ---------------- The crew follow the avatar once it leaves the camp ----------------
   // seated -> follow (the avatar is more than LEAVE_R from the fire) -> returning (it is back within BACK_R) -> seated again at their seat.
   // Followers keep a loose formation behind and beside the avatar, walking or running to keep up, and are kept out of walls like the avatar.
   const LEAVE_R = 9, BACK_R = 5, FORM = { ruen: [0.0, -2.4], kyle: [-1.5, -1.5], yuna: [1.5, -1.5] };
   const wrap = a => Math.atan2(Math.sin(a), Math.cos(a));
-  function stepTo(c, tx, tz, dt, run) {
+  // A follower walks toward its spot, feeling its way round obstacles: each frame it tries the direct line and a fan of detours to either side
+  // and takes the one that gets closest, sticking to the side it chose so it does not dither. If it makes no headway for a while it
+  // sidesteps on purpose, and if it is stuck for good while the avatar is far off it is moved to the avatar's side.
+  const FAN = [0, 0.45, -0.45, 0.95, -0.95, 1.55, -1.55, 2.2, -2.2];
+  const STUCK_SNAP = 3.0, FAR_SNAP = 28;
+  function stepTo(c, tx, tz, dt, run, farFrom) {
     const p = c.rig.root.position, dx = tx - p.x, dz = tz - p.z, d = Math.hypot(dx, dz);
     let v = 0;
+    c.px = c.px || 0; c.pz = c.pz || 0;
     if (d > 0.25) {
-      v = Math.min(run ? 4.4 : 2.3, 0.6 + d * 1.6); const k = Math.min(1, v * dt / d);
-      const n = Player.collidePoint(p.x + dx * k, p.z + dz * k); p.x = n.x; p.z = n.z;
-      const want = Math.atan2(dx, dz); c.rig.root.rotation.y += wrap(want - c.rig.root.rotation.y) * Math.min(1, dt * 9);
-    }
+      v = Math.min(run ? 4.4 : 2.3, 0.6 + d * 1.6);
+      const step = Math.min(v * dt, d), want = Math.atan2(dx, dz);
+      let best = null, bestScore = -1e9;
+      const base = c.detour && c.detour.t > 0 ? c.detour.ang : want;                // a deliberate sidestep overrides for a moment
+      for (const off of FAN) {
+        const ang = base + off, n = Player.collidePoint(p.x + Math.sin(ang) * step, p.z + Math.cos(ang) * step);
+        const gain = ((n.x - p.x) * dx + (n.z - p.z) * dz) / d;                       // how much nearer to the goal this step gets
+        const score = gain - Math.abs(off) * 0.01 * step + (c.side && Math.sign(off) === c.side ? 0.02 * step : 0);
+        if (score > bestScore) { bestScore = score; best = { n, off }; }
+      }
+      p.x = best.n.x; p.z = best.n.z; if (best.off) c.side = Math.sign(best.off); else if (bestScore > step * 0.7) c.side = 0;
+      const faceTo = Math.hypot(best.n.x - c.px, best.n.z - c.pz) > 0.001 ? Math.atan2(Math.sin(want + best.off * 0.5), Math.cos(want + best.off * 0.5)) : want;
+      c.rig.root.rotation.y += wrap(faceTo - c.rig.root.rotation.y) * Math.min(1, dt * 9);
+      // Headway over the last half second: none means stuck
+      c.prog = (c.prog || 0) + Math.max(0, bestScore);
+      c.progT = (c.progT || 0) + dt;
+      if (c.progT >= 0.5) {
+        const made = c.prog, expect = v * 0.5 * 0.35;
+        c.stuck = made < expect && d > 1.2 ? (c.stuck || 0) + c.progT : 0;
+        c.prog = 0; c.progT = 0;
+        if (c.stuck > 1.0 && (!c.detour || c.detour.t <= 0)) c.detour = { ang: want + (c.side || (Math.random() < 0.5 ? 1 : -1)) * 1.7, t: 0.9 };       // back off and go round
+      }
+      if (c.detour) c.detour.t -= dt;
+      // Stuck for good, or left far behind: join the avatar
+      if (farFrom && (c.stuck > STUCK_SNAP && farFrom.d > 7 || farFrom.d > FAR_SNAP)) { c.stuck = 0; c.detour = null; return { v: 0, d, snap: true }; }
+    } else { c.stuck = 0; c.prog = 0; c.progT = 0; }
+    c.px = p.x; c.pz = p.z;
     return { v, d };
+  }
+  // Puts a follower at its formation spot beside the avatar, on free ground
+  function snapTo(c, av, f) {
+    const h = av.heading, sx = Math.sin(h), sz = Math.cos(h), rx = Math.cos(h), rz = -Math.sin(h);
+    for (const k of [1, 1.6, 2.2, 0.6]) {
+      const n = Player.collidePoint(av.x + sx * f[1] * k + rx * f[0] * k, av.z + sz * f[1] * k + rz * f[0] * k);
+      if (Math.hypot(n.x - av.x, n.z - av.z) > 0.8) { c.rig.root.position.set(n.x, 0, n.z); c.rig.root.rotation.y = h; c.px = n.x; c.pz = n.z; return; }
+    }
+    c.rig.root.position.set(av.x, 0, av.z - 1.5);
   }
   function crewMove(c, dt, av) {
     const rig = c.rig; if (rig.combat || c.name === 'stranger') return null;
@@ -186,13 +267,16 @@ const Camp = (() => {
     else if (c.mode === 'returning' && away > LEAVE_R) c.mode = 'follow';
     if (c.mode === 'follow') {
       const f = FORM[c.name] || [0, -2], h = av.heading, sx = Math.sin(h), sz = Math.cos(h), rx = Math.cos(h), rz = -Math.sin(h);
-      const tx = av.x + sx * f[1] + rx * f[0], tz = av.z + sz * f[1] + rz * f[0];
-      const r = stepTo(c, tx, tz, dt, Math.hypot(tx - rig.root.position.x, tz - rig.root.position.z) > 3.5 || av.speed > 3.2);
+      const goal = Player.collidePoint(av.x + sx * f[1] + rx * f[0], av.z + sz * f[1] + rz * f[0]), tx = goal.x, tz = goal.z;      // the spot must be on free ground
+      const away = Math.hypot(av.x - rig.root.position.x, av.z - rig.root.position.z);
+      const r = stepTo(c, tx, tz, dt, Math.hypot(tx - rig.root.position.x, tz - rig.root.position.z) > 3.5 || av.speed > 3.2, { d: away });
+      if (r.snap) { snapTo(c, av, f); return 0; }
       if (r.v === 0) rig.root.rotation.y += wrap(h - rig.root.rotation.y) * Math.min(1, dt * 4);     // standing still: face where the avatar faces
       return r.v;
     }
     if (c.mode === 'returning') {
-      const r = stepTo(c, c.seat.x, c.seat.z, dt, false);
+      const r = stepTo(c, c.seat.x, c.seat.z, dt, false, { d: 99 });
+      if (r.snap) { rig.root.position.set(c.seat.x, 0, c.seat.z); c.mode = 'seated'; rig.kind = 'seated'; faceFire(rig.root, c.seat.x, c.seat.z); rig.seatH = c.seat.h; return 0; }
       if (r.d <= 1.15) { c.mode = 'seated'; rig.kind = 'seated'; rig.root.position.set(c.seat.x, 0, c.seat.z); faceFire(rig.root, c.seat.x, c.seat.z); rig.seatH = c.seat.h; return 0; }   // the seat's own collider holds them just short, so close enough sits
       return r.v;
     }
@@ -238,11 +322,13 @@ const Camp = (() => {
 
   return {
     build, update, crew, colliders, SEATS,
-    UPGRADES, buy, damageMult, nearFire, FIRE_R, addScrap, dropScrap, seatAll, gatherAt, release, afterBattle, addParts: n => { parts += n; },
+    UPGRADES, GEAR, buy, damageMult, hpMult, nextGear, wornName, nearFire, nearCamp, rest, siteList, discover, travel, wake, fadeThen, FIRE_R,
+    found: () => [...found], lastCamp: () => lastCamp, setLast: id => { lastCamp = id; }, skitSeen: id => skits.has(id), markSkit: id => skits.add(id), addScrap, dropScrap, seatAll, gatherAt, release, afterBattle, addParts: n => { parts += n; },
     isOwned: id => owned.has(id),
-    getState: () => ({ parts, owned: [...owned] }),
+    getState: () => ({ parts, owned: [...owned], found: [...found], last: lastCamp, skits: [...skits] }),
     setState(d) {
-      parts = d.parts || 0; owned.clear(); (d.owned || []).forEach(id => owned.add(id));
+      parts = d.parts || 0; owned.clear(); (d.owned || []).forEach(id => owned.add(LEGACY[id] || id));
+      found.clear(); found.add('fire'); (d.found || []).forEach(id => found.add(id)); lastCamp = d.last || 'fire'; skits.clear(); (d.skits || []).forEach(id => skits.add(id));
       for (const s of scrap) if (s.key && s.key[0] === 'a' && World.isTaken(s.key)) { s.taken = true; s.mesh.visible = false; }       // the alley's scrap that was already picked up
     },
     // After a load: the crew sit at the fire if the avatar is near it, otherwise they are following the avatar

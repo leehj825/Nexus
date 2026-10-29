@@ -27,6 +27,7 @@
   HUD.init();
   Combat.init(scene, camera);
   CampUI.init();
+  CrewUI.init();
   ModelCheck.init();
   Cutscene.init();
   // Saving: each part of the game registers what it keeps; the world goes first and the player last, so the avatar lands in a loaded world
@@ -35,6 +36,7 @@
   Save.register('world', World.getState, World.setState);
   Save.register('combat', Combat.getState, d => { Combat.setState(d); if (d.alley) { City.setGate(true, true); gateWas = true; } });
   Save.register('camp', Camp.getState, Camp.setState);
+  Save.register('growth', Growth.getState, d => { Growth.setState(d); Combat.refreshAll(false); });
   Save.register('story', () => ({ stage: Cutscene.stage() }), d => Cutscene.restore(d.stage));
   Save.register('player', Player.getState, d => { Player.setState(d); Camp.restoreCrew(Player.state()); });
   Title.init(() => {});
@@ -109,6 +111,8 @@
     composer.render();
     Perf.end(raw);
     Save.update(step);
+    const site = Camp.nearCamp(Player.state());
+    if (site && !Combat.active() && Camp.discover(site)) { const toast = document.getElementById('toast'), s = Camp.siteList().find(q => q.id === site); if (toast) { toast.textContent = 'Camp found: ' + s.name; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); } Sound.sfx('quest'); }
     HUD.update(t, Player.state());
     CampUI.update();
     Cutscene.updateUI(CampUI.isOpen());

@@ -116,10 +116,10 @@ const Chars = (() => {
   // running on forward and down from the hand. m needs steelD, bladeEdge and bladeCore
   function addBlade(c, m) {
     const blade = joint(c.j.wrR, 0, -0.08, 0.01); blade.rotation.x = -0.6;
-    add(blade, box(0.03, 0.12, 0.03), m.steelD, 0, -0.03, 0);                                                  // the grip
-    add(blade, box(0.09, 0.02, 0.035), m.steelD, 0, -0.08, 0);                                                 // the guard
-    add(blade, box(0.022, 0.6, 0.008), m.bladeEdge, 0, -0.38, 0);                                              // the blade
-    add(blade, box(0.008, 0.58, 0.01), m.bladeCore, 0, -0.38, 0);                                              // its white core
+    add(blade, box(0.034, 0.2, 0.034), m.steelD, 0, -0.04, 0);                                                 // the grip
+    add(blade, box(0.12, 0.025, 0.055), m.steelD, 0, -0.145, 0);                                               // the guard
+    add(blade, box(0.03, 0.9, 0.01), m.bladeEdge, 0, -0.6, 0);                                                 // the blade
+    add(blade, box(0.01, 0.88, 0.012), m.bladeCore, 0, -0.6, 0);                                               // its white core
   }
 
   // ---------------- Ruen: the Intuitive Hacker. Slender, a brown chin-length bob with a fringe, an open navy jacket over an
@@ -378,6 +378,73 @@ const Chars = (() => {
     return c;
   }
 
+
+  // ---------------- The Corporate Spire's people and machines. Stand-ins built from code until models arrive ----------------
+  // An Enforcer: a human soldier in white and steel plates over a black suit, a glowing visor, a rifle and a riot shield
+  function enforcer() {
+    const p = { thigh: 0.44, shin: 0.44, shoulderW: 0.23, torsoH: 0.62, armR: 0.07, legR: 0.08, hipW: 0.11, headS: 1.05 };
+    const m = { skin: std(0xd8b498), plate: std(0xe4eaf0, { roughness: 0.35, metalness: 0.35 }), pants: std(0x16181d), shoes: std(0x0e1014), sleeve: std(0x20242b), visor: lit(0x3ff0ff, 2.2), steel: std(0x59616b, { metalness: 0.5, roughness: 0.4 }), red: lit(0xff3a3a, 2.2) };
+    const c = skeleton(p); limbs(c, p, m); c.kind = 'stand'; c.seed = 8.1;
+    const T = c.torso;
+    add(T, tb(0.42, 0.34, 0.5, 0.26, 0.21), m.plate, 0, 0.3, 0);                                             // the chest plate
+    add(T, tb(0.3, 0.3, 0.2, 0.2, 0.2), m.pants, 0, -0.05, 0);
+    add(T, box(0.3, 0.05, 0.015), m.visor, 0, 0.42, 0.135);
+    for (const s of [-1, 1]) { add(c.j['sh' + (s > 0 ? 'L' : 'R')], box(0.2, 0.09, 0.24), m.plate, s * 0.02, 0.04, 0); }                // shoulder pads
+    add(c.j.shR, box(0.05, 0.05, 0.05), m.red, 0.04, 0.12, 0);                                                // a shoulder light that warns before it fires
+    add(c.head, box(0.27, 0.12, 0.1), std(0x16181d), 0, 0.0, 0);
+    add(c.head, tb(0.31, 0.3, 0.3, 0.29, 0.27), m.plate, 0, 0.17, 0);                                         // the helmet
+    add(c.head, box(0.27, 0.06, 0.03), m.visor, 0, 0.18, 0.14);                                               // the visor
+    const rifle = joint(c.j.wrR, 0, -0.1, 0.02); rifle.rotation.x = Math.PI / 2 - 0.1;
+    add(rifle, box(0.06, 0.1, 0.52), m.steel, 0, 0, -0.18); add(rifle, box(0.03, 0.03, 0.1), m.visor, 0, 0.06, -0.38);
+    add(c.j.elL, box(0.05, 0.54, 0.36), m.plate, 0.12, -0.12, 0.08); add(c.j.elL, box(0.055, 0.5, 0.025), m.visor, 0.12, -0.12, 0.27);   // the riot shield
+    return c;
+  }
+  // A floating drone: a disc with a lens. The joints exist (the clips write to them) but nothing is attached to them; the disc bobs on the root.
+  function dronish(o) {
+    const p = { thigh: 0.4, shin: 0.4, shoulderW: 0.2, torsoH: 0.5, armR: 0.05, legR: 0.06 };
+    const c = skeleton(p); c.kind = 'stand'; c.seed = o.seed; c.hover = joint(c.root, 0, 1.6, 0); c.hoverBase = o.y || 1.6;
+    const body = std(o.body, { roughness: 0.3, metalness: 0.5 });
+    c.disc = joint(c.hover, 0, 0, 0);
+    add(c.disc, new THREE.CylinderGeometry(o.r, o.r * 0.75, 0.16, o.sides || 10), body, 0, 0, 0);
+    add(c.disc, new THREE.CylinderGeometry(o.r * 0.55, o.r * 0.55, 0.06, o.sides || 10), lit(o.glow, 1.4), 0, -0.1, 0);
+    add(c.hover, box(0.2, 0.2, 0.2), lit(o.lens, 2.6), 0, -0.14, 0.0);
+    if (o.pods) for (const s of [-1, 1]) add(c.hover, box(0.1, 0.1, 0.34), std(0x2a2f38), s * (o.r * 0.7), -0.06, 0.18);
+    if (o.halo) for (let i = 0; i < 4; i++) { const b = add(c.disc, box(0.12, 0.04, 0.9), lit(0xffe9a8, 1.6), 0, 0.14, 0); b.rotation.y = i * Math.PI / 4; b.position.x = 0; }
+    return c;
+  }
+  const drone = () => dronish({ r: 0.5, body: 0xd8dee6, glow: 0x3ff0ff, lens: 0x3ff0ff, seed: 2.2, pods: true });
+  const seraph = () => dronish({ r: 0.75, body: 0xf2f4f8, glow: 0xffe9a8, lens: 0xffe9a8, seed: 4.6, sides: 14, halo: true, y: 1.9 });
+  // The CEO: a tall figure in a long white coat with gold seams. morph() turns them into the singularity: the body goes and a column of shards takes over.
+  function ceo() {
+    const p = { thigh: 0.46, shin: 0.46, shoulderW: 0.22, torsoH: 0.64, armR: 0.06, legR: 0.075, hipW: 0.1, headS: 1.05 };
+    const m = { skin: std(0xe0c6b0, { roughness: 0.6 }), hair: std(0xd9d4c8), coat: std(0xf0f3f7, { roughness: 0.45 }), seam: lit(0xffe3a0, 2.0), pants: std(0xf0f3f7), shoes: std(0xd0d6de), sleeve: std(0xf0f3f7), hand: std(0xe0c6b0) };
+    const c = skeleton(p); limbs(c, p, m); c.kind = 'stand'; c.seed = 9.4;
+    const T = c.torso;
+    add(T, tb(0.36, 0.34, 0.6, 0.23, 0.22), m.coat, 0, 0.3, 0);
+    add(T, tb(0.34, 0.5, 0.95, 0.22, 0.34), m.coat, 0, -0.38, 0);                                          // the long coat
+    add(T, box(0.03, 1.25, 0.012), m.seam, 0, -0.1, 0.17); add(T, box(0.03, 0.55, 0.012), m.seam, 0, 0.3, 0.12);
+    for (const s of [-1, 1]) add(T, box(0.012, 0.9, 0.2), m.seam, s * 0.24, -0.35, 0.05);
+    face(c.head, m, { w: 0.25, d: 0.25, simple: true });
+    add(c.head, tb(0.27, 0.26, 0.14, 0.27, 0.27), m.hair, 0, 0.3, -0.01);
+    c.body = [T, c.head, c.j.shL, c.j.shR, c.j.hipL, c.j.hipR];
+    c.shards = new THREE.Group(); c.shards.visible = false; c.root.add(c.shards);
+    const gold = lit(0xffe3a0, 2.2), pink = lit(0xff3fb4, 1.8);
+    for (let i = 0; i < 16; i++) {
+      const sh = add(c.shards, new THREE.OctahedronGeometry(0.16 + (i % 4) * 0.06, 0), i % 5 === 0 ? pink : gold, 0, 0, 0);
+      sh.userData = { a: i / 16 * Math.PI * 2, r: 0.5 + (i % 4) * 0.28, y: 0.4 + (i * 0.37) % 3.2, v: 0.6 + (i % 3) * 0.3 };
+    }
+    add(c.shards, new THREE.OctahedronGeometry(0.55, 1), lit(0xffffff, 3.0), 0, 1.8, 0).userData = { core: true };
+    const ring = add(c.shards, new THREE.TorusGeometry(1.4, 0.05, 6, 32), gold, 0, 3.7, 0); ring.rotation.x = Math.PI / 2; ring.userData = { ring: true };
+    return c;
+  }
+  function morph(c, on = true) {                                                                             // the CEO's second form (and back, after a defeat)
+    if (!c.shards) return;
+    for (const o of c.body) o.visible = !on;
+    c.merged = on; c.shards.visible = on; c.root.scale.setScalar(on ? 1.35 : 1);
+  }
+  // Tints every part of a rig toward a colour (for stand-ins that borrow another figure's build)
+  function tintRig(c, hex, k) { c.root.traverse(o => { if (o.isMesh && o.material && o.material.color) { o.material = o.material.clone(); o.material.color.lerp(new THREE.Color(hex), k); } }); }
+
   // A person in a pose. kind: 'seated' (hips on a seat at c.seatH) or 'stand' (walks with `speed`)
   function rest(c) {
     for (const k in c.j) c.j[k].rotation.set(0, 0, 0);
@@ -509,12 +576,12 @@ const Chars = (() => {
   }
 
   const orbAt = new THREE.Vector3();
-  const kinds = { ruen, kyle, yuna, player, stranger, husk };
+  const kinds = { ruen, kyle, yuna, player, stranger, husk, enforcer, drone, seraph, ceo };
   // The clips a figure walks, runs and idles with, and the idle it holds in battle. Nobody holds a weapon, so everyone
   // walks and runs with the plain unarmed locomotion. The crew drop into the magic stance when a fight starts (their
   // strikes are brawling punches and hooks, their skills are casts); the husks keep a loose unarmed idle.
   const UNARMED = { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'mgIdle' };
-  const LOCO = { husk: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' }, brute: { idle: 'idleEase', walk: 'walkCalm', run: 'walkCalm', battle: 'idleUnarmed' }, loader: { idle: 'idleEase', walk: 'walkCalm', run: 'walkCalm', battle: 'idleUnarmed' } };
+  const LOCO = { husk: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' }, brute: { idle: 'idleEase', walk: 'walkCalm', run: 'walkCalm', battle: 'idleUnarmed' }, enforcer: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' }, drone: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' }, seraph: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' }, ceo: { idle: 'idleEase', walk: 'walkCalm', run: 'runCalm', battle: 'idleUnarmed' }, loader: { idle: 'idleEase', walk: 'walkCalm', run: 'walkCalm', battle: 'idleUnarmed' } };
 
   // Builds one of the crew by name and returns its rig (the root is what the scene adds)
   function create(kind) {
@@ -583,6 +650,14 @@ const Chars = (() => {
     }
     if (c.armFix) undoAPose(c);
     if (CREATURE[c.name] && c.armFix) creature(c, t, dt, speed);
+    if (c.hover) {                                                                // drones bob in the air, and sink when destroyed
+      const dead = c.clip && c.clip.name === 'die', want = dead ? 0.25 : c.hoverBase + Math.sin(t * 2.2 + c.seed) * 0.1;
+      c.hover.position.y += (want - c.hover.position.y) * Math.min(1, dt * (dead ? 3 : 8)); c.hover.rotation.z += ((dead ? 0.7 : Math.sin(t * 1.3 + c.seed) * 0.05) - c.hover.rotation.z) * Math.min(1, dt * 4);
+      c.disc.rotation.y += dt * 1.6;
+    }
+    if (c.shards && c.shards.visible) {                                           // the singularity's shards circle a bright core
+      for (const o of c.shards.children) { const u = o.userData; if (u.core) { o.rotation.y = t; o.scale.setScalar(1 + Math.sin(t * 3) * 0.08); } else if (u.ring) o.rotation.z = t * 0.6; else { u.a += dt * u.v; o.position.set(Math.cos(u.a) * u.r, u.y + Math.sin(t * 1.7 + u.a) * 0.15, Math.sin(u.a) * u.r); o.rotation.y += dt * 2; } }
+    }
     if (c.talkMood || c.talkAmp > 0.01 || c.lookPt || c.lookAmp > 0.01) gesture(c, t, dt);
     if (c.name === 'ruen') {                                                     // the orb floats over her left palm, specks circling it
       c.root.updateMatrixWorld(true);
@@ -601,5 +676,5 @@ const Chars = (() => {
     if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = -Math.min(speed, 4) * 0.06; }
   }
 
-  return { create, update, play, clipLength, setTalk, setLook, setOrbAim };
+  return { create, update, play, clipLength, morph, setTalk, setLook, setOrbAim };
 })();

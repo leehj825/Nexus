@@ -7,33 +7,40 @@ const CampUI = (() => {
   let shop = false, open = false, shown = '', seen = 0, toastTimer = 0;
 
   // Everything the list shows, as one string, so the list is only rebuilt when something in it changes
-  const stateKey = () => Camp.parts + '|' + Camp.UPGRADES.map(u => (Camp.isOwned(u.id) ? 1 : 0)).join('');
+  const stateKey = () => Camp.found().join(',') + '|' + Camp.parts + '|' + Camp.UPGRADES.map(u => (Camp.isOwned(u.id) ? 1 : 0)).join('');
 
   function render() {
     list.textContent = '';
-    for (const u of Camp.UPGRADES) {
-      const li = document.createElement('li');
-      const done = Camp.isOwned(u.id);
-      const info = document.createElement('div');
-      const name = document.createElement('b');
-      name.textContent = u.name;
-      const text = document.createElement('span');
-      text.textContent = u.text;
-      info.append(name, text);
-      const buy = document.createElement('button');
-      buy.type = 'button';
-      buy.textContent = done ? 'Installed' : 'Craft ◆ ' + u.cost;
-      buy.disabled = done || Camp.parts < u.cost;
-      buy.addEventListener('click', () => { if (Camp.buy(u.id)) render(); });
-      li.classList.toggle('done', done);
-      li.append(info, buy);
-      list.append(li);
+    for (const id of Growth.IDS) {                                                  // each crew member's next weapon and armour
+      const head = document.createElement('li'); head.className = 'camp-char';
+      head.innerHTML = '<b>' + Growth.NAME[id] + '</b><span>Lv ' + Growth.lv(id) + ' \u00b7 ' + Growth.ROLE[id] + '</span>';
+      list.append(head);
+      for (const slot of ['w', 'a']) {
+        const u = Camp.nextGear(id, slot), li = document.createElement('li'), info = document.createElement('div'), name = document.createElement('b'), text = document.createElement('span'), btn = document.createElement('button');
+        const label = slot === 'w' ? 'Weapon' : 'Armour', worn = Camp.wornName(id, slot);
+        name.textContent = u ? u.name : worn; text.textContent = u ? label + ' \u00b7 ' + u.text + (worn ? ' (now ' + worn + ')' : '') : label + ' \u00b7 fully upgraded';
+        info.append(name, text); btn.type = 'button';
+        btn.textContent = u ? 'Craft \u25c6 ' + u.cost : 'Maxed'; btn.disabled = !u || Camp.parts < u.cost;
+        if (u) btn.addEventListener('click', () => { if (Camp.buy(u.id)) { Combat.refreshAll(true); render(); } });
+        li.classList.toggle('done', !u); li.append(info, btn); list.append(li);
+      }
+    }
+    // Fast travel: any camp that has been found, from where the crew are standing now
+    const here = Camp.nearCamp(Player.state()), tl = $('campTravel'); tl.textContent = '';
+    const dest = Camp.siteList().filter(s => Camp.found().includes(s.id) && s.id !== here);
+    $('campTravelH').hidden = tl.hidden = !dest.length || shop;
+    for (const s of dest) {
+      const li = document.createElement('li'), info = document.createElement('div'), nm = document.createElement('b'), go = document.createElement('button');
+      nm.textContent = s.name; info.append(nm); go.type = 'button'; go.textContent = 'Go';
+      go.addEventListener('click', () => { setOpen(false); Camp.travel(s.id); });
+      li.append(info, go); tl.append(li);
     }
     shown = stateKey();
     $('campParts').textContent = Camp.parts;
   }
 
   function setOpen(on) {
+    if (on && !open) Camp.rest(Camp.nearCamp(Player.state()));          // opening the camp is resting: the crew are healed and the game saves
     open = on; if (!on) shop = false;
     panel.hidden = !on;
     Player.setFrozen(on);

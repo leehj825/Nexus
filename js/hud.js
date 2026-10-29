@@ -44,13 +44,13 @@ const HUD = (() => {
       const qd = document.getElementById('qdist'); if (qd) qd.textContent = Math.round(Math.hypot(p.x - ob.x, p.z - ob.z)) + ' m to ' + ob.label;
     } else { const qd = document.getElementById('qdist'); if (qd && qd.textContent) qd.textContent = ''; }
     // Landmarks: the fire (orange), the gate (blue), the crew (small yellow squares)
-    g.fillStyle = '#ff9a3a'; g.fillRect(toX(0) - 3, toY(0) - 3, 6, 6);
+    g.fillStyle = '#ff9a3a'; for (const s of Camp.siteList()) if (Camp.found().includes(s.id)) g.fillRect(toX(s.x) - 3, toY(s.z) - 3, 6, 6);        // the camps found so far
     g.fillStyle = '#4aa8ff'; g.beginPath(); g.arc(toX(0), toY(-26), 5, 0, Math.PI * 2); g.fill();
     g.fillStyle = '#ffe08a';
     for (const [x, z] of [[-1.9, -0.9], [1.5, -1.2], [2.7, 0.4]]) g.fillRect(toX(x) - 2, toY(z) - 2, 4, 4);
     g.restore();
     // The avatar: a white arrow at the centre, pointing where it faces
-    g.save(); g.translate(cx, cy); g.rotate(p.heading + Math.PI);
+    g.save(); g.translate(cx, cy); g.rotate(Math.PI - p.heading);
     g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(0, -7); g.lineTo(5, 6); g.lineTo(0, 3); g.lineTo(-5, 6); g.closePath(); g.fill();
     g.restore();
     // The rim
@@ -71,7 +71,10 @@ const HUD = (() => {
   let zone = '';
   function update(t, p) {
     drawMap(p, t);
-    const z = p.z < World.HUB_Z ? 'Industrial Hub \u00b7 Night' : p.z < World.Z0 - 1 ? 'Neon Market \u00b7 Night' : 'Neon District \u00b7 Night';             // the zone title follows the player through the gate
+    { const c = Growth.chars.you, lv = document.querySelector('.status .lv'); if (lv) lv.textContent = 'Lv ' + c.lv; const sf = $('stFill'); if (sf) sf.style.width = (c.lv >= Growth.MAXLV ? 100 : c.xp / Growth.need(c.lv) * 100) + '%'; }
+    const pi = Combat.partyInfo()[0];                                              // Jin's health in the status bar
+    if (pi) { const f = $('hpFill'); if (f) f.style.width = Math.max(0, Math.min(100, pi.hp / pi.hpMax * 100)) + '%'; $('hpTxt').textContent = Math.round(pi.hp) + ' / ' + pi.hpMax; }
+    const z = p.z < World.SPIRE_Z ? 'Corporate Spire \u00b7 Night' : p.z < World.HUB_Z ? 'Industrial Hub \u00b7 Night' : p.z < World.Z0 - 1 ? 'Neon Market \u00b7 Night' : 'Neon District \u00b7 Night';             // the zone title follows the player through the gate
     if (z !== zone) { zone = z; const el = document.querySelector('.zone span'); if (el) el.innerHTML = z.replace('\u00b7', '&middot;'); }
   }
 
