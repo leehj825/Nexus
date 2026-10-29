@@ -539,10 +539,10 @@ const Chars = (() => {
     }
   }
 
-  // Weapons are only out when they are needed: drawn (scaled up from nothing) for a fight or while seated at camp, away while the crew walk and run.
-  // Ruen's orb also stays out while a scene has it hover ahead of her.
+  // Weapons are only out when they are needed: drawn (scaled up from nothing) for a fight, away while the crew walk, run or sit at camp.
+  // Ruen's orb is the exception: it also stays out while she is seated at camp, and while a scene has it hover ahead of her.
   function armWeapons(c, dt) {
-    const want = c.combat || c.kind === 'seated' || c.orbAimOn ? 1 : 0;
+    const want = c.combat || (c.kind === 'seated' && c.orb) || c.orbAimOn ? 1 : 0;
     c.armT = (c.armT === undefined ? want : c.armT) + (want - (c.armT === undefined ? want : c.armT)) * Math.min(1, dt * 9);
     for (const w of c.weapons) { w.visible = c.armT > 0.03; w.scale.setScalar(Math.max(0.001, c.armT)); }
   }
