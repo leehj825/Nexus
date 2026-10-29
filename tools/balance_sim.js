@@ -7,7 +7,7 @@ const CFG = Object.assign({
   pick: 0.55,                                                         // the share of the scrap on the route that gets picked up
   sloppy: 0.2,                                                        // how often the bot makes a plain attack instead of the best command (players slip)
 }, JSON.parse(process.env.BAL || '{}'));
-const argv = process.argv.slice(2); if (argv[0]) CFG.runs = +argv[0]; if (argv[1]) CFG.meet = +argv[1]; if (argv[2]) CFG.react = +argv[2];
+if (require.main === module) { const argv = process.argv.slice(2); if (argv[0]) CFG.runs = +argv[0]; if (argv[1]) CFG.meet = +argv[1]; if (argv[2]) CFG.react = +argv[2]; }
 let T = JSON.parse(fs.readFileSync(__dirname + '/../js/tuning.js', 'utf8').replace(/^[\s\S]*?const Tuning = /, '').replace(/;\s*$/, ''));      // the numbers shared with the game
 const census = JSON.parse(fs.readFileSync(__dirname + '/census.json', 'utf8'));
 const tierFor = r => { const z = r >= 14 ? T.zoneTier.spire : r >= 8 ? T.zoneTier.hub : T.zoneTier.market; return z.base + (r - z.row0) * z.perRow; };

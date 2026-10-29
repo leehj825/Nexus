@@ -7,10 +7,10 @@ const iters = +process.argv[2] || 600, RUNS = +process.argv[3] || 60;
 const clone = o => JSON.parse(JSON.stringify(o));
 // What the search may change: [path, low, high]
 const PARAMS = [
-  ['tier.hp', 0.1, 0.9], ['tier.dmg', 0.08, 0.6], ['scale.foeHp', 0.7, 2.4], ['scale.foeDmg', 0.7, 2.4], ['scale.xp', 0.25, 1.4],
+  ['tier.hp', 0.1, 1.3], ['tier.dmg', 0.08, 0.9], ['tier.xp', 0.05, 0.6], ['scale.xp', 0.3, 1.6],
   ['growth.hp', 0.06, 0.2], ['growth.dmg', 0.05, 0.18],
   ['zoneTier.market.base', 0.2, 1.5], ['zoneTier.market.perRow', 0.15, 0.8], ['zoneTier.hub.base', 1.5, 6], ['zoneTier.hub.perRow', 0.15, 0.8], ['zoneTier.spire.base', 2.5, 9], ['zoneTier.spire.perRow', 0.15, 0.8],
-  ['foes.loader.hp', 300, 1400], ['scale.bossDmg', 0.7, 2.6], ['foes.ceo.hp', 500, 3000], ['scale.ceoDmg', 0.7, 2.6],
+  ['foes.loader.hp', 300, 1400], ['scale.bossDmg', 0.6, 3.0], ['foes.ceo.hp', 500, 3000], ['scale.ceoDmg', 0.6, 3.0],
   ['gear.wmul', 1, 3], ['gear.amul', 1, 3], ['loot.base', 1, 3], ['xp.step', 10, 50],
 ];
 const get = (o, path) => path.split('.').reduce((a, k) => a[k], o);
@@ -25,7 +25,7 @@ function build(vec) {
   });
   return T;
 }
-const TARGET = { alley: [0.97, 0.2], market: [0.93, 0.28], hub: [0.9, 0.32], spire: [0.88, 0.35], loader: [0.75, 0.6], ceo: [0.65, 0.7] };
+const TARGET = { alley: [0.97, 0.15], market: [0.93, 0.28], hub: [0.9, 0.32], spire: [0.88, 0.35], loader: [0.75, 0.6], ceo: [0.65, 0.7] };
 const MARKS = { tower: 4.5, hubGate: 5.5, beforeBoss: 7.2, afterBoss: 7.9, beforeCeo: 9.0, end: 9.6 };
 function loss(M) {
   let L = 0;
