@@ -5,7 +5,7 @@
 // or let the tour run through every move in turn. Drag to orbit, wheel to zoom, double-click to reset the camera.
 const ModelCheck = (() => {
   const $ = id => document.getElementById(id);
-  const KINDS = [['ruen', 'Ruen'], ['kyle', 'Kyle'], ['yuna', 'Yuna'], ['ranger', 'Ranger'], ['rangerbare', 'Ranger (no cloth)'], ['player', 'Jin'], ['stranger', 'Stranger'], ['husk', 'Husk'], ['brute', 'Husk Brute'], ['loader', 'Loader Mech'], ['enforcer', 'Enforcer'], ['drone', 'Sentry Drone'], ['seraph', 'Seraph Drone'], ['ceo', 'The CEO']];
+  const KINDS = [['ruen', 'Ruen'], ['kyle', 'Kyle'], ['yuna', 'Yuna'], ['ranger', 'Ranger'], ['rangeroldcloth', 'Ranger (old cloth)'], ['rangerbare', 'Ranger (no cloth)'], ['player', 'Jin'], ['stranger', 'Stranger'], ['husk', 'Husk'], ['brute', 'Husk Brute'], ['loader', 'Loader Mech'], ['enforcer', 'Enforcer'], ['drone', 'Sentry Drone'], ['seraph', 'Seraph Drone'], ['ceo', 'The CEO']];
   const SPECIAL = [['@seat', 'Seated pose'], ['@walk', 'Walk (locomotion)'], ['@run', 'Run (locomotion)']];
   // The clips, grouped for the list: first matching rule wins
   const GROUPS = [
