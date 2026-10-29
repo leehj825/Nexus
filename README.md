@@ -70,6 +70,7 @@ js/fx.js            additive-sprite effects: hit sparks, projectiles, novas, shi
 js/perf.js          the debug overlay and adaptive quality
 js/tuning.js        every number that sets the difficulty (read by the game and the balance simulator)
 js/items.js         battle items and credits (what shops sell); js/shopui.js is the shop panel
+js/quests.js        side jobs: who gives them, progress, rewards and the crew screen's Jobs log
 js/main.js          renderer, scene, and the frame loop
 ```
 

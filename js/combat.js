@@ -501,7 +501,7 @@ const Combat = (() => {
     for (const u of party) u.ready = false;
     const lvl = $('lvl'); lvl.hidden = true;
     if (text === 'Cleared') {                                                 // the spoils: XP for everyone, level-ups, and the pairs grow closer
-      const xp = Math.round(foes.reduce((n, f) => n + (f.xp || 0), 0) * DIFF[diff].xp), ups = Growth.award(xp), cr = foes.reduce((n, f) => n + (f.cr || 0), 0); Growth.fought(); refreshAll(true); Items.add(cr);
+      const xp = Math.round(foes.reduce((n, f) => n + (f.xp || 0), 0) * DIFF[diff].xp), ups = Growth.award(xp), cr = foes.reduce((n, f) => n + (f.cr || 0), 0); Growth.fought(); refreshAll(true); Items.add(cr); Quests.defeated(foes.length, Player.state().z);
       lvl.innerHTML = '<div class="xp">+' + xp + ' XP' + (cr ? ' \u00b7 +' + cr + ' credits' : '') + '</div>' + ups.map(g => '<div><b style="color:' + PARTY[g.id].color + '">' + PARTY[g.id].name + '</b> Lv ' + g.from + ' \u2192 ' + g.to + (g.skills.length ? ' \u00b7 New: ' + g.skills.join(', ') : '') + '</div>').join('');
       lvl.hidden = false; if (ups.length) { resultWait = 5; setTimeout(() => Sound.sfx('levelup'), 900); }
     }

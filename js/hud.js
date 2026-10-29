@@ -35,7 +35,7 @@ const HUD = (() => {
     for (const b of World.footprints()) { const x0 = toX(b.x - b.hw), y0 = toY(b.z - b.hd); if (x0 < MAP && y0 < MAP && x0 + b.hw * 2 * SCALE > 0 && y0 + b.hd * 2 * SCALE > 0) g.fillRect(x0, y0, b.hw * 2 * SCALE, b.hd * 2 * SCALE); }
     g.globalAlpha = 1;
     // People in the Market (small cyan dots) and the story objective (a gold diamond, pinned to the rim when it is off the map)
-    g.fillStyle = '#7ff7ff'; for (const n of World.npcs()) g.fillRect(toX(n.x) - 2, toY(n.z) - 2, 4, 4);
+    for (const n of World.npcs()) { const m = n.tag ? Quests.mark(n) : 0; g.fillStyle = m ? '#ffd24a' : '#7ff7ff'; const s = m ? 6 : 4; g.fillRect(toX(n.x) - s / 2, toY(n.z) - s / 2, s, s); }
     const ob = Cutscene.objective();
     if (ob) {
       let ox = toX(ob.x), oy = toY(ob.z); const dx = ox - cx, dy = oy - cy, dd = Math.hypot(dx, dy), lim = MAP / 2 - 12;

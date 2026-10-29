@@ -96,7 +96,8 @@ const World = (() => {
   }
 
   // ---------- people ----------
-  const NAMES = ['Mox', 'Pell', 'Sable', 'Juno', 'Rook', 'Tamsin', 'Okoro', 'Vee', 'Dax', 'Lio'];
+  const NAMES = ['Mox', 'Pell', 'Sable', 'Lio', 'Wren', 'Cass', 'Hob', 'Ines'], HUB_NAMES = ['Marek', 'Tor', 'Kesh', 'Odalys', 'Bram', 'Sunniva'], SPIRE_NAMES = ['Anselm', 'Perrin', 'Sol', 'Mirelle', 'Ward', 'Ezra'];
+  const GIVERS = { '0,0': ['rook', 'Rook'], '-1,3': ['tamsin', 'Tamsin'], '1,2': ['juno', 'Juno'], '1,9': ['okoro', 'Okoro'], '-2,11': ['ivo', 'Ivo'], '0,14': ['vee', 'Vee'], '-1,17': ['thea', 'Thea'] };      // chunk -> who gives a job there
   function makeNpc(ch, rnd, x, z, rotY, shop) {
     const rig = Chars.create('stranger');
     rig.root.position.set(x, 0, z); rig.root.rotation.y = rotY; rig.root.scale.setScalar(0.92 + rnd() * 0.16);
@@ -286,7 +287,7 @@ const World = (() => {
         box(g, 0.34, 0.2, 0.34, emis(0x3ff0ff, 2.2), X + dx, dy - 0.2, Z + dz);
       }
       campProp(X - 11, Z + 10, 'hub');                                                       // the Hub's camp, by the checkpoint
-      makeNpc(ch, rnd, X - 14.2, Z + 10.4, Math.PI / 2, false).hub = true;
+      { const dax = makeNpc(ch, rnd, X - 14.2, Z + 10.4, Math.PI / 2, false); dax.hub = true; dax.name = 'Dax'; dax.tag = 'dax'; dax.zone = 'hub'; }
       for (let i = 0; i < 4; i++) clutter(X + (rnd() < 0.5 ? -1 : 1) * (9 + rnd() * 5), Z + (rnd() - 0.5) * 26);
       dropScrap(3, () => [X + (rnd() - 0.5) * 24, Z + 8 + rnd() * 6]);
     } else if (kind === 'factory') {                                                    // a low, wide works with stacks, pipe runs and orange lights
@@ -538,6 +539,24 @@ const World = (() => {
         break;
       }
     }
+    // People: workers on the Hub's floors and staff in the Spire's halls, a vendor at each camp past the Market, and the named job-givers (js/quests.js)
+    {
+      const zone = r >= HROWS ? 'spire' : r >= MROWS ? 'hub' : 'market';
+      const spot = (tries, apart = 9) => { for (let i = 0; i < tries; i++) { const x = X + (rnd() - 0.5) * (CH - 8), z = Z + (rnd() - 0.5) * (CH - 8); if (free(x, z, 1.3) && !(ch.pack && Math.hypot(x - ch.pack.x, z - ch.pack.z) < apart)) return [x, z]; } return null; };
+      const faceTo = (x, z, tx, tz) => Math.atan2(tx - x, tz - z);
+      const person = (name, x, z, ry, shop) => { const n = makeNpc(ch, rnd, x, z, ry, shop); n.name = name; n.zone = zone; return n; };
+      if (zone !== 'market' && !['wall', 'tower', 'foundry', 'summit', 'gate'].includes(kind)) {
+        const names = zone === 'hub' ? HUB_NAMES : SPIRE_NAMES;
+        for (let k = 0; k < 2; k++) if (rnd() < (k ? 0.25 : 0.6)) { const s = spot(30); if (s) person(names[Math.floor(rnd() * names.length)], s[0], s[1], rnd() * 6.28, false); }
+      }
+      const V = { gate: [[X - 8.5, Z + 12.6, X - 11, Z + 10, 'Brann']], foundry: [[X - 11.6, Z + 15, X - 8, Z + 15, 'Corrie']], lobby: [[X + 13.4, Z + 4.4, X + 10, Z + 4, 'Ilse']], atrium: [[X - 11.4, Z + 6, X - 8, Z + 6, 'Corvin']] }[kind];
+      if (V) for (const v of V) person(v[4], v[0], v[1], faceTo(v[0], v[1], v[2], v[3]), true).zone = kind === 'gate' ? 'hub' : zone;
+      const G = GIVERS[ch.key];
+      if (G) {
+        const s = spot(300, 3) || [X + CH / 2 - 4, Z + CH / 2 - 4], n = person(G[1], s[0], s[1], rnd() * 6.28, false); n.tag = G[0];
+        n.mark = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), emis(0xffd24a, 2.4)); n.mark.position.set(s[0], 2.6, s[1]); n.mark.visible = false; g.add(n.mark);
+      }
+    }
     flush(g);
     // Instance the windows
     if (wins.length) {
@@ -605,7 +624,7 @@ const World = (() => {
         ch.core.mesh.visible = bossDown; if (bossDown && !ch.coreLit) { ch.coreLit = true; ch.signs.push(ch.coreSign); }
       }
       // Rigs are ~40 meshes each: past the fog's reach they are hidden rather than drawn
-      for (const n of ch.npcs) n.rig.root.visible = Math.hypot(p.x - n.x, p.z - n.z) < SEE;
+      for (const n of ch.npcs) { n.rig.root.visible = Math.hypot(p.x - n.x, p.z - n.z) < SEE; if (n.mark) { const m = Quests.mark(n); n.mark.visible = m > 0 && n.rig.root.visible; n.mark.rotation.y = t * 2; n.mark.position.y = 2.6 + Math.sin(t * 3) * 0.1; n.mark.scale.setScalar(m > 1 ? 1.4 : 1); } }
       if (ch.pack) for (const r of ch.pack.rigs) r.root.visible = Math.hypot(p.x - r.root.position.x, p.z - r.root.position.z) < SEE;
       if (Math.hypot(p.x - ch.X, p.z - ch.Z) > 48) continue;
       for (const n of ch.npcs) { const d = Math.hypot(p.x - n.x, p.z - n.z); Chars.setLook(n.rig, d < 5 ? tmpP.set(p.x, 1.5, p.z) : null); Chars.update(n.rig, t, dt, 0); }
@@ -704,5 +723,5 @@ const World = (() => {
   const allNpcs = () => { const out = []; for (const ch of chunks.values()) for (const n of ch.npcs) out.push(n); return out; };
   function nearNpc(p, r) { let best = null, bd = r; for (const n of allNpcs()) { const d = Math.hypot(p.x - n.x, p.z - n.z); if (d < bd) { bd = d; best = n; } } return best; }
 
-  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, TOWER, GATE, FOUNDRY, HUB_Z, census, SITES, getState, setState, isTaken: k => taken.has(k), openShutter, armBoss, armCeo, ceoDown: () => spireBossDown, debugCeoDown: () => { spireBossDown = true; }, LIFT, ARRIVE, ATRIUM, SUMMIT, SPIRE_Z, liftAt: p => Math.hypot(p.x - LIFT.x, p.z - LIFT.z) < 2.6, nextNode, coreAt, nodeCount: () => nodesTaken.size, bossDown: () => bossDown, shutterOpen: () => shutterOpen, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
+  return { init, update, collide, blocked, footprints, markTaken, nearNpc, npcs: allNpcs, tagNpcs: () => allNpcs().filter(n => n.tag).map(n => n.tag + '@' + Math.round(n.x) + ',' + Math.round(n.z)), TOWER, GATE, FOUNDRY, HUB_Z, census, SITES, getState, setState, isTaken: k => taken.has(k), openShutter, armBoss, armCeo, ceoDown: () => spireBossDown, debugCeoDown: () => { spireBossDown = true; }, LIFT, ARRIVE, ATRIUM, SUMMIT, SPIRE_Z, liftAt: p => Math.hypot(p.x - LIFT.x, p.z - LIFT.z) < 2.6, nextNode, coreAt, nodeCount: () => nodesTaken.size, bossDown: () => bossDown, shutterOpen: () => shutterOpen, HALF_X, MIN_Z, Z0, CH, setDetail, chunkRects, lights: () => lightsOn, loaded: () => chunks.size };
 })();

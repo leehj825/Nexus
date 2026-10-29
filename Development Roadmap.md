@@ -56,9 +56,10 @@ Status key: ✅ done · 🟡 partly done · ⬜ not started. Last updated after 
 *   ✅ **City polish and shops:** buildings have ledges, pilasters, drain pipes, air-conditioners with glowing grilles, fire escapes, shop windows with awnings, parapets and rooftop plant, framed windows with sills, and the streets have crosswalks, bollards, hydrants, benches and planters. Shops now sell battle items for credits (Patch Kit, Stim, Flash Grenade, Revive Kit), vendors buy scrap, and the battle menu has an Items button, so shops and camps no longer do the same thing.
 *   ✅ **Balance pass:** a headless simulator and search tuned the numbers (see `Balance.md`), skills now cost gauge time, enemies scale by zone, bosses are tougher and act more often, and Settings has an Easy / Normal / Hard choice.
 *   ✅ **Camera and followers:** a third-person orbit camera; followers feel their way round obstacles and rejoin Jin if stuck or left behind; the minimap arrow points where Jin faces.
+*   ✅ **Polish pass:** the Hub (clanking metal on the off-beats) and the Spire (cold arpeggios and glass bells) have their own scores; new sound effects for slashes, healing, link attacks, level-ups, shop buying and selling, gear crafting, resting, revives, stims, fast travel and the gate. Workers walk the Hub's floors and staff the Spire's halls, every camp past the Market has a vendor with zone-specific stock and talk, and seven named people give side jobs (bring scrap, clear a district, carry a package to the Hub). A gold diamond over their heads and on the minimap marks work to take or hand in, and the crew screen has a Jobs log. Jobs are saved with the game.
 
 ## Next steps (in order)
 1. **Enemy models (yours):** Sentry Drone and Seraph Drone are the only enemies left on stand-ins, plus optionally the CEO's singularity form and a custom Stranger. The Enforcer, Loader Mech and CEO models are in.
 2. **Playtest the balance:** the numbers come from a simulation, so play it and tell me where fights feel too easy or too hard.
-3. **Polish:** music for the Hub and Spire, more NPCs and side content, a custom Stranger model, and sound for the new skills.
+3. **Polish left:** a custom Stranger model and more side jobs if you want them.
 4. **Phone test and release (yours).**

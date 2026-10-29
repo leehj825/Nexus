@@ -225,6 +225,7 @@ body.cutscene #hud, body.cutscene #labels { display: none; }
 .cc-xpt { margin: 3px 0 6px; color: var(--dim); font-size: 11px; }
 .cc-stats { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 4px; color: var(--dim); }
 .cc-stats b { color: var(--ink); }
+.crew-jobs { grid-column: 1 / -1; }
 .cc-sub { margin: 8px 0 2px; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
 .cc-list { list-style: none; margin: 0; padding: 0; }
 .cc-list li { padding: 3px 0; opacity: 0.55; }

@@ -421,14 +421,20 @@ const Cutscene = (() => {
   }
   const NPC_LINES = {
     vendor: ['Scrap is as good as credit here. Show me what you\'ve got.', 'Fresh circuits, honest prices. Mostly honest.', 'Nobody\'s buying tonight. The signs keep lying about what\'s open.'],
-    hub: ['Work crews walked out three weeks ago. The machines didn\'t get the message.', 'Corporate drones used to check my pass. Now they just watch. That\'s worse.', 'Don\'t go near the Foundry shutter at night. Something hums behind it.', 'The Hub was loud once. Now you can hear the furnaces thinking.'],
+    vendorHub: ['Patch kits by the crate, if you can carry them. The foundry\'s not the only thing that burns.', 'Hub prices. The gate doubled everything, and I only doubled half.', 'Buy a revive. Everyone says they won\'t need one.'],
+    vendorSpire: ['Corporate stock, no questions about where it came from.', 'Top floor wants everything on the books. I keep two sets.', 'Spend it before the grid gets to it. Credits don\'t last up here.'],
+    hub: ['Work crews walked out three weeks ago. The machines didn\'t get the message.', 'Corporate drones used to check my pass. Now they just watch. That\'s worse.', 'Don\'t go near the Foundry shutter at night. Something hums behind it.', 'The Hub was loud once. Now you can hear the furnaces thinking.', 'I was on the night line when it started. The belts just kept running. Nobody had told them to stop.', 'Half my crew went up the lift and never wrote back.'],
+    spire: ['Meetings never ended. They just moved into the servers.', 'My badge doesn\'t open anything now. The doors decide for themselves.', 'The CEO hasn\'t left the top floor since the shutdown. We\'ve all stopped asking.', 'I keep my desk tidy. It\'s all I can still control.', 'You can hear the servers thinking if you stand still.', 'There\'s a light in the atrium that wasn\'t installed by us.'],
     rumor: ['The signs started spelling things that aren\'t ads. I stopped reading them.', 'Drones sweep the upper sectors at dawn. If you\'re heading up, go before.', 'Those husks? Used to be somebody\'s neighbours. The grid took the rest.', 'There\'s a tower up the avenue that hums at night. Don\'t stand near it.', 'My cousin walked toward the white light. We stopped getting his messages.'],
   };
-  // Talking to someone in the Market: a short exchange, and a vendor's counter opens the camp's crafting panel afterwards
+  const pickFrom = a => a[Math.floor(Math.random() * a.length)];
+  // Talking to someone: a job-giver's business first, otherwise a short exchange; a vendor's counter opens the shop afterwards
   function chat(npc) {
-    const pool = NPC_LINES[npc.shop ? 'vendor' : npc.hub ? 'hub' : 'rumor'], a = pool[Math.floor(Math.random() * pool.length)], b2 = NPC_LINES.rumor[Math.floor(Math.random() * NPC_LINES.rumor.length)];
-    const list = [{ shot: 'who', rig: npc.rig, name: npc.name, color: '#9fe0d0', mood: 'talk', text: a }];
-    if (npc.shop) list.push({ shot: 'who', rig: npc.rig, name: npc.name, color: '#9fe0d0', mood: 'nod', text: 'Take a look at the counter.' }); else list.push({ shot: 'who', rig: npc.rig, name: npc.name, color: '#9fe0d0', mood: 'worry', text: b2 });
+    const q = Quests.talkTo(npc), who = { shot: 'who', rig: npc.rig, name: npc.name, color: '#9fe0d0' };
+    if (q) return begin(q.lines.map(l => Object.assign({ mood: l.mood, text: l.text }, who)), q.done || (() => {}), { anchor: 'npc', npc });
+    const z = npc.zone || 'market', pool = NPC_LINES[npc.shop ? (z === 'hub' ? 'vendorHub' : z === 'spire' ? 'vendorSpire' : 'vendor') : z === 'hub' ? 'hub' : z === 'spire' ? 'spire' : npc.hub ? 'hub' : 'rumor'];
+    const list = [Object.assign({ mood: 'talk', text: pickFrom(pool) }, who)];
+    if (npc.shop) list.push(Object.assign({ mood: 'nod', text: 'Take a look at the counter.' }, who)); else list.push(Object.assign({ mood: 'worry', text: pickFrom(NPC_LINES[z === 'market' ? 'rumor' : z]) }, who));
     begin(list, () => { if (npc.shop) ShopUI.open(); }, { anchor: 'npc', npc });
   }
   // What the interact button does right now: the story at the fire, or a chat with someone close by
@@ -438,7 +444,7 @@ const Cutscene = (() => {
     if (camp === 'fire') return { kind: 'story', label: LABEL[Math.min(stage, 2)] };
     if (camp && SKITS[camp] && !Camp.skitSeen(camp)) return { kind: 'skit', id: camp, label: 'Talk' };
     if (stage === 13 && World.liftAt(p)) return { kind: 'lift', label: 'Ride the lift' };
-    const n = World.nearNpc(p, 2.8); return n ? { kind: 'npc', npc: n, label: n.shop ? 'Trade \u00b7 ' + n.name : 'Talk \u00b7 ' + n.name } : null;
+    const n = World.nearNpc(p, 2.8); return n ? { kind: 'npc', npc: n, label: (n.shop ? 'Trade \u00b7 ' : 'Talk \u00b7 ') + n.name + ['', ' (!)', ' (\u2713)'][Quests.mark(n)] } : null;
   }
   function start() {
     if (active || Combat.active()) return;

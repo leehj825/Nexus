@@ -38,6 +38,7 @@
   Save.register('combat', Combat.getState, d => { Combat.setState(d); if (d.alley) { City.setGate(true, true); gateWas = true; } });
   Save.register('camp', Camp.getState, Camp.setState);
   Save.register('items', Items.getState, Items.setState);
+  Save.register('quests', Quests.getState, Quests.setState);
   Save.register('growth', Growth.getState, d => { Growth.setState(d); Combat.refreshAll(false); });
   Save.register('story', () => ({ stage: Cutscene.stage() }), d => Cutscene.restore(d.stage));
   Save.register('player', Player.getState, d => { Player.setState(d); Camp.restoreCrew(Player.state()); });

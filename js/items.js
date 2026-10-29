@@ -9,7 +9,7 @@ const Items = (() => {
   function sellScrap() { if (!Camp.spend(1)) return false; credits += Tuning.credits.scrapSell; return true; }
   function use(id) { if (inv[id] > 0) { inv[id]--; return true; } return false; }
   return {
-    DEF, IDS, stockAt, buy, sellScrap, use, add: n => { credits += n; }, count: id => inv[id], any: () => IDS.some(id => inv[id] > 0),
+    DEF, IDS, stockAt, give: (id, n) => { if (id in inv) inv[id] += n; }, buy, sellScrap, use, add: n => { credits += n; }, count: id => inv[id], any: () => IDS.some(id => inv[id] > 0),
     get credits() { return credits; },
     getState: () => ({ credits, inv: Object.assign({}, inv) }),
     setState(d) { credits = d.credits || 0; for (const id of IDS) inv[id] = (d.inv && d.inv[id]) || 0; },
