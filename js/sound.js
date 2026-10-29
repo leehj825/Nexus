@@ -117,5 +117,13 @@ const Sound = (() => {
   function arm() { const go = () => { init(); window.removeEventListener('pointerdown', go); window.removeEventListener('keydown', go); }; window.addEventListener('pointerdown', go); window.addEventListener('keydown', go); }
   arm();
 
+  // When the app goes to the background (the tab is hidden, or the Android app pauses) the sound stops, and it comes back with the app
+  let held = false;
+  function suspend() { if (ctx && ctx.state === 'running') { held = true; ctx.suspend(); } }
+  function resume() { if (ctx && held) { held = false; ctx.resume(); } }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) suspend(); else resume(); });
+  window.addEventListener('pagehide', suspend); window.addEventListener('pageshow', resume);
+  window.nexusSuspend = suspend; window.nexusResume = resume;               // the Android app calls these when it is paused and resumed
+
   return { init, sfx, blip, setMood, update, setMuted, setMusic, setSfx, get muted() { return muted; }, get music() { return musicOn; }, get fx() { return sfxOn; }, get mood() { return mood; }, running: () => !!ctx && ctx.state === 'running' };
 })();

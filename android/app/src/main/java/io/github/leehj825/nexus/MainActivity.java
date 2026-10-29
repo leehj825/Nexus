@@ -116,14 +116,22 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
-        web.onPause();                                         // stops the game's timers and sound while the app is in the background
+        web.evaluateJavascript("window.nexusSuspend && window.nexusSuspend()", null);     // silence the music at once; the WebView alone leaves Web Audio playing
+        web.onPause();                                         // stops the page's timers and rendering while the app is in the background
         super.onPause();
+    }
+
+    @Override
+    protected void onStop() {
+        web.evaluateJavascript("window.nexusSuspend && window.nexusSuspend()", null);
+        super.onStop();
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         web.onResume();
+        web.evaluateJavascript("window.nexusResume && window.nexusResume()", null);
     }
 
     @Override

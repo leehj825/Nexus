@@ -615,6 +615,7 @@ const Chars = (() => {
     husk: { hunch: 0.2, head: 0.12, armsOut: 0.05, armFwd: 0.22, roll: 0.1, lurch: 0.035, twitch: 1, breath: 0.03 },
     brute: { hunch: 0.14, head: 0.12, armsOut: 0.2, armFwd: 0.1, roll: 0.07, lurch: 0.05, twitch: 0.3, breath: 0.045 },
   };
+  const LEGDAMP = { ceo: 0.6 }, IDQ = new THREE.Quaternion();
   function creature(c, t, dt, speed) {
     const k = CREATURE[c.name], ph = (c.walkT || 0) * Math.PI * 2 / 1.03, mv = Math.min(1, speed / 1.5);
     const u = c.clip ? Math.sin(Math.min(1, c.clip.t / (Mocap.clips[c.clip.name].d || 1)) * Math.PI) : 0;       // 0 -> 1 -> 0 over a played clip
@@ -655,6 +656,7 @@ const Chars = (() => {
       }
     }
     if (c.armFix) undoAPose(c);
+    if (LEGDAMP[c.name]) for (const k of ['hipL', 'hipR', 'kneeL', 'kneeR']) c.j[k].quaternion.slerp(IDQ, 1 - LEGDAMP[c.name]);      // a long coat: shorter strides, so the legs stay inside it
     if (CREATURE[c.name] && c.armFix) creature(c, t, dt, speed);
     if (c.hover) {                                                                // drones bob in the air, and sink when destroyed
       const dead = c.clip && c.clip.name === 'die', want = dead ? 0.25 : c.hoverBase + Math.sin(t * 2.2 + c.seed) * 0.1;
