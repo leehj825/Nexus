@@ -41,6 +41,11 @@ const Combat = (() => {
     yuna: [{ label: 'Blast', run: u => { strike(u, 14, 'mgBolt2'); strike(u, 14, null); } }, { label: 'Stagger', run: u => stagger(u) }],
   };
 
+  // Difficulty (Settings): how hard the foes hit, how much they can take, and how much XP they give. Normal is what js/tuning.js and the balance simulator describe.
+  const DIFF = { easy: { name: 'Easy', dmg: 0.7, hp: 0.8, xp: 1.25 }, normal: { name: 'Normal', dmg: 1, hp: 1, xp: 1 }, hard: { name: 'Hard', dmg: 1.3, hp: 1.25, xp: 0.9 } };
+  let diff = 'normal'; try { diff = localStorage.getItem('nexus.diff') || 'normal'; } catch (e) {} if (!DIFF[diff]) diff = 'normal';
+  const setDifficulty = d => { if (!DIFF[d]) return; diff = d; try { localStorage.setItem('nexus.diff', d); } catch (e) {} };
+
   const ease = x => x * x * (3 - 2 * x);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const $ = id => document.getElementById(id);
@@ -183,6 +188,7 @@ const Combat = (() => {
   }
   // A husk's attack on a crew member. Kyle may intercept a fatal blow on Ruen or Yuna
   function hitParty(u, dmg, from) {
+    dmg = Math.max(1, Math.round(dmg * DIFF[diff].dmg));
     if (from && from.weak > 0) dmg = Math.round(dmg * 0.7);
     const kyle = party.find(p => p.id === 'kyle');
     if (dmg >= u.hp && u.id !== 'kyle' && kyle.alive && kyle.guard > 0 && kyle.atb >= 0.5) {
@@ -199,6 +205,7 @@ const Combat = (() => {
   // Foe takes a hit from a crew member's command
   function hitFoe(f, dmg) {
     if (!f.alive) return;
+    dmg = Math.max(1, Math.round(dmg / DIFF[diff].hp));
     if (f.guard > 0) dmg = Math.round(dmg * 0.5);
     if (f.shielded) { dmg = Math.round(dmg * Tuning.ceo.shieldSoak); if (Math.random() < 0.25) log(f.name + '\'s shield soaks the blow.'); }
     damage(f, dmg);
@@ -467,7 +474,7 @@ const Combat = (() => {
     for (const u of party) u.ready = false;
     const lvl = $('lvl'); lvl.hidden = true;
     if (text === 'Cleared') {                                                 // the spoils: XP for everyone, level-ups, and the pairs grow closer
-      const xp = foes.reduce((n, f) => n + (f.xp || 0), 0), ups = Growth.award(xp); Growth.fought(); refreshAll(true);
+      const xp = Math.round(foes.reduce((n, f) => n + (f.xp || 0), 0) * DIFF[diff].xp), ups = Growth.award(xp); Growth.fought(); refreshAll(true);
       lvl.innerHTML = '<div class="xp">+' + xp + ' XP</div>' + ups.map(g => '<div><b style="color:' + PARTY[g.id].color + '">' + PARTY[g.id].name + '</b> Lv ' + g.from + ' \u2192 ' + g.to + (g.skills.length ? ' \u00b7 New: ' + g.skills.join(', ') : '') + '</div>').join('');
       lvl.hidden = false; if (ups.length) { resultWait = 5; setTimeout(() => Sound.sfx('quest'), 900); }
     }
@@ -715,7 +722,7 @@ const Combat = (() => {
     ui.actions.hidden = !who || phase !== 'battle';
   }
 
-  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone, hp: party.map(u => [u.id, Math.round(u.hp)]) }), debugRun: (id, label) => { const u = partyOf(id), c = u && commandsFor(u).find(q => q.label === label); if (!c) return 'missing'; if (c.off) return 'off'; u.atb = 1; u.ready = true; c.run(u); return 'ok'; }, debugFoeHp: f => { for (const x of foes) x.hp = Math.round(x.hpMax * f); }, debugFoeAct: () => { for (const f of foes) if (f.alive && !f.wind) foeAct(f); }, debugReady: () => { for (const u of party) if (u.alive) u.atb = 1; }, restAll, refreshAll, partyInfo: () => party.map(u => ({ id: u.id, name: u.name, hp: u.hp, hpMax: u.hpMax })), setState(d) {
+  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone, hp: party.map(u => [u.id, Math.round(u.hp)]) }), debugRun: (id, label) => { const u = partyOf(id), c = u && commandsFor(u).find(q => q.label === label); if (!c) return 'missing'; if (c.off) return 'off'; u.atb = 1; u.ready = true; c.run(u); return 'ok'; }, debugFoeHp: f => { for (const x of foes) x.hp = Math.round(x.hpMax * f); }, debugFoeAct: () => { for (const f of foes) if (f.alive && !f.wind) foeAct(f); }, debugReady: () => { for (const u of party) if (u.alive) u.atb = 1; }, restAll, refreshAll, setDifficulty, difficulty: () => diff, DIFF, partyInfo: () => party.map(u => ({ id: u.id, name: u.name, hp: u.hp, hpMax: u.hpMax })), setState(d) {
     for (const [id, hp] of d.hp || []) { const u = party.find(q => q.id === id); if (u) { u.hp = hp; u.alive = hp > 0; } }
      if (d.alley && !alleyDone) { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); } }, debugClearAlley: () => { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); }, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
 })();
