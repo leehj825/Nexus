@@ -17,7 +17,7 @@ const Camp = (() => {
     kyle: { w: ['Kinetic Gauntlet', 'Gauntlet Servos', 'Gauntlet Overdrive'], a: ['Plate Harness', 'Bulwark Plate'] },
     yuna: { w: ['Tuned Blasters', 'Plasma Coils', 'Dual Overclock'], a: ['Stealth Weave', 'Ghost Suit'] },
   };
-  const WCOST = [2, 4, 7], ACOST = [3, 6], WMULT = 1.15, AMULT = 1.12;
+  const WCOST = Tuning.gear.wcost, ACOST = Tuning.gear.acost, WMULT = Tuning.gear.weapon, AMULT = Tuning.gear.armor;
   const UPGRADES = [];
   for (const who of Object.keys(GEAR)) {
     GEAR[who].w.forEach((name, i) => UPGRADES.push({ id: who + '-w' + (i + 1), who, slot: 'w', tier: i + 1, name, cost: WCOST[i], text: '+15% damage' }));
@@ -200,7 +200,7 @@ const Camp = (() => {
     if (!id) return;
     discover(id); lastCamp = id; Combat.restAll(); Save.save();
     const toast = document.getElementById('toast'); if (toast) { toast.textContent = 'The crew rest. Everyone is back on their feet.'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
-    Sound.sfx('quest');
+    Sound.sfx('rest');
   }
   function travel(id) { if (!found.has(id)) return; lastCamp = id; fadeThen(() => { arriveAt(id); Save.save(); }); }
   function wake() { fadeThen(() => { arriveAt(lastCamp); Combat.restAll(); Save.save(); }); }
@@ -325,6 +325,7 @@ const Camp = (() => {
     UPGRADES, GEAR, buy, damageMult, hpMult, nextGear, wornName, nearFire, nearCamp, rest, siteList, discover, travel, wake, fadeThen, FIRE_R,
     found: () => [...found], lastCamp: () => lastCamp, setLast: id => { lastCamp = id; }, skitSeen: id => skits.has(id), markSkit: id => skits.add(id), addScrap, dropScrap, seatAll, gatherAt, release, afterBattle, addParts: n => { parts += n; },
     isOwned: id => owned.has(id),
+    spend: n => { if (parts < n) return false; parts -= n; return true; },
     getState: () => ({ parts, owned: [...owned], found: [...found], last: lastCamp, skits: [...skits] }),
     setState(d) {
       parts = d.parts || 0; owned.clear(); (d.owned || []).forEach(id => owned.add(LEGACY[id] || id));

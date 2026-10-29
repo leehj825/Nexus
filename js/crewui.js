@@ -23,7 +23,14 @@ const CrewUI = (() => {
       + '<ul class="cc-list">' + links + '</ul>';
     return el;
   }
-  function render() { const body = $('crewBody'); body.textContent = ''; for (const id of Growth.IDS) body.append(card(id)); }
+  // The job log: every side job taken, what it needs and what it pays
+  function jobs() {
+    const j = Quests.list(), el = document.createElement('div'); el.className = 'crew-card-one crew-jobs';
+    el.innerHTML = '<div class="cc-head"><b>Jobs</b><span>' + j.filter(q => q.done).length + ' of ' + Quests.DEFS.length + ' done</span></div>'
+      + (j.length ? '<ul class="cc-list">' + j.map(q => '<li class="' + (q.done ? '' : 'on') + '"><b>' + q.title + (q.ready ? ' \u2713 ready to hand in' : '') + '</b><span>' + q.who + ' \u00b7 ' + q.place + ' \u00b7 ' + q.prog + '</span></li>').join('') + '</ul>' : '<div class="cc-xpt">No jobs yet. People with a gold mark over their heads have work.</div>');
+    return el;
+  }
+  function render() { const body = $('crewBody'); body.textContent = ''; for (const id of Growth.IDS) body.append(card(id)); body.append(jobs()); }
   function setOpen(on) { if (on && (Combat.engaging() || Cutscene.active())) return; open = on; $('crew').hidden = !on; Player.setFrozen(on); if (on) render(); }
 
   function init() {

@@ -35,7 +35,7 @@ const HUD = (() => {
     for (const b of World.footprints()) { const x0 = toX(b.x - b.hw), y0 = toY(b.z - b.hd); if (x0 < MAP && y0 < MAP && x0 + b.hw * 2 * SCALE > 0 && y0 + b.hd * 2 * SCALE > 0) g.fillRect(x0, y0, b.hw * 2 * SCALE, b.hd * 2 * SCALE); }
     g.globalAlpha = 1;
     // People in the Market (small cyan dots) and the story objective (a gold diamond, pinned to the rim when it is off the map)
-    g.fillStyle = '#7ff7ff'; for (const n of World.npcs()) g.fillRect(toX(n.x) - 2, toY(n.z) - 2, 4, 4);
+    for (const n of World.npcs()) { const m = n.tag ? Quests.mark(n) : 0; g.fillStyle = m ? '#ffd24a' : '#7ff7ff'; const s = m ? 6 : 4; g.fillRect(toX(n.x) - s / 2, toY(n.z) - s / 2, s, s); }
     const ob = Cutscene.objective();
     if (ob) {
       let ox = toX(ob.x), oy = toY(ob.z); const dx = ox - cx, dy = oy - cy, dd = Math.hypot(dx, dy), lim = MAP / 2 - 12;
@@ -72,6 +72,7 @@ const HUD = (() => {
   function update(t, p) {
     drawMap(p, t);
     { const c = Growth.chars.you, lv = document.querySelector('.status .lv'); if (lv) lv.textContent = 'Lv ' + c.lv; const sf = $('stFill'); if (sf) sf.style.width = (c.lv >= Growth.MAXLV ? 100 : c.xp / Growth.need(c.lv) * 100) + '%'; }
+    { const cr = $('credits'); if (cr) cr.textContent = Items.credits; }
     const pi = Combat.partyInfo()[0];                                              // Jin's health in the status bar
     if (pi) { const f = $('hpFill'); if (f) f.style.width = Math.max(0, Math.min(100, pi.hp / pi.hpMax * 100)) + '%'; $('hpTxt').textContent = Math.round(pi.hp) + ' / ' + pi.hpMax; }
     const z = p.z < World.SPIRE_Z ? 'Corporate Spire \u00b7 Night' : p.z < World.HUB_Z ? 'Industrial Hub \u00b7 Night' : p.z < World.Z0 - 1 ? 'Neon Market \u00b7 Night' : 'Neon District \u00b7 Night';             // the zone title follows the player through the gate

@@ -28,6 +28,7 @@
   Combat.init(scene, camera);
   CampUI.init();
   CrewUI.init();
+  ShopUI.init();
   ModelCheck.init();
   Cutscene.init();
   // Saving: each part of the game registers what it keeps; the world goes first and the player last, so the avatar lands in a loaded world
@@ -36,6 +37,8 @@
   Save.register('world', World.getState, World.setState);
   Save.register('combat', Combat.getState, d => { Combat.setState(d); if (d.alley) { City.setGate(true, true); gateWas = true; } });
   Save.register('camp', Camp.getState, Camp.setState);
+  Save.register('items', Items.getState, Items.setState);
+  Save.register('quests', Quests.getState, Quests.setState);
   Save.register('growth', Growth.getState, d => { Growth.setState(d); Combat.refreshAll(false); });
   Save.register('story', () => ({ stage: Cutscene.stage() }), d => Cutscene.restore(d.stage));
   Save.register('player', Player.getState, d => { Player.setState(d); Camp.restoreCrew(Player.state()); });
@@ -66,8 +69,10 @@
   // The score follows the situation; the fire crackles near the camp; glitches crackle too; buttons click
   let lastMood = '', glitchT = 0;
   function soundtrack(dt) {
-    const p = Player.state(), m = Cutscene.active() ? 'scene' : Combat.active() ? 'battle' : p.z < World.Z0 - 2 ? 'market' : 'explore';
+    const p = Player.state(), zn = p.z < World.SPIRE_Z - 2 ? 'spire' : p.z < World.HUB_Z - 2 ? 'hub' : p.z < World.Z0 - 2 ? 'market' : 'explore';
+    const m = Cutscene.active() ? 'scene' : Combat.active() ? 'battle' : zn;
     if (m !== lastMood) { lastMood = m; Sound.setMood(m); }
+    Sound.setZone(zn === 'hub' || zn === 'spire' ? zn : 'default');
     Sound.update(dt, p);
     glitchT -= dt; if (glitchT <= 0 && City.glitch() > 0.25) { Sound.sfx('glitch', { vol: City.glitch() }); glitchT = 0.5 + Math.random() * 1.2; }
   }
@@ -76,7 +81,7 @@
   let gateHint = 0;
   function gateWatch(dt) {
     const cleared = Combat.alleyCleared();
-    if (cleared !== gateWas) { gateWas = cleared; City.setGate(cleared); if (cleared) Cutscene.gateOpened(); }
+    if (cleared !== gateWas) { gateWas = cleared; City.setGate(cleared); if (cleared) { Sound.sfx('door'); Cutscene.gateOpened(); } }
     gateHint -= dt;
     if (!cleared && gateHint <= 0 && Player.state().z < City.FAR + 4.4) {
       gateHint = 6; const toast = document.getElementById('toast');

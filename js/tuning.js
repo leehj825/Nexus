@@ -1,0 +1,32 @@
+// Nexus - tuning: every number that sets how hard the game is, in one place. The game reads these (combat.js, growth.js, camp.js, world.js), and the
+// balance simulator (tools/balance_sim.js) reads the same file, so what it measures is what is played. Keep this file plain JSON-style data.
+const Tuning = {
+  "party": {"you": {"hp": 110, "rate": 0.12}, "ruen": {"hp": 90, "rate": 0.13}, "kyle": {"hp": 150, "rate": 0.1}, "yuna": {"hp": 80, "rate": 0.2}},
+  "xp": {"base": 40, "step": 45},
+  "growth": {"hp": 0.119, "dmg": 0.11, "rate": 0.015},
+  "gear": {"weapon": 1.15, "armor": 1.12, "wcost": [5, 10, 17], "acost": [5, 11]},
+  "bond": {"l2": 3, "l3": 8},
+  "tier": {"hp": 0.995, "dmg": 0.615, "rate": 0.12, "xp": 0.392},
+  "foes": {"husk": {"hp": 60, "rate": 0.07, "xp": 14, "ai": "husk"}, "brute": {"hp": 110, "rate": 0.075, "xp": 38, "ai": "husk"}, "loader": {"hp": 1707, "rate": 0.22, "xp": 220, "ai": "boss"}, "enforcer": {"hp": 90, "rate": 0.085, "xp": 40, "ai": "enforcer"}, "drone": {"hp": 40, "rate": 0.135, "xp": 22, "ai": "drone"}, "seraph": {"hp": 70, "rate": 0.1, "xp": 40, "ai": "seraph"}, "ceo": {"hp": 2569, "rate": 0.164, "xp": 600, "ai": "ceo"}},
+  "husk": {"crush": [30, 36], "lash": [11, 15]},
+  "brute": {"crush": [32, 40]},
+  "boss": {"sweep": [12, 16], "volley": [11, 15], "crush": [30, 38], "rate2": 1.35},
+  "enf": {"guardChance": 0.3, "guard": 8, "shot": [12, 16]},
+  "drone": {"shot": [6, 9]},
+  "seraph": {"heal": 0.3, "guard": 6},
+  "ceo": {"lance": [22, 28], "sweep": [10, 14], "pulse": [14, 18], "crush2": [34, 40], "crush3": [36, 44], "lock": 9, "rate2": 1.15, "rate3": 1.15, "shieldSoak": 0.15, "shieldDown": 12},
+  "wind": 1.6,
+  "castRate": 0.4,
+  "stagger": 0.35,
+  "guardTime": 8,
+  "braceTime": 6,
+  "weakTime": 14,
+  "mend": 0.28,
+  "patch": 0.3,
+  "delay": {"link": 0.2, "arc": 0.25, "edge": 0.4, "mend": 0.3, "bulwark": 0.3, "shock": 0.35, "barrage": 0.4, "weak": 0.1},
+  "zoneTier": {"market": {"row0": 0, "base": 0.207, "perRow": 0.349}, "hub": {"row0": 8, "base": 2.921, "perRow": 0.222}, "spire": {"row0": 14, "base": 5.394, "perRow": 0.25}},
+  "scale": {"foeHp": 1, "foeDmg": 1, "xp": 1.219, "bossDmg": 2.827, "ceoDmg": 2.368},
+  "credits": { "perFoe": 6, "tierGrowth": 0.5, "loader": 120, "scrapSell": 8 },
+  "items": { "patch": { "name": "Patch Kit", "price": 30, "heal": 0.45, "text": "Heals the most hurt ally by 45%" }, "revive": { "name": "Revive Kit", "price": 80, "heal": 0.4, "text": "Brings a fallen ally back at 40% health" }, "stim": { "name": "Stim", "price": 45, "text": "Fills an ally's gauge so they act next" }, "flash": { "name": "Flash Grenade", "price": 60, "push": 0.5, "text": "Pushes every foe's gauge back and breaks wind-ups" } },
+  "loot": {"base": 2.456, "perTier": 0.5}
+};

@@ -9,14 +9,23 @@ const Sound = (() => {
   try { muted = localStorage.getItem('nexus.muted') === '1'; if (localStorage.getItem('nexus.music') === '0') musicOn = false; if (localStorage.getItem('nexus.sfx') === '0') sfxOn = false; } catch (e) { /* storage can be blocked */ }
   const layers = {};                                                          // pad, arp, bass, kick, snare, hat: each a gain node
   const LEVEL = {
-    explore: { pad: 0.5, arp: 0.22, bass: 0, kick: 0, snare: 0, hat: 0 },
-    market: { pad: 0.45, arp: 0.32, bass: 0.35, kick: 0.3, snare: 0, hat: 0.14 },
-    battle: { pad: 0.3, arp: 0.42, bass: 0.65, kick: 0.75, snare: 0.55, hat: 0.3 },
-    scene: { pad: 0.5, arp: 0.08, bass: 0, kick: 0, snare: 0, hat: 0 },
+    explore: { pad: 0.5, arp: 0.22, bass: 0, kick: 0, snare: 0, hat: 0, clank: 0, bell: 0 },
+    market: { pad: 0.45, arp: 0.32, bass: 0.35, kick: 0.3, snare: 0, hat: 0.14, clank: 0, bell: 0 },
+    hub: { pad: 0.42, arp: 0.2, bass: 0.55, kick: 0.45, snare: 0, hat: 0.08, clank: 0.55, bell: 0 },          // the Industrial Hub: a heavy, driving pulse with metal hits
+    spire: { pad: 0.5, arp: 0.34, bass: 0.22, kick: 0.1, snare: 0, hat: 0.1, clank: 0, bell: 0.55 },           // the Corporate Spire: cold, airy, glassy bells
+    battle: { pad: 0.3, arp: 0.42, bass: 0.65, kick: 0.75, snare: 0.55, hat: 0.3, clank: 0, bell: 0 },
+    scene: { pad: 0.5, arp: 0.08, bass: 0, kick: 0, snare: 0, hat: 0, clank: 0, bell: 0 },
   };
-  const BPM = { explore: 88, market: 96, battle: 132, scene: 80 };
-  const ROOTS = [57, 53, 60, 55];                                              // A3 F3 C4 G3 as midi notes
-  const CHORD = [[0, 3, 7], [0, 4, 7], [0, 4, 7], [0, 4, 7]];                   // minor, then majors
+  const BPM = { explore: 88, market: 96, hub: 84, spire: 102, battle: 132, scene: 80 };
+  // The notes, by zone: the alley and Market share one score; the Hub and Spire have their own (battles in a zone use its notes at battle speed)
+  const R = -1;
+  const SCORE = {
+    default: { roots: [57, 53, 60, 55], chords: [[0, 3, 7], [0, 4, 7], [0, 4, 7], [0, 4, 7]], pad: 'sawtooth', padCut: 900, arpType: 'square', arpOct: 24, arpPat: [0, 1, 2, 1, 2, 0, 1, 2, 0, 2, 1, 2, 0, 1, 2, 1], bass: [0, 3, 6, 8, 11, 14], bassType: 'sawtooth', bassCut: 420 },
+    hub: { roots: [50, 50, 53, 48], chords: [[0, 3, 7], [0, 3, 7], [0, 4, 7], [0, 4, 7]], pad: 'sawtooth', padCut: 520, arpType: 'sawtooth', arpOct: 12, arpPat: [0, R, R, 1, R, R, 2, R, 0, R, R, 1, R, 2, R, R], bass: [0, 2, 4, 6, 8, 10, 12, 14], bassType: 'sawtooth', bassCut: 300 },
+    spire: { roots: [64, 60, 57, 62], chords: [[0, 4, 7, 11], [0, 4, 7, 11], [0, 3, 7, 10], [0, 4, 7, 10]], pad: 'triangle', padCut: 2600, arpType: 'triangle', arpOct: 36, arpPat: [0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2, 1, 3, 2, 1, 0], bass: [0, 8], bassType: 'sine', bassCut: 500 },
+  };
+  let zone = 'default';
+  const setZone = z => { zone = SCORE[z] ? z : 'default'; };
   const hz = m => 440 * Math.pow(2, (m - 69) / 12);
   let step = 0, nextT = 0;
 
@@ -54,18 +63,20 @@ const Sound = (() => {
   function schedule() {
     if (!ctx || ctx.state !== 'running') return;
     while (nextT < ctx.currentTime + 0.18) {
-      const s = step % 16, bar = Math.floor(step / 16) % 4, root = ROOTS[bar], ch = CHORD[bar], sd = 60 / BPM[mood] / 4;
+      const P = SCORE[zone], s = step % 16, bar = Math.floor(step / 16) % 4, root = P.roots[bar], ch = P.chords[bar], sd = 60 / BPM[mood] / 4;
       if (s === 0) {                                                            // a new bar: the pad
         for (const dt of [-0.12, 0, 0.12]) for (const iv of ch) {
           const o = ctx.createOscillator(), g = ctx.createGain(), fl = ctx.createBiquadFilter();
-          o.type = 'sawtooth'; o.frequency.value = hz(root + iv); o.detune.value = dt * 100; fl.type = 'lowpass'; fl.frequency.value = 900;
+          o.type = P.pad; o.frequency.value = hz(root + iv); o.detune.value = dt * 100; fl.type = 'lowpass'; fl.frequency.value = P.padCut;
           g.gain.setValueAtTime(0.0001, nextT); g.gain.linearRampToValueAtTime(0.045, nextT + sd * 4); g.gain.linearRampToValueAtTime(0.0001, nextT + sd * 16);
           o.connect(fl); fl.connect(g); g.connect(layers.pad); o.start(nextT); o.stop(nextT + sd * 16 + 0.05);
         }
       }
-      const arp = [0, 1, 2, 1, 2, 0, 1, 2, 0, 2, 1, 2, 0, 1, 2, 1][s];             // a rising and falling figure over the chord
-      note(nextT, 'square', hz(root + 24 + ch[arp] + (s % 8 === 7 ? 12 : 0)), sd * 1.6, 0.06, layers.arp, 2200, 2);
-      if ([0, 3, 6, 8, 11, 14].includes(s)) note(nextT, 'sawtooth', hz(root - 24), sd * 2.2, 0.16, layers.bass, 420, 3);
+      const arp = P.arpPat[s];                                                       // a figure over the chord (a rest where the pattern says so)
+      if (arp >= 0) note(nextT, P.arpType, hz(root + P.arpOct + ch[arp % ch.length] + (s % 8 === 7 ? 12 : 0)), sd * 1.6, 0.06, layers.arp, 2200, 2);
+      if (P.bass.includes(s)) note(nextT, P.bassType, hz(root - 24), sd * 2.2, zone === 'spire' ? 0.2 : 0.16, layers.bass, P.bassCut, 3);
+      if (zone === 'hub' && [2, 6, 10, 13].includes(s)) { noise(nextT, 0.1, 0.22, layers.clank, 'bandpass', 640 + (s % 3) * 180, 7); note(nextT, 'square', 170 + (s % 3) * 40, 0.06, 0.05, layers.clank, 1500, 6); }     // metal hits off the beat
+      if (zone === 'spire' && s % 4 === 0) { note(nextT, 'sine', hz(root + 36 + ch[(s / 4) % ch.length]), 1.6, 0.08, layers.bell, 7000); note(nextT, 'sine', hz(root + 48 + ch[(s / 4 + 1) % ch.length]), 1.0, 0.04, layers.bell, 8000); }   // glassy bells
       if (s % 4 === 0) { const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(140, nextT); o.frequency.exponentialRampToValueAtTime(40, nextT + 0.16); g.gain.setValueAtTime(0.5, nextT); g.gain.exponentialRampToValueAtTime(0.0001, nextT + 0.22); o.connect(g); g.connect(layers.kick); o.start(nextT); o.stop(nextT + 0.25); }
       if (s === 4 || s === 12) noise(nextT, 0.16, 0.18, layers.snare, 'bandpass', 1900, 0.8);
       if (s % 2 === 1) noise(nextT, 0.04, 0.07, layers.hat, 'highpass', 7000);
@@ -94,6 +105,19 @@ const Sound = (() => {
       case 'lose': for (let i = 0; i < 4; i++) note(t + i * 0.2, 'sawtooth', hz(64 - i * 3), 0.5, 0.1 * vol, d, 1500); break;
       case 'blip': note(t, 'square', o.f || 300, 0.045, 0.05 * vol, d, 3000); break;
       case 'glitch': for (let i = 0; i < 4; i++) noise(t + i * 0.05, 0.04, 0.2 * vol, d, 'bandpass', 800 + Math.random() * 3000, 4); break;
+      case 'slash': { noise(t, 0.22, 0.3 * vol, d, 'bandpass', 2400 + (o.pitch || 0), 1.6); const os = ctx.createOscillator(), g = ctx.createGain(); os.type = 'sawtooth'; os.frequency.setValueAtTime(1800 + (o.pitch || 0), t); os.frequency.exponentialRampToValueAtTime(260, t + 0.16); g.gain.setValueAtTime(0.1 * vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18); os.connect(g); g.connect(d); os.start(t); os.stop(t + 0.2); note(t + 0.04, 'triangle', 2200, 0.3, 0.05 * vol, d, 7000); break; }
+      case 'heal': for (let i = 0; i < 5; i++) note(t + i * 0.08, 'sine', hz(72 + [0, 4, 7, 12, 16][i]), 0.6, 0.11 * vol, d, 6000); break;
+      case 'link': noise(t, 0.3, 0.3 * vol, d, 'bandpass', 1200, 1); for (let i = 0; i < 3; i++) { note(t + i * 0.09, 'sawtooth', hz(60 + i * 7), 0.5, 0.09 * vol, d, 3500); note(t + i * 0.09, 'square', hz(72 + i * 7), 0.4, 0.05 * vol, d, 5000); } note(t + 0.3, 'sine', 55, 0.5, 0.5 * vol, d, 300); break;
+      case 'levelup': for (let i = 0; i < 7; i++) note(t + i * 0.09, 'square', hz(67 + [0, 4, 7, 12, 16, 19, 24][i]), 0.4, 0.09 * vol, d, 5500); note(t + 0.63, 'triangle', hz(91), 1.0, 0.12 * vol, d, 7000); break;
+      case 'coin': note(t, 'square', hz(83), 0.07, 0.07 * vol, d, 6000); note(t + 0.07, 'square', hz(88), 0.28, 0.07 * vol, d, 6000); break;
+      case 'sell': note(t, 'square', hz(88), 0.07, 0.07 * vol, d, 6000); note(t + 0.07, 'square', hz(81), 0.07, 0.07 * vol, d, 6000); note(t + 0.14, 'square', hz(76), 0.2, 0.07 * vol, d, 5000); break;
+      case 'equip': noise(t, 0.06, 0.4 * vol, d, 'bandpass', 3200, 4); note(t, 'square', 520, 0.25, 0.08 * vol, d, 4000); note(t, 'square', 780, 0.25, 0.06 * vol, d, 4000); for (let i = 0; i < 3; i++) note(t + 0.25 + i * 0.08, 'triangle', hz(76 + [0, 5, 9][i]), 0.4, 0.09 * vol, d, 6000); break;
+      case 'rest': for (const iv of [0, 7, 12, 16]) note(t, 'sine', hz(57 + iv), 2.2, 0.1 * vol, d, 2400); noise(t, 0.7, 0.05 * vol, d, 'lowpass', 600); break;
+      case 'revive': { const os = ctx.createOscillator(), g = ctx.createGain(); os.type = 'sine'; os.frequency.setValueAtTime(200, t); os.frequency.exponentialRampToValueAtTime(1400, t + 0.5); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.2 * vol, t + 0.1); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7); os.connect(g); g.connect(d); os.start(t); os.stop(t + 0.75); note(t + 0.45, 'triangle', hz(84), 0.6, 0.1 * vol, d, 6000); break; }
+      case 'stim': for (let i = 0; i < 4; i++) note(t + i * 0.04, 'square', 900 + i * 350, 0.06, 0.06 * vol, d, 6000); break;
+      case 'travel': { noise(t, 0.9, 0.35 * vol, d, 'bandpass', 500, 0.7); const os = ctx.createOscillator(), g = ctx.createGain(); os.type = 'sine'; os.frequency.setValueAtTime(90, t); os.frequency.exponentialRampToValueAtTime(900, t + 0.8); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18 * vol, t + 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9); os.connect(g); g.connect(d); os.start(t); os.stop(t + 0.95); break; }
+      case 'deny': note(t, 'square', 150, 0.12, 0.08 * vol, d, 1200); note(t + 0.1, 'square', 110, 0.16, 0.08 * vol, d, 1200); break;
+      case 'door': noise(t, 0.35, 0.25 * vol, d, 'lowpass', 500); note(t, 'sine', 70, 0.4, 0.3 * vol, d, 300); break;
       case 'crackle': noise(t, 0.03, 0.08 * vol, d, 'highpass', 3000 + Math.random() * 2000); break;
     }
   }
@@ -117,5 +141,13 @@ const Sound = (() => {
   function arm() { const go = () => { init(); window.removeEventListener('pointerdown', go); window.removeEventListener('keydown', go); }; window.addEventListener('pointerdown', go); window.addEventListener('keydown', go); }
   arm();
 
-  return { init, sfx, blip, setMood, update, setMuted, setMusic, setSfx, get muted() { return muted; }, get music() { return musicOn; }, get fx() { return sfxOn; }, get mood() { return mood; }, running: () => !!ctx && ctx.state === 'running' };
+  // When the app goes to the background (the tab is hidden, or the Android app pauses) the sound stops, and it comes back with the app
+  let held = false;
+  function suspend() { if (ctx && ctx.state === 'running') { held = true; ctx.suspend(); } }
+  function resume() { if (ctx && held) { held = false; ctx.resume(); } }
+  document.addEventListener('visibilitychange', () => { if (document.hidden) suspend(); else resume(); });
+  window.addEventListener('pagehide', suspend); window.addEventListener('pageshow', resume);
+  window.nexusSuspend = suspend; window.nexusResume = resume;               // the Android app calls these when it is paused and resumed
+
+  return { init, sfx, blip, setMood, setZone, update, setMuted, setMusic, setSfx, get muted() { return muted; }, get music() { return musicOn; }, get fx() { return sfxOn; }, get mood() { return mood; }, running: () => !!ctx && ctx.state === 'running' };
 })();

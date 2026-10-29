@@ -16,7 +16,7 @@
     <div class="bar st"><i id="stFill"></i></div>
     <div class="lv">Lv 1</div>
     <div class="quest"><span id="qtext">&#9670; Speak with the crew</span><span id="qdist"></span></div>
-    <div class="tally"><span>&#9670; <b id="parts">0</b></span><span>&#9679; 1</span></div>
+    <div class="tally"><span>&#9670; <b id="parts">0</b></span><span>&#9679; <b id="credits">0</b></span></div>
   </div>
 
   <div class="zone"><span>Neon District &middot; Night</span></div>
@@ -78,6 +78,15 @@
   </div>
 </div>
 
+<div id="shop" class="camp" hidden>
+  <div class="camp-card" role="dialog" aria-label="Shop">
+    <header><h2>Shop</h2><span class="camp-parts">&#9679; <b id="shopCredits">0</b> credits &middot; &#9670; <b id="shopScrap">0</b> scrap</span></header>
+    <p class="camp-note">Items are used from the battle menu. Credits come from fights. Gear is crafted at camps from scrap.</p>
+    <ul id="shopList" class="camp-list"></ul>
+    <button id="shopClose" class="camp-close" type="button">Leave</button>
+  </div>
+</div>
+
 <div id="crew" class="camp" hidden>
   <div class="camp-card crew-card" role="dialog" aria-label="Crew">
     <header><h2>Crew</h2></header>
@@ -114,6 +123,7 @@
       <li><div><b>Effects</b><span>Hits, spells, pickups and voices</span></div><button id="setSfx" type="button">On</button></li>
       <li><div><b>Quality</b><span id="setQualityNote">Auto lowers the detail if the game runs slowly</span></div><button id="setQuality" type="button">Auto</button></li>
       <li><div><b>Debug</b><span>Frame rate, draw calls, chunk borders, aggro radii, ATB gauges</span></div><button id="setDebug" type="button">Off</button></li>
+      <li><div><b>Difficulty</b><span>How hard the foes hit and how much they can take</span></div><button id="setDiff" type="button">Normal</button></li>
       <li><div><b>Save</b><span id="saveNote">The game saves on its own at camps, story points and every few seconds</span></div><button id="setSave" type="button">Save now</button></li>
       <li><div><b>Model Check</b><span>Watch every move and pose of every character</span></div><button id="openModelCheck" type="button">Open</button></li>
     </ul>
@@ -153,6 +163,7 @@
 <script src="vendor/postprocessing/RenderPass.js"></script>
 <script src="vendor/postprocessing/EffectComposer.js"></script>
 <script src="vendor/postprocessing/UnrealBloomPass.js"></script>
+<script src="js/tuning.js"></script>
 <script src="js/anims.js"></script>
 <script src="js/anims_magic.js"></script>
 <script src="js/anims_brawl.js"></script>
@@ -163,6 +174,7 @@
 <script src="js/sound.js"></script>
 <script src="js/save.js"></script>
 <script src="js/growth.js"></script>
+<script src="js/items.js"></script>
 <script src="js/perf.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/characters.js"></script>
@@ -176,6 +188,8 @@
 <script src="js/cutscene.js"></script>
 <script src="js/modelcheck.js"></script>
 <script src="js/crewui.js"></script>
+<script src="js/shopui.js"></script>
+<script src="js/quests.js"></script>
 <script src="js/title.js"></script>
 <script src="js/main.js"></script>
 </body>

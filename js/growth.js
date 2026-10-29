@@ -7,8 +7,8 @@ const Growth = (() => {
   const ROLE = { you: 'Vanguard', ruen: 'Hacker', kyle: 'Protector', yuna: 'Ranger' };
   const MAXLV = 10;
   const chars = {}; for (const id of IDS) chars[id] = { lv: 1, xp: 0 };
-  const need = lv => 40 + 25 * (lv - 1);                         // XP from this level to the next
-  const hpMult = lv => 1 + 0.14 * (lv - 1), dmgMult = lv => 1 + 0.12 * (lv - 1), rateMult = lv => 1 + 0.015 * (lv - 1);
+  const need = lv => Tuning.xp.base + Tuning.xp.step * (lv - 1);        // XP from this level to the next
+  const hpMult = lv => 1 + Tuning.growth.hp * (lv - 1), dmgMult = lv => 1 + Tuning.growth.dmg * (lv - 1), rateMult = lv => 1 + Tuning.growth.rate * (lv - 1);
 
   // The skills, by level. 'cmd' is the label the battle menu shows; combat.js runs it.
   const SKILLS = {
@@ -25,7 +25,7 @@ const Growth = (() => {
   const pairKey = (a, b) => [a, b].sort().join('-');
   const addBond = (a, b, n) => { const k = pairKey(a, b); bonds[k] = (bonds[k] || 0) + n; };
   const bondPts = (a, b) => bonds[pairKey(a, b)] || 0;
-  const bondLevel = (a, b) => { const p = bondPts(a, b); return p >= 8 ? 3 : p >= 3 ? 2 : 1; };
+  const bondLevel = (a, b) => { const p = bondPts(a, b); return p >= Tuning.bond.l3 ? 3 : p >= Tuning.bond.l2 ? 2 : 1; };
   const BOND_NAME = ['', 'Allies', 'Trusted', 'Bound'];
   const LINKS = [                                                // who leads the link, the partner it needs, the label
     { lead: 'you', with: 'yuna', id: 'crossfire', name: 'Crossfire', text: 'Jin and Yuna strike together and stagger the foe' },

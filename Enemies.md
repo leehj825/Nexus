@@ -66,8 +66,8 @@ Theme: the grid is still running machines, with nobody to watch them. Corporate 
 * **Stats:** 40 HP, medium-fast gauge, burst 8 to 11.
 * **Model needs:** flying, `hover`, `fire`, `hit react`, `death`.
 
-### Enforcer (stand-in in the game: a code-built soldier in white plates with a rifle and riot shield)
-*In the game now:* 90 HP, fires a rifle (12 to 16), and raises a shield (half damage for 8 s) that Stagger, Weak Point and Shockwave break. Guards the Spire in mixed groups.
+### Enforcer (custom model in the game)
+*In the game now (custom model; a white-and-navy soldier with a cyan visor):* 90 HP, fires a rifle (12 to 16), and raises a shield (half damage for 8 s) that Stagger, Weak Point and Shockwave break. Guards the Spire in mixed groups.
 
 * **Who:** the "corporate enforcers" Yuna warns about in the alley. Armoured human soldiers.
 * **Look:** human, 1.85 m, white and steel armour plates over a black suit, a full visor that glows cyan, a rifle and a riot shield on the left arm. Clean lines, no rags. A shoulder light blinks red when it is about to attack.
@@ -75,8 +75,8 @@ Theme: the grid is still running machines, with nobody to watch them. Corporate 
 * **Stats:** 90 HP, medium gauge, rifle 12 to 16, shield bash (heavy) 28.
 * **Model needs:** Mixamo humanoid skeleton, `rifle idle`, `rifle fire`, `shield block`, `bash`, `death`.
 
-### Loader Mech (mini-boss, in the Foundry; stand-in in the game)
-*In the game now:* guards the Data Core inside the Foundry. 440 HP. It sweeps the whole crew (12 to 16), winds up a telegraphed crush (30 to 38), and below half health speeds up and rains shards (11 to 15 to everyone). It uses the Brute's model scaled up and painted yellow until a real model arrives.
+### Loader Mech (mini-boss, in the Foundry; custom model in the game)
+*In the game now (custom hazard-striped mech, 3.4 m):* guards the Data Core inside the Foundry. 440 HP. It sweeps the whole crew (12 to 16), winds up a telegraphed crush (30 to 38), and below half health speeds up and rains shards (11 to 15 to everyone). 
 
 * **Who:** a cargo loader the grid took over. Not corporate, not human, only a machine doing what it was doing before.
 * **Look:** a 3.5 m tall two-legged cargo mech, yellow-and-black hazard stripes (rusted), a crane arm with a claw on the left and a piston hammer on the right, cockpit window with pink glitch light inside instead of a pilot.
@@ -117,8 +117,8 @@ Theme: pristine corporate space tearing at the seams. Clean white halls with raw
 * **Behaviour:** heals other enemies, and shields them for a turn. Kill it first.
 * **Stats:** 70 HP, medium gauge, heals 30.
 
-### The CEO (final boss: the Paradox; stand-in in the game)
-*In the game now:* 950 HP in three forms. Command: data lances and sweeps. Rewrite (below 66%): locks a crew member's commands (Yuna's Stagger breaks the locks) and winds up crushes. Singularity (below 33%): the body gives way to a column of shards, the shield soaks 85% of damage until a burst from Ruen grounds it for 12 seconds. The stand-in is a tall figure in a long white coat; send a model for each form when ready.
+### The CEO (final boss: the Paradox; custom model for the first form in the game)
+*In the game now:* 950 HP in three forms. Command: data lances and sweeps. Rewrite (below 66%): locks a crew member's commands (Yuna's Stagger breaks the locks) and winds up crushes. Singularity (below 33%): the body gives way to a column of shards, the shield soaks 85% of damage until a burst from Ruen grounds it for 12 seconds. The first form uses the custom model (a long white coat with gold seams); the singularity form is the code-built column of shards. A model for that form could replace the shards.
 
 * **Who:** the Mega-Corporation's head, merging with the primary singularity. Never named so far (the writing can name them).
 * **Look, phase 1 (human):** a tall man or woman, 1.9 m, in a white tailored coat with gold-white light along the seams, floating slightly above the floor, calm face. Lit from behind by the singularity, a swirl of gold-white and pink behind them.

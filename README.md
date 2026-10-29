@@ -68,8 +68,13 @@ js/combat.js        battle: the ATB encounter (the avatar included), the camera 
 js/sound.js         generative synthwave score (explore, market, battle and scene moods) and sound effects, all Web Audio
 js/fx.js            additive-sprite effects: hit sparks, projectiles, novas, shields, dissolves
 js/perf.js          the debug overlay and adaptive quality
+js/tuning.js        every number that sets the difficulty (read by the game and the balance simulator)
+js/items.js         battle items and credits (what shops sell); js/shopui.js is the shop panel
+js/quests.js        side jobs: who gives them, progress, rewards and the crew screen's Jobs log
 js/main.js          renderer, scene, and the frame loop
 ```
+
+tools/              the balance simulator and its search (see Balance.md)
 
 Coordinates: feet at y = 0, the fire at the origin, the alley running along z with the gate at z = -26. Characters face +Z by default.
 

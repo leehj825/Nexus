@@ -25,18 +25,47 @@ const City = (() => {
     const shell = [0x10122a, 0x141633, 0x1a1830, 0x0f1b26];
     const shellGeo = new THREE.BoxGeometry(8, 1, 9);
     const litCols = [0xffc977, 0x6fe8ff, 0xff5fbf, 0xffe2a8];
-    const wins = [];
+    const wins = [], buildings = [];
     for (const s of [-1, 1]) {
       for (let z = FAR - 4; z < 12; z += 9) {
         const h = 14 + rnd() * 12, m = mat(pick(shell), { roughness: 1 });
         const b = put(root, shellGeo, m, s * (HALF + 4), h / 2, z + 4.5);
-        b.scale.y = h;
+        b.scale.y = h; buildings.push({ s, z, h });
         for (let y = 1.4; y < h - 1; y += 1.6) for (let k = 0; k < 6; k++) {
           if (rnd() < 0.55) continue;
           wins.push({ x: s * (HALF + 0.04), y, z: z + 1 + k * 1.35, col: pick(litCols) });
         }
       }
       box(root, 1.2, 0.2, 60, mat(0x0a0c14), s * (HALF - 0.4), 0.1, -8);     // shopfront plinth
+    }
+    // Detail on the alley's walls: ledges, pilasters, drain pipes, air-conditioners and fire escapes, merged into one mesh per material
+    const parts = new Map();                                                       // material -> boxes [w, h, d, x, y, z]
+    const dbox = (m, w, h, d, x, y, z) => { let l = parts.get(m); if (!l) parts.set(m, l = []); l.push([w, h, d, x, y, z]); };
+    const trim = mat(0x2a2f5a, { roughness: 0.85 }), trimD = mat(0x181b38, { roughness: 0.9 }), metal = mat(0x2c3038, { metalness: 0.5, roughness: 0.5 }), acM = mat(0x555a66, { metalness: 0.4, roughness: 0.6 }), grille = emis(0x6fe8ff, 0.5);
+    for (const b of buildings) {
+      const s = b.s, fx = s * (HALF + 0.02), len = 9, z0 = b.z + 4.5, h = b.h;                  // the face toward the alley is at x = s * HALF
+      for (let y = 4.4; y < h - 1; y += 4.4) dbox(trim, 0.5, 0.18, len + 0.3, fx - s * 0.12, y, z0);
+      for (const dz of [-len / 2 + 0.3, len / 2 - 0.3]) dbox(trimD, 0.4, h, 0.45, fx - s * 0.1, h / 2, z0 + dz);
+      for (let i = 0; i < 2; i++) { const z = z0 + (rnd() - 0.5) * (len - 2); dbox(metal, 0.16, h, 0.16, fx - s * 0.16, h / 2, z); }
+      for (let i = 0; i < 3; i++) { const z = z0 + (rnd() - 0.5) * (len - 2), y = 3.2 + rnd() * Math.max(1, h - 6); dbox(acM, 0.75, 0.7, 1.1, fx - s * 0.38, y, z); dbox(grille, 0.06, 0.45, 0.8, fx - s * 0.78, y, z); }
+      if (h > 12 && rnd() < 0.7) {                                                            // a fire escape facing the alley
+        const z = z0 + (rnd() - 0.5) * (len - 5);
+        for (let y = 3.6, k = 0; y < Math.min(h - 1.5, 19); y += 3.6, k++) {
+          dbox(metal, 1.3, 0.1, 2.8, fx - s * 0.7, y, z); dbox(metal, 0.05, 0.05, 2.8, fx - s * 1.3, y + 0.55, z); dbox(metal, 1.3, 0.6, 0.05, fx - s * 0.7, y + 0.3, z - 1.4);
+          for (let st = 0; st < 5; st++) dbox(metal, 0.9, 0.07, 0.45, fx - s * 0.7, y - 0.5 - st * 0.55, z + (k % 2 ? 1 : -1) * (1.0 - st * 0.4));
+        }
+      }
+    }
+    for (const [m, list] of parts) {
+      let nv = 0, ni = 0; const unit = new THREE.BoxGeometry(1, 1, 1); const n1 = unit.attributes.position.count, i1 = unit.index.count;
+      nv = n1 * list.length; ni = i1 * list.length;
+      const pos = new Float32Array(nv * 3), nor = new Float32Array(nv * 3), idx = new Uint32Array(ni);
+      list.forEach(([w, h, d, x, y, z], k) => {
+        for (let i = 0; i < n1; i++) { const o = (k * n1 + i) * 3; pos[o] = unit.attributes.position.getX(i) * w + x; pos[o + 1] = unit.attributes.position.getY(i) * h + y; pos[o + 2] = unit.attributes.position.getZ(i) * d + z; nor[o] = unit.attributes.normal.getX(i); nor[o + 1] = unit.attributes.normal.getY(i); nor[o + 2] = unit.attributes.normal.getZ(i); }
+        for (let i = 0; i < i1; i++) idx[k * i1 + i] = unit.index.array[i] + k * n1;
+      });
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); geo.setIndex(new THREE.BufferAttribute(idx, 1));
+      const mesh = new THREE.Mesh(geo, m); mesh.frustumCulled = false; root.add(mesh);
     }
     // Instanced windows: one draw call for all of them, each tinted on its own
     const inst = new THREE.InstancedMesh(new THREE.BoxGeometry(0.06, 0.6, 0.5), new THREE.MeshBasicMaterial({ color: 0xffffff }), wins.length);

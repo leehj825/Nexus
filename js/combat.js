@@ -7,7 +7,7 @@
 //   Kyle: Intercept. While Guard is up, a fatal hit on Ruen or Yuna is taken by Kyle instead if his ATB is at least half full.
 //   Yuna: fast gauge. Her ATB fills at twice the rate, and Stagger pushes an enemy's turn back.
 const Combat = (() => {
-  const TRANS = 1.4, ENCOUNTER_R = 6.5, GUARD_TIME = 8, BRACE_TIME = 6, CAST_RATE = 0.4, STAGGER = 0.35, RESULT_WAIT = 2.2, WIND = 1.6;
+  const TRANS = 1.4, ENCOUNTER_R = 6.5, GUARD_TIME = Tuning.guardTime, BRACE_TIME = Tuning.braceTime, CAST_RATE = Tuning.castRate, STAGGER = Tuning.stagger, RESULT_WAIT = 2.2, WIND = Tuning.wind;
   const BATTLE = { pos: new THREE.Vector3(0.2, 3.4, 7.4), look: new THREE.Vector3(0, 1.0, -2.6) };
   const SPOT = { you: [-0.9, -2.6], ruen: [-2.6, -0.7], kyle: [0.6, -1.5], yuna: [2.6, -0.5] };     // the far side of the fire, facing the husks
   const FOE_SPOT = [[-2.8, -5.8], [0.0, -6.8], [2.8, -5.8]];
@@ -21,25 +21,30 @@ const Combat = (() => {
   const groups = new Map();                                        // every husk group that can be fought: { id, x, z, rigs, tier, aggro, onClear }
   let cur = null, aggroCd = 4, alleyDone = false;                    // the husks that hold the alley's gate: beaten once, gone for good
   const PARTY = {
-    you: { name: 'You', hp: 110, rate: 0.12, color: '#ffffff' },
-    ruen: { name: 'Ruen', hp: 90, rate: 0.13, color: '#c9a0ff' },
-    kyle: { name: 'Kyle', hp: 150, rate: 0.1, color: '#ffd27a' },
-    yuna: { name: 'Yuna', hp: 80, rate: 0.2, color: '#7ff7ff' },
+    you: { name: 'You', hp: Tuning.party.you.hp, rate: Tuning.party.you.rate, color: '#ffffff' },
+    ruen: { name: 'Ruen', hp: Tuning.party.ruen.hp, rate: Tuning.party.ruen.rate, color: '#c9a0ff' },
+    kyle: { name: 'Kyle', hp: Tuning.party.kyle.hp, rate: Tuning.party.kyle.rate, color: '#ffd27a' },
+    yuna: { name: 'Yuna', hp: Tuning.party.yuna.hp, rate: Tuning.party.yuna.rate, color: '#7ff7ff' },
   };
   const ORDER = ['you', 'ruen', 'kyle', 'yuna'];
-  const HUSK = { name: 'Husk', hp: 60, rate: 0.09, color: '#ff5a7a', xp: 14 };
-  const BOSS = { name: 'Loader Mech', hp: 440, rate: 0.07, color: '#ffd24a', xp: 220 };            // the Foundry's guardian: a sweep that hits everyone, crushes, and a shard volley once it is half broken
-  const ENFORCER = { name: 'Enforcer', hp: 90, rate: 0.1, color: '#9fd8ff', xp: 40, ai: 'enforcer' };       // raises a shield (half damage) until Stagger or Shockwave breaks it
-  const DRONE = { name: 'Sentry Drone', hp: 40, rate: 0.13, color: '#3ff0ff', xp: 22, ai: 'drone' };
-  const SERAPH = { name: 'Seraph Drone', hp: 70, rate: 0.1, color: '#ffe9a8', xp: 40, ai: 'seraph' };        // heals and shields the others: break it first
-  const CEO = { name: 'The CEO', hp: 950, rate: 0.085, color: '#fff0c0', xp: 600, ai: 'ceo' };
-  const BRUTE = { name: 'Husk Brute', hp: 110, rate: 0.065, color: '#ff8a4a', xp: 38 };       // big and slow: no light attacks, only the telegraphed Crush, which hits hard
+  const HUSK = { name: 'Husk', ...Tuning.foes.husk, color: '#ff5a7a' };
+  const BOSS = { name: 'Loader Mech', ...Tuning.foes.loader, color: '#ffd24a' };            // the Foundry's guardian: a sweep that hits everyone, crushes, and a shard volley once it is half broken
+  const ENFORCER = { name: 'Enforcer', ...Tuning.foes.enforcer, color: '#9fd8ff' };       // raises a shield (half damage) until Stagger or Shockwave breaks it
+  const DRONE = { name: 'Sentry Drone', ...Tuning.foes.drone, color: '#3ff0ff' };
+  const SERAPH = { name: 'Seraph Drone', ...Tuning.foes.seraph, color: '#ffe9a8' };        // heals and shields the others: break it first
+  const CEO = { name: 'The CEO', ...Tuning.foes.ceo, color: '#fff0c0' };
+  const BRUTE = { name: 'Husk Brute', ...Tuning.foes.brute, color: '#ff8a4a' };       // big and slow: no light attacks, only the telegraphed Crush, which hits hard
   const COMMANDS = {
     you: [{ label: 'Strike', run: u => strike(u, 16, 'brawlPunch') }, { label: 'Brace', run: u => brace(u) }],
     ruen: [{ label: 'Data Bolt', run: u => strike(u, 22, 'mgBolt') }, { label: 'Data Burst', run: u => startCast(u) }],
     kyle: [{ label: 'Strike', run: u => strike(u, 18, 'brawlSwipe') }, { label: 'Guard', run: u => guard(u) }],
     yuna: [{ label: 'Blast', run: u => { strike(u, 14, 'mgBolt2'); strike(u, 14, null); } }, { label: 'Stagger', run: u => stagger(u) }],
   };
+
+  // Difficulty (Settings): how hard the foes hit, how much they can take, and how much XP they give. Normal is what js/tuning.js and the balance simulator describe.
+  const DIFF = { easy: { name: 'Easy', dmg: 0.7, hp: 0.8, xp: 1.25 }, normal: { name: 'Normal', dmg: 1, hp: 1, xp: 1 }, hard: { name: 'Hard', dmg: 1.3, hp: 1.25, xp: 0.9 } };
+  let diff = 'normal'; try { diff = localStorage.getItem('nexus.diff') || 'normal'; } catch (e) {} if (!DIFF[diff]) diff = 'normal';
+  const setDifficulty = d => { if (!DIFF[d]) return; diff = d; try { localStorage.setItem('nexus.diff', d); } catch (e) {} };
 
   const ease = x => x * x * (3 - 2 * x);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -91,8 +96,8 @@ const Combat = (() => {
   function foesOf(g) {
     if (g.foes) return g.foes;
     g.foes = g.rigs.map((rig, i) => {
-      const BS = rig.name === 'loader', B = rig.name === 'brute' || BS, K = { loader: BOSS, brute: BRUTE, enforcer: ENFORCER, drone: DRONE, seraph: SERAPH, ceo: CEO }[rig.name] || HUSK, hp = Math.round(K.hp * (1 + 0.22 * g.tier));
-      const f = { id: g.id + ':' + i, name: K.name, ai: K.ai || (BS ? 'boss' : 'husk'), xp: Math.round(K.xp * (1 + 0.2 * g.tier)), brute: B, boss: BS, turn: 0, phase2: false, color: K.color, rig, hp, hpMax: hp, dmgMul: 1 + 0.14 * g.tier, rate: K.rate * (1 + 0.05 * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
+      const BS = rig.name === 'loader', B = rig.name === 'brute' || BS, K = { loader: BOSS, brute: BRUTE, enforcer: ENFORCER, drone: DRONE, seraph: SERAPH, ceo: CEO }[rig.name] || HUSK, hp = Math.round(K.hp * (1 + Tuning.tier.hp * g.tier) * Tuning.scale.foeHp);
+      const f = { id: g.id + ':' + i, name: K.name, cr: K.cr !== undefined ? K.cr : Math.round(Tuning.credits.perFoe * (1 + Tuning.credits.tierGrowth * g.tier)), ai: K.ai || (BS ? 'boss' : 'husk'), xp: Math.round(K.xp * (1 + Tuning.tier.xp * g.tier) * Tuning.scale.xp), brute: B, boss: BS, turn: 0, phase2: false, color: K.color, rig, hp, hpMax: hp, dmgMul: (1 + Tuning.tier.dmg * g.tier) * Tuning.scale.foeDmg * (BS ? Tuning.scale.bossDmg : rig.name === 'ceo' ? Tuning.scale.ceoDmg : 1), rate: K.rate * (1 + Tuning.tier.rate * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
       f.rate0 = f.rate; f.label = makeLabel(K.name, K.color, f); return f;
     });
     return g.foes;
@@ -183,6 +188,7 @@ const Combat = (() => {
   }
   // A husk's attack on a crew member. Kyle may intercept a fatal blow on Ruen or Yuna
   function hitParty(u, dmg, from) {
+    dmg = Math.max(1, Math.round(dmg * DIFF[diff].dmg));
     if (from && from.weak > 0) dmg = Math.round(dmg * 0.7);
     const kyle = party.find(p => p.id === 'kyle');
     if (dmg >= u.hp && u.id !== 'kyle' && kyle.alive && kyle.guard > 0 && kyle.atb >= 0.5) {
@@ -199,12 +205,13 @@ const Combat = (() => {
   // Foe takes a hit from a crew member's command
   function hitFoe(f, dmg) {
     if (!f.alive) return;
+    dmg = Math.max(1, Math.round(dmg / DIFF[diff].hp));
     if (f.guard > 0) dmg = Math.round(dmg * 0.5);
-    if (f.shielded) { dmg = Math.round(dmg * 0.15); if (Math.random() < 0.25) log(f.name + '\'s shield soaks the blow.'); }
+    if (f.shielded) { dmg = Math.round(dmg * Tuning.ceo.shieldSoak); if (Math.random() < 0.25) log(f.name + '\'s shield soaks the blow.'); }
     damage(f, dmg);
   }
   // A burst of Ruen's grounds the singularity's shield for a time
-  function breakShield(f) { if (f.shielded) { f.shielded = false; f.shieldT = 12; log('The shield is grounded!'); FX.nova(f.rig.root.position, 0xc9a0ff); } }
+  function breakShield(f) { if (f.shielded) { f.shielded = false; f.shieldT = Tuning.ceo.shieldDown; log('The shield is grounded!'); FX.nova(f.rig.root.position, 0xc9a0ff); } }
 
   // ---------------- Commands ----------------
   // While anyone is attacking, everybody else waits: no gauge fills, no husk acts, no cast ticks, no menu. A run-up and strike holds it
@@ -212,7 +219,7 @@ const Combat = (() => {
   let actT = 0;
   const busy = t => { actT = Math.max(actT, t); };
   const isBusy = () => actT > 0 || party.some(u => u.rush);
-  function endTurn(u) { u.atb = 0; u.ready = false; menuFor = null; }
+  function endTurn(u, delay = 0) { u.atb = -delay; u.ready = false; menuFor = null; }                 // a skill's delay leaves the gauge below empty, so the next turn is later
   // The melee fighters (Jin, Kyle) run up to their target, strike it face to face and run back; the others shoot from where they stand
   const MELEE = { you: true, kyle: true }, RUN = 12, REACH = 1.25, SWING = 1.8;          // run speed (m/s) and how much faster than normal the blow plays
   function strike(u, dmg, clip = 'brawlPunch', opts = {}) {          // clip null: the second blow of a combo, the first one's clip plays on
@@ -222,12 +229,12 @@ const Combat = (() => {
       const home = u.to.clone(), tp = t.rig.root.position;
       const dir = home.clone().sub(tp).setY(0).normalize();
       u.rush = { phase: 'out', t: 0, target: t, dmg, clip, home, stand: tp.clone().setY(0).addScaledVector(dir, REACH), struck: false, others };
-      endTurn(u); return;
+      endTurn(u, opts.delay); return;
     }
     if (clip) { Chars.play(u.rig, clip); Sound.sfx(clip === 'mgBolt' ? 'bolt' : 'blast'); } else Sound.sfx('blast', { delay: 0.14 });
     shot(u, t, u.color); hitFoe(t, dmg); log(u.name + ' hits ' + t.name + ' for ' + dmg + '.');
     if (clip) busy(Math.min(Chars.clipLength(clip), 1.1));
-    endTurn(u);
+    endTurn(u, opts.delay);
   }
   // Moves a rushing fighter one frame: out to the target, the blow (damage lands on the clip's hit frame), back to the spot
   function updateRush(u, dt) {
@@ -279,32 +286,32 @@ const Combat = (() => {
 
 
   // ---------------- Skills (learned at set levels, see growth.js) and link attacks (unlocked by bonds) ----------------
-  function arc(u) { strike(u, 22, 'brawlSwipe', { all: 14 }); }
-  function edge(u) { strike(u, 48, 'brawlSwipe'); }
+  function arc(u) { Sound.sfx('slash', { pitch: 300 }); strike(u, 22, 'brawlSwipe', { all: 14, delay: Tuning.delay.arc }); }
+  function edge(u) { Sound.sfx('slash', { pitch: -400 }); strike(u, 48, 'brawlSwipe', { delay: Tuning.delay.edge }); }
   function mend(u) {
-    Chars.play(u.rig, 'mgHeal'); Sound.sfx('shield'); busy(1.1);
-    for (const a of alive()) { const h = Math.round(a.hpMax * 0.28); a.hp = Math.min(a.hpMax, a.hp + h); popup(a, '+' + h, '#8dffb0'); FX.shield(a.rig.root.position, 0x6dff9a); }
-    log('Ruen mends the crew.'); endTurn(u);
+    Chars.play(u.rig, 'mgHeal'); Sound.sfx('heal'); busy(1.1);
+    for (const a of alive()) { const h = Math.round(a.hpMax * Tuning.mend); a.hp = Math.min(a.hpMax, a.hp + h); popup(a, '+' + h, '#8dffb0'); FX.shield(a.rig.root.position, 0x6dff9a); }
+    log('Ruen mends the crew.'); endTurn(u, Tuning.delay.mend);
   }
   function bulwark(u) {
     Chars.play(u.rig, 'block'); Sound.sfx('shield'); busy(1.0);
     for (const a of alive()) { a.brace = BRACE_TIME; a.rig.idleClip = 'blockIdle'; FX.shield(a.rig.root.position, 0xffd27a); }
-    log('Kyle\'s Bulwark covers the crew.'); endTurn(u);
+    log('Kyle\'s Bulwark covers the crew.'); endTurn(u, Tuning.delay.bulwark);
   }
   function shockwave(u) {
     Chars.play(u.rig, 'brawlSwipe'); Sound.sfx('nova'); shake(0.3); busy(1.3); FX.nova(u.rig.root.position, 0xffd27a);
     for (const f of foesAlive()) { f.guard = 0; hitFoe(f, pdmg(u, 22)); f.atb = Math.max(0, f.atb - 0.35); clearWind(f); }
-    log('Kyle\'s Shockwave rocks the foes.'); endTurn(u);
+    log('Kyle\'s Shockwave rocks the foes.'); endTurn(u, Tuning.delay.shock);
   }
   function weakPoint(u) {
     const t = selected(); if (!t) return;
     Chars.play(u.rig, 'mgBolt2'); Sound.sfx('blast'); shot(u, t, u.color); hitFoe(t, pdmg(u, 12)); busy(0.9);
-    t.weak = 14; t.guard = 0; t.atb = Math.max(0, t.atb - STAGGER * 0.6); clearWind(t); log(t.name + ' is hit in a weak spot and will hit softer.'); endTurn(u);
+    t.weak = Tuning.weakTime; t.guard = 0; t.atb = Math.max(0, t.atb - STAGGER * 0.6); clearWind(t); log(t.name + ' is hit in a weak spot and will hit softer.'); endTurn(u, Tuning.delay.weak);
   }
   function barrage(u) {
     Chars.play(u.rig, 'mgBolt2'); Sound.sfx('blast'); busy(1.6);
     for (let i = 0; i < 5; i++) { const fs = foesAlive(); if (!fs.length) break; const t = fs[Math.floor(Math.random() * fs.length)]; shot(u, t, u.color); hitFoe(t, pdmg(u, 10)); }
-    log('Yuna\'s Barrage!'); endTurn(u);
+    log('Yuna\'s Barrage!'); endTurn(u, Tuning.delay.barrage);
   }
   const SKILL_RUN = { arc, edge, mend, storm: u => startCast(u, 2), bulwark, shock: shockwave, weak: weakPoint, barrage };
   // A link spends half of the partner's gauge; at bond level 3 it hits 30% harder
@@ -312,28 +319,55 @@ const Combat = (() => {
   const lbonus = (a, b) => Growth.bondLevel(a, b) >= 3 ? 1.3 : 1;
   function crossfire(u) {
     const t = selected(), y = partyOf('yuna'); if (!t) return; const lb = lbonus('you', 'yuna');
-    Chars.play(u.rig, 'brawlPunch'); Chars.play(y.rig, 'mgBolt2'); Sound.sfx('crit'); shot(u, t, u.color); shot(y, t, y.color); shake(0.2); busy(1.3);
+    Chars.play(u.rig, 'brawlPunch'); Chars.play(y.rig, 'mgBolt2'); Sound.sfx('link'); shot(u, t, u.color); shot(y, t, y.color); shake(0.2); busy(1.3);
     hitFoe(t, Math.round((pdmg(u, 30) + pdmg(y, 24)) * lb)); t.atb = Math.max(0, t.atb - STAGGER); clearWind(t);
-    y.atb = Math.max(0, y.atb - 0.5); log('Jin and Yuna\'s Crossfire!'); endTurn(u);
+    y.atb = Math.max(0, y.atb - 0.5); log('Jin and Yuna\'s Crossfire!'); endTurn(u, Tuning.delay.link);
   }
   function aegis(u) {
     const k = partyOf('kyle'), lb = lbonus('ruen', 'kyle');
-    Chars.play(u.rig, 'mgNova'); Chars.play(k.rig, 'block'); Sound.sfx('nova'); shake(0.35); busy(1.4); FX.shield(k.rig.root.position);
+    Chars.play(u.rig, 'mgNova'); Chars.play(k.rig, 'block'); Sound.sfx('link'); shake(0.35); busy(1.4); FX.shield(k.rig.root.position);
     for (const f of foesAlive()) { FX.nova(f.rig.root.position); breakShield(f); hitFoe(f, Math.round(pdmg(u, 26) * lb)); }
-    k.guard = GUARD_TIME; k.rig.idleClip = 'blockIdle'; k.atb = Math.max(0, k.atb - 0.5); log('Ruen\'s Aegis Burst, under Kyle\'s shield!'); endTurn(u);
+    k.guard = GUARD_TIME; k.rig.idleClip = 'blockIdle'; k.atb = Math.max(0, k.atb - 0.5); log('Ruen\'s Aegis Burst, under Kyle\'s shield!'); endTurn(u, Tuning.delay.link);
   }
   function vow(u) {
     const t = selected(), j = partyOf('you'); if (!t) return; const lb = lbonus('kyle', 'you');
-    Chars.play(u.rig, 'brawlSwipe'); Chars.play(j.rig, 'brawlPunch'); Sound.sfx('crit'); shot(u, t, u.color); shot(j, t, j.color); shake(0.2); busy(1.3);
+    Chars.play(u.rig, 'brawlSwipe'); Chars.play(j.rig, 'brawlPunch'); Sound.sfx('link'); shot(u, t, u.color); shot(j, t, j.color); shake(0.2); busy(1.3);
     hitFoe(t, Math.round((pdmg(u, 24) + pdmg(j, 18)) * lb));
     for (const a of [u, j]) { a.brace = BRACE_TIME; a.rig.idleClip = 'blockIdle'; FX.shield(a.rig.root.position, 0xffffff); }
-    j.atb = Math.max(0, j.atb - 0.5); log('Kyle and Jin\'s Iron Vow!'); endTurn(u);
+    j.atb = Math.max(0, j.atb - 0.5); log('Kyle and Jin\'s Iron Vow!'); endTurn(u, Tuning.delay.link);
   }
   const LINK_RUN = { crossfire, aegis, vow };
+
+  // ---------------- Items (bought in shops): they take the user's turn ----------------
+  let itemMenu = false, itemMenuFor = null;
+  const hurtest = () => alive().filter(a => a.hp < a.hpMax).sort((a, b) => a.hp / a.hpMax - b.hp / b.hpMax)[0];
+  const fallen = () => party.find(a => !a.alive);
+  const slowest = u => alive().filter(a => a !== u && a.atb < 0.95 && !(a.id === 'ruen' && cast)).sort((a, b) => a.atb - b.atb)[0];
+  function itemOk(u, id) {
+    if (id === 'patch') return !!hurtest(); if (id === 'revive') return !!fallen();
+    if (id === 'stim') return !!slowest(u); if (id === 'flash') return foesAlive().length > 0; return false;
+  }
+  function useItem(u, id) {
+    if (!itemOk(u, id) || !Items.use(id)) return;
+    const D = Tuning.items[id];
+    Chars.play(u.rig, 'mgBless'); busy(0.9); Sound.sfx(id === 'revive' ? 'revive' : id === 'stim' ? 'stim' : id === 'flash' ? 'nova' : 'heal');
+    if (id === 'patch') { const a = hurtest(), h = Math.round(a.hpMax * D.heal); a.hp = Math.min(a.hpMax, a.hp + h); popup(a, '+' + h, '#8dffb0'); FX.shield(a.rig.root.position, 0x6dff9a); log(u.name + ' patches up ' + a.name + '.'); }
+    else if (id === 'revive') { const a = fallen(); a.alive = true; a.hp = Math.round(a.hpMax * D.heal); a.atb = 0; a.ready = false; a.rig.clip = null; a.rig.idleClip = a.rig.loco.battle; popup(a, '+' + a.hp, '#8dffb0'); FX.nova(a.rig.root.position, 0x6dff9a); log(u.name + ' brings ' + a.name + ' back!'); }
+    else if (id === 'stim') { const a = slowest(u); a.atb = 1; a.ready = !(a.id === 'ruen' && cast); FX.shield(a.rig.root.position, 0x3ff0ff); log(u.name + ' stims ' + a.name + '. They act next.'); }
+    else if (id === 'flash') { shake(0.2); for (const f of foesAlive()) { f.atb = Math.max(0, f.atb - D.push); f.guard = 0; clearWind(f); FX.nova(f.rig.root.position, 0xffffff); } log(u.name + ' throws a flash grenade!'); }
+    endTurn(u, 0.15);
+  }
+  // The Items menu replaces the command buttons: what is owned, greyed out when it would do nothing, and Back
+  function itemCommands(u) {
+    const list = Items.IDS.filter(id => Items.count(id) > 0).map(id => ({ label: Tuning.items[id].name + ' ×' + Items.count(id), off: !itemOk(u, id), run: w => { itemMenu = false; useItem(w, id); } }));
+    list.push({ label: 'Back', run: () => { itemMenu = false; } });
+    return list;
+  }
   // What a crew member's menu holds: the two basic commands, the skills their level has earned, and the links their bonds allow (greyed out unless the partner is up with half a gauge)
   function commandsFor(u) {
     const list = COMMANDS[u.id].map(c => ({ label: c.label, run: c.run }));
     for (const s of Growth.unlocked(u.id)) list.push({ label: s.name, run: SKILL_RUN[s.id], skill: true });
+    if (Items.any()) list.push({ label: 'Items', run: w => { itemMenu = true; itemMenuFor = w.id; } });
     for (const l of Growth.LINKS) if (l.lead === u.id && Growth.bondLevel(l.lead, l.with) >= 2) { const p = partyOf(l.with); list.push({ label: l.name, run: LINK_RUN[l.id], link: true, off: !(p && p.alive && p.atb >= 0.5) }); }
     return list;
   }
@@ -346,13 +380,13 @@ const Combat = (() => {
     const sweep = f.phase2 ? f.turn % 2 === 0 : f.turn % 3 === 0;
     if (sweep) {                                                      // the sweep (or, broken, the shard volley) hits everyone at once
       Chars.play(f.rig, 'brawlSwipe', false, 0.9); busy(1.5);
-      for (const u of all) { shot(f, u, f.color); hitParty(u, Math.round((f.phase2 ? rand(11, 15) : rand(12, 16)) * f.dmgMul), f); }
+      for (const u of all) { shot(f, u, f.color); hitParty(u, Math.round((f.phase2 ? rand(...Tuning.boss.volley) : rand(...Tuning.boss.sweep)) * f.dmgMul), f); }
       log(f.phase2 ? 'Scrap shards rain on the crew!' : 'The Loader Mech sweeps its arm across the crew!');
     } else {
       const t = pick(); if (!t) return;
       const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.7, 24), new THREE.MeshBasicMaterial({ color: 0xff3a5a, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }));
       ring.rotation.x = -Math.PI / 2; ring.position.set(t.rig.root.position.x, 0.04, t.rig.root.position.z); scene.add(ring);
-      f.wind = { t: WIND, target: t, ring, dmg: Math.round(rand(30, 38) * f.dmgMul) };
+      f.wind = { t: WIND, target: t, ring, dmg: Math.round(rand(...Tuning.boss.crush) * f.dmgMul) };
       log(f.name + ' winds up on ' + t.name + '!'); Sound.sfx('growl');
     }
   }
@@ -363,20 +397,20 @@ const Combat = (() => {
     f.wind = { t: WIND, target: t, ring, dmg }; log(f.name + ' winds up on ' + t.name + '!'); Sound.sfx('growl');
   }
   function enforcerAct(f) {
-    if (!(f.guard > 0) && Math.random() < 0.3) { f.guard = 8; Chars.play(f.rig, 'block'); FX.shield(f.rig.root.position, 0x9fd8ff); Sound.sfx('shield'); busy(0.6); log(f.name + ' raises its shield.'); return; }
+    if (!(f.guard > 0) && Math.random() < Tuning.enf.guardChance) { f.guard = Tuning.enf.guard; Chars.play(f.rig, 'block'); FX.shield(f.rig.root.position, 0x9fd8ff); Sound.sfx('shield'); busy(0.6); log(f.name + ' raises its shield.'); return; }
     const t = pick(); if (!t) return;
-    Chars.play(f.rig, 'shoot'); Sound.sfx('blast'); busy(0.9); shot(f, t, f.color); hitParty(t, Math.round(rand(12, 16) * f.dmgMul), f); log(f.name + ' fires at ' + t.name + '.');
+    Chars.play(f.rig, 'shoot'); Sound.sfx('blast'); busy(0.9); shot(f, t, f.color); hitParty(t, Math.round(rand(...Tuning.enf.shot) * f.dmgMul), f); log(f.name + ' fires at ' + t.name + '.');
   }
   function droneAct(f) {
     busy(1.0); Sound.sfx('blast');
-    for (let i = 0; i < 2; i++) { const t = pick(); if (!t) return; shot(f, t, f.color); hitParty(t, Math.round(rand(6, 9) * f.dmgMul), f); }
+    for (let i = 0; i < 2; i++) { const t = pick(); if (!t) return; shot(f, t, f.color); hitParty(t, Math.round(rand(...Tuning.drone.shot) * f.dmgMul), f); }
     log(f.name + ' fires a burst.');
   }
   function seraphAct(f) {
     const allies = foesAlive().filter(x => x !== f), hurt = allies.filter(x => x.hp < x.hpMax * 0.9).sort((a, b) => a.hp / a.hpMax - b.hp / b.hpMax)[0];
     busy(1.0); FX.nova(f.rig.root.position, 0xffe9a8); Sound.sfx('shield');
-    if (hurt) { const h = Math.round(hurt.hpMax * 0.3); hurt.hp = Math.min(hurt.hpMax, hurt.hp + h); popup(hurt, '+' + h, '#8dffb0'); FX.shield(hurt.rig.root.position, 0xffe9a8); log(f.name + ' mends ' + hurt.name + '.'); }
-    else if (allies.length) { const a = allies[Math.floor(Math.random() * allies.length)]; a.guard = 6; FX.shield(a.rig.root.position, 0xffe9a8); log(f.name + ' shields ' + a.name + '.'); }
+    if (hurt) { const h = Math.round(hurt.hpMax * Tuning.seraph.heal); hurt.hp = Math.min(hurt.hpMax, hurt.hp + h); popup(hurt, '+' + h, '#8dffb0'); FX.shield(hurt.rig.root.position, 0xffe9a8); log(f.name + ' mends ' + hurt.name + '.'); }
+    else if (allies.length) { const a = allies[Math.floor(Math.random() * allies.length)]; a.guard = Tuning.seraph.guard; FX.shield(a.rig.root.position, 0xffe9a8); log(f.name + ' shields ' + a.name + '.'); }
     else { const t = pick(); if (t) { shot(f, t, f.color); hitParty(t, Math.round(rand(8, 11) * f.dmgMul), f); } }
   }
   // The CEO, in three forms. Command: lances and sweeps. Rewrite: it locks a crew member's gauge (Yuna's Stagger breaks the locks). Singularity: shielded, and only
@@ -386,17 +420,17 @@ const Combat = (() => {
     const r = f.hp / f.hpMax, ph = r > 0.66 ? 1 : r > 0.33 ? 2 : 3;
     if (ph !== f.phase) {
       f.phase = ph;
-      if (ph === 2) { log('The CEO rewrites the rules!'); f.rate *= 1.15; shake(0.3); Sound.sfx('growl'); FX.nova(f.rig.root.position, 0xffe3a0); }
-      if (ph === 3) { Chars.morph(f.rig); f.shielded = true; f.shieldT = 0; f.rate *= 1.15; log('The singularity opens! Only a burst from Ruen can ground its shield.'); shake(0.45); Sound.sfx('nova'); FX.nova(f.rig.root.position, 0xffffff); }
+      if (ph === 2) { log('The CEO rewrites the rules!'); f.rate *= Tuning.ceo.rate2; shake(0.3); Sound.sfx('growl'); FX.nova(f.rig.root.position, 0xffe3a0); }
+      if (ph === 3) { Chars.morph(f.rig); f.shielded = true; f.shieldT = 0; f.rate *= Tuning.ceo.rate3; log('The singularity opens! Only a burst from Ruen can ground its shield.'); shake(0.45); Sound.sfx('nova'); FX.nova(f.rig.root.position, 0xffffff); }
     }
     const all = party.filter(u => u.alive); if (!all.length) return;
-    const sweep = () => { Chars.play(f.rig, 'brawlSwipe', false, 0.9); busy(1.4); for (const u of all) { shot(f, u, f.color); hitParty(u, Math.round((ph === 3 ? rand(14, 18) : rand(10, 14)) * f.dmgMul), f); } log(ph === 3 ? 'The singularity pulses through the crew!' : 'The CEO sweeps a wave of light across the crew!'); };
-    if (ph === 1) { if (f.turn % 3 === 0) sweep(); else { const t = pick(); if (t) { Chars.play(f.rig, 'brawlPunch'); busy(0.9); shot(f, t, f.color); hitParty(t, Math.round(rand(22, 28) * f.dmgMul), f); log('The CEO lances ' + t.name + ' with data.'); } } }
+    const sweep = () => { Chars.play(f.rig, 'brawlSwipe', false, 0.9); busy(1.4); for (const u of all) { shot(f, u, f.color); hitParty(u, Math.round((ph === 3 ? rand(...Tuning.ceo.pulse) : rand(...Tuning.ceo.sweep)) * f.dmgMul), f); } log(ph === 3 ? 'The singularity pulses through the crew!' : 'The CEO sweeps a wave of light across the crew!'); };
+    if (ph === 1) { if (f.turn % 3 === 0) sweep(); else { const t = pick(); if (t) { Chars.play(f.rig, 'brawlPunch'); busy(0.9); shot(f, t, f.color); hitParty(t, Math.round(rand(...Tuning.ceo.lance) * f.dmgMul), f); log('The CEO lances ' + t.name + ' with data.'); } } }
     else if (ph === 2) {
-      if (f.turn % 2 === 0) { const t = all.filter(u => !(u.locked > 0))[Math.floor(Math.random() * all.length)] || all[0]; if (t && !(t.locked > 0)) { t.locked = 9; t.ready = false; menuFor = null; FX.shield(t.rig.root.position, 0xff3fb4); log('The CEO locks ' + t.name + '\'s commands! Yuna\'s Stagger can break the lock.'); busy(0.8); return; } }
-      if (f.turn % 3 === 0) sweep(); else { const t = pick(); if (t) startWind(f, t, Math.round(rand(34, 40) * f.dmgMul)); }
+      if (f.turn % 2 === 0) { const t = all.filter(u => !(u.locked > 0))[Math.floor(Math.random() * all.length)] || all[0]; if (t && !(t.locked > 0)) { t.locked = Tuning.ceo.lock; t.ready = false; menuFor = null; FX.shield(t.rig.root.position, 0xff3fb4); log('The CEO locks ' + t.name + '\'s commands! Yuna\'s Stagger can break the lock.'); busy(0.8); return; } }
+      if (f.turn % 3 === 0) sweep(); else { const t = pick(); if (t) startWind(f, t, Math.round(rand(...Tuning.ceo.crush2) * f.dmgMul)); }
     } else {
-      if (f.turn % 2 === 0) sweep(); else { const t = pick(); if (t) startWind(f, t, Math.round(rand(36, 44) * f.dmgMul)); }
+      if (f.turn % 2 === 0) sweep(); else { const t = pick(); if (t) startWind(f, t, Math.round(rand(...Tuning.ceo.crush3) * f.dmgMul)); }
     }
   }
   function foeAct(f) {
@@ -410,12 +444,12 @@ const Combat = (() => {
       const t = pick(); if (!t) return;
       const ring = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.7, 24), new THREE.MeshBasicMaterial({ color: 0xff3a5a, transparent: true, opacity: 0.8, depthWrite: false, toneMapped: false }));
       ring.rotation.x = -Math.PI / 2; ring.position.set(t.rig.root.position.x, 0.04, t.rig.root.position.z); scene.add(ring);
-      f.wind = { t: WIND, target: t, ring, dmg: Math.round((f.brute ? rand(32, 40) : rand(30, 36)) * f.dmgMul) };
+      f.wind = { t: WIND, target: t, ring, dmg: Math.round((f.brute ? rand(...Tuning.brute.crush) : rand(...Tuning.husk.crush)) * f.dmgMul) };
       log(f.name + ' winds up on ' + t.name + '!'); Sound.sfx('growl');
     } else {
       const t = pick(); if (!t) return;
       Chars.play(f.rig, 'brawlPunch'); busy(0.9);
-      shot(f, t, f.color || HUSK.color); hitParty(t, Math.round(rand(11, 15) * f.dmgMul), f);
+      shot(f, t, f.color || HUSK.color); hitParty(t, Math.round(rand(...Tuning.husk.lash) * f.dmgMul), f);
       log(f.name + ' lashes ' + t.name + '.');
     }
   }
@@ -467,9 +501,9 @@ const Combat = (() => {
     for (const u of party) u.ready = false;
     const lvl = $('lvl'); lvl.hidden = true;
     if (text === 'Cleared') {                                                 // the spoils: XP for everyone, level-ups, and the pairs grow closer
-      const xp = foes.reduce((n, f) => n + (f.xp || 0), 0), ups = Growth.award(xp); Growth.fought(); refreshAll(true);
-      lvl.innerHTML = '<div class="xp">+' + xp + ' XP</div>' + ups.map(g => '<div><b style="color:' + PARTY[g.id].color + '">' + PARTY[g.id].name + '</b> Lv ' + g.from + ' \u2192 ' + g.to + (g.skills.length ? ' \u00b7 New: ' + g.skills.join(', ') : '') + '</div>').join('');
-      lvl.hidden = false; if (ups.length) { resultWait = 5; setTimeout(() => Sound.sfx('quest'), 900); }
+      const xp = Math.round(foes.reduce((n, f) => n + (f.xp || 0), 0) * DIFF[diff].xp), ups = Growth.award(xp), cr = foes.reduce((n, f) => n + (f.cr || 0), 0); Growth.fought(); refreshAll(true); Items.add(cr); Quests.defeated(foes.length, Player.state().z);
+      lvl.innerHTML = '<div class="xp">+' + xp + ' XP' + (cr ? ' \u00b7 +' + cr + ' credits' : '') + '</div>' + ups.map(g => '<div><b style="color:' + PARTY[g.id].color + '">' + PARTY[g.id].name + '</b> Lv ' + g.from + ' \u2192 ' + g.to + (g.skills.length ? ' \u00b7 New: ' + g.skills.join(', ') : '') + '</div>').join('');
+      lvl.hidden = false; if (ups.length) { resultWait = 5; setTimeout(() => Sound.sfx('levelup'), 900); }
     }
     ui.banner.textContent = text; ui.banner.hidden = false; Sound.sfx(text === 'Cleared' ? 'win' : 'lose');
   }
@@ -493,14 +527,14 @@ const Combat = (() => {
       u.rig.root.position.set(u.home.x, 0, u.home.z);
     }
     const won = foes.every(f => !f.alive), lost = party.every(u => !u.alive);
-    for (const u of party) u.hp = u.hp <= 0 ? (won ? Math.round(u.hpMax * 0.3) : 0) : Math.min(u.hpMax, u.hp + (won ? Math.round(u.hpMax * 0.3) : 0));       // a win patches everyone up a little and gets the fallen on their feet
+    for (const u of party) u.hp = u.hp <= 0 ? (won ? Math.round(u.hpMax * Tuning.patch) : 0) : Math.min(u.hpMax, u.hp + (won ? Math.round(u.hpMax * Tuning.patch) : 0));       // a win patches everyone up a little and gets the fallen on their feet
     for (const f of foes) {
       f.rig.combat = false; f.rig.clip = null;
       f.rig.root.rotation.set(0, 0, 0); f.rig.root.position.set(f.home.x, 0, f.home.z);
       if (!(won && !cur.persistent)) { f.alive = true; f.hp = f.hpMax; }
     }
     if (won && cur) {
-      const loot = 1 + Math.floor(cur.tier / 2) + (cur.id === 'alley' ? 0 : 1);
+      const loot = cur.id === 'alley' ? 1 : Math.round(Tuning.loot.base + Math.floor(cur.tier * Tuning.loot.perTier));
       if (cur.persistent) Camp.addParts(1);
       else {                                                                  // a patrol is gone for good: remove it, drop its loot
         Camp.addParts(loot); cur.cleared = true;
@@ -691,7 +725,7 @@ const Combat = (() => {
     }
     for (const u of party) {
       u.card.hp.style.width = (clamp(u.hp / u.hpMax, 0, 1) * 100) + '%';
-      u.card.atb.style.width = (u.atb * 100) + '%';
+      u.card.atb.style.width = (Math.max(0, u.atb) * 100) + '%';
       u.card.atb.parentNode.classList.toggle('full', u.ready); u.card.atb.parentNode.classList.toggle('locked', u.locked > 0);
       if (u.card.cast) u.card.cast.style.width = (cast ? cast.t * 100 : 0) + '%';
     }
@@ -701,7 +735,8 @@ const Combat = (() => {
     }
     // The command menu: the first ready crew member (in order), who is not casting
     const who = isBusy() ? null : party.find(u => u.alive && u.ready && !(u.id === 'ruen' && cast));
-    const cmds = who ? commandsFor(who) : [], key = who ? who.id + '|' + cmds.map(c => c.label + (c.off ? '-' : '')).join(',') : null;
+    if (itemMenu && (!who || who.id !== itemMenuFor)) itemMenu = false;
+    const cmds = who ? (itemMenu ? itemCommands(who) : commandsFor(who)) : [], key = who ? who.id + '|' + cmds.map(c => c.label + (c.off ? '-' : '')).join(',') : null;
     if (key !== menuFor) {
       menuFor = key;
       ui.actions.innerHTML = '';
@@ -715,7 +750,7 @@ const Combat = (() => {
     ui.actions.hidden = !who || phase !== 'battle';
   }
 
-  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone, hp: party.map(u => [u.id, Math.round(u.hp)]) }), debugRun: (id, label) => { const u = partyOf(id), c = u && commandsFor(u).find(q => q.label === label); if (!c) return 'missing'; if (c.off) return 'off'; u.atb = 1; u.ready = true; c.run(u); return 'ok'; }, debugFoeHp: f => { for (const x of foes) x.hp = Math.round(x.hpMax * f); }, debugFoeAct: () => { for (const f of foes) if (f.alive && !f.wind) foeAct(f); }, debugReady: () => { for (const u of party) if (u.alive) u.atb = 1; }, restAll, refreshAll, partyInfo: () => party.map(u => ({ id: u.id, name: u.name, hp: u.hp, hpMax: u.hpMax })), setState(d) {
+  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone, hp: party.map(u => [u.id, Math.round(u.hp)]) }), debugRun: (id, label) => { const u = partyOf(id), c = u && commandsFor(u).find(q => q.label === label); if (!c) return 'missing'; if (c.off) return 'off'; u.atb = 1; u.ready = true; c.run(u); return 'ok'; }, debugFoeHp: f => { for (const x of foes) x.hp = Math.round(x.hpMax * f); }, debugFoeAct: () => { for (const f of foes) if (f.alive && !f.wind) foeAct(f); }, debugItem: id => { const u = party[0]; const ok = itemOk(u, id); useItem(u, id); return ok; }, debugReady: () => { for (const u of party) if (u.alive) u.atb = 1; }, restAll, refreshAll, setDifficulty, difficulty: () => diff, DIFF, partyInfo: () => party.map(u => ({ id: u.id, name: u.name, hp: u.hp, hpMax: u.hpMax })), setState(d) {
     for (const [id, hp] of d.hp || []) { const u = party.find(q => q.id === id); if (u) { u.hp = hp; u.alive = hp > 0; } }
-     if (d.alley && !alleyDone) { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); } }, debugClearAlley: () => { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); }, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
+     if (d.alley && !alleyDone) { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); } }, debugClearAlley: () => { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); }, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugRig: id => (party.find(u => u.id === id) || {}).rig, debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
 })();
