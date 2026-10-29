@@ -235,9 +235,10 @@ body.cutscene #hud, body.cutscene #labels { display: none; }
 .lbl.guarded .lbar { box-shadow: 0 0 0 2px rgba(159, 216, 255, 0.9); }
 .bar.locked { outline: 1px solid #ff3fb4; opacity: 0.6; }
 
-.stick { position: fixed; left: 26px; bottom: 74px; z-index: 5; width: 120px; height: 120px; border-radius: 50%; background: rgba(8, 10, 18, 0.35); border: 2px solid rgba(255, 255, 255, 0.22); touch-action: none; display: none; }
+.stick { position: fixed; left: 26px; bottom: 74px; z-index: 5; pointer-events: auto; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; width: 120px; height: 120px; border-radius: 50%; background: rgba(8, 10, 18, 0.35); border: 2px solid rgba(255, 255, 255, 0.22); touch-action: none; display: none; }
 .stick i { position: absolute; left: 50%; top: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%; background: rgba(255, 255, 255, 0.28); border: 2px solid rgba(255, 255, 255, 0.5); pointer-events: none; }
 body.touch .stick { display: block; }
 body.touch.in-battle .stick, body.touch.cutscene .stick, body.touch.titled .stick, body.touch.mcheck .stick { display: none; }
 body.touch .prompt { display: block; }
 body:not(.touch) .prompt { display: none; }
+body.touch .hints { display: none; }
