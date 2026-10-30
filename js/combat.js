@@ -639,7 +639,7 @@ const Combat = (() => {
       if (ptr.size === 2) {
         const n = pair(); if (two) { view.zoom = clamp(view.zoom * two.d / Math.max(n.d, 1), 0.4, 2.2); pan(n.x - two.x, n.y - two.y); } two = n;
       } else if (p.btn === 2 || p.btn === 1 || p.shift) pan(dx, dy);
-      else { view.yaw -= dx * 0.006; view.pitch = clamp(view.pitch + dy * 0.004, -0.8, 0.9); }
+      else { view.yaw -= dx * 0.006; view.pitch = clamp(view.pitch - dy * 0.004, -0.8, 0.9); }   // drag down lowers the camera, as in exploring }
     });
     const lift = e => {
       const p = ptr.get(e.pointerId); ptr.delete(e.pointerId); two = ptr.size === 2 ? pair() : null;
