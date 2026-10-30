@@ -709,7 +709,7 @@ const Chars = (() => {
       if (c.orbAim > 0.002) {                                                     // the orb drifts out toward the alley's far end, like a compass needle
         gv.set(0, 0.25, -2.0).multiplyScalar(c.orbAim); c.root.localToWorld(gv.set(orbAt.x, orbAt.y + 0.3, orbAt.z)); gv.add(tmpAim.set(0, 0.2 * c.orbAim, -2.2 * c.orbAim)); c.root.worldToLocal(gv);
         c.orbit.position.set(gv.x, gv.y + Math.sin(t * 2.2) * 0.025, gv.z);
-      } else c.orbit.position.set(orbAt.x, orbAt.y + 0.3 + Math.sin(t * 2.2) * 0.025, orbAt.z);
+      } else c.orbit.position.set(orbAt.x, orbAt.y + 0.12 + Math.sin(t * 2.2) * 0.02, orbAt.z);   // just above the palm, not up by the head
       c.orb.rotation.y = t * 0.8;
       for (const sp of c.specks) {
         const u = sp.userData, a = u.a + t * u.v;
