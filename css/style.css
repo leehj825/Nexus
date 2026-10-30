@@ -79,6 +79,7 @@ body.in-battle .hints, body.in-battle .prompt { display: none; }
 .actions button:active, .actions button.armed { border-color: var(--gold); }
 .actions button.armed { transform: scale(0.96); }
 .actions button.off { opacity: 0.4; }
+.actions.waiting button:not(.off) { opacity: 0.55; }
 .actions .tip { flex: 0 0 100%; min-height: 2.6em; margin-bottom: 2px; padding: 7px 10px; background: rgba(8, 8, 14, 0.92); border-left: 2px solid var(--gold); border-radius: 4px; font-size: 12px; line-height: 1.4; color: var(--ink); }
 .actions .tip b { color: var(--gold); font-weight: 600; }
 .party { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; pointer-events: none; }
