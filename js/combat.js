@@ -116,7 +116,7 @@ const Combat = (() => {
   // Picks the stage for a fight with group g: the way the foes lie from the crew, turned in steps of 45 degrees until the crew's spots, the
   // foes' spots and the camera's ground point are all clear of buildings and props
   function placeStage(g) {
-    if (g.id === 'alley') { stage.ox = 0; stage.oz = 0; stage.th = 0; }
+    if (g.id === 'alley') { stage.ox = 0; stage.oz = -6.5; stage.th = 0; }                // the husks hold the alley where they stand: the crew comes up to them
     else {
       const p = Player.state(), n = g.rigs.length, c = g.rigs.reduce((a, r) => ({ x: a.x + r.root.position.x / n, z: a.z + r.root.position.z / n }), { x: 0, z: 0 });
       const th0 = Math.atan2(c.x - p.x > 0 ? -(c.x - p.x) : -(c.x - p.x), -(c.z - p.z)); let best = null;
@@ -528,7 +528,7 @@ const Combat = (() => {
       f.hp = f.hpMax; f.alive = true; f.atb = rand(0, 0.2); f.rig.combat = true; f.wind = null;
       f.rate = f.rate0 || f.rate; f.phase2 = false; f.guard = 0; f.weak = 0; f.turn = 0; f.phase = 1; f.shielded = false; f.shieldT = 0; if (f.ai === 'ceo') Chars.morph(f.rig, false);
       f.rig.clip = null; f.rig.idleClip = f.rig.loco.battle;
-      f.from = f.rig.root.position.clone(); const sp = W(spots[i][0], spots[i][1]); f.to = new THREE.Vector3(sp.x, 0, sp.z);
+      f.from = f.rig.root.position.clone(); const sp = W(spots[i][0], spots[i][1]); f.to = g.id === 'alley' ? f.from.clone() : new THREE.Vector3(sp.x, 0, sp.z);   // the alley's husks fight where they stand
       f.rig.root.rotation.set(0, stage.th, 0);
     });
     cast = null; pending = []; target = foes[Math.floor(foes.length / 2)]; menuFor = null;
@@ -557,7 +557,8 @@ const Combat = (() => {
     phase = 'leave'; phaseT = 0; ui.banner.hidden = true; $('lvl').hidden = true;
     for (const u of [...party, ...foes]) { clearWind(u); u.rush = null; u.from = u.rig.root.position.clone(); }
     for (const u of party) u.to = new THREE.Vector3(u.home.x, 0, u.home.z);
-    for (const f of foes) f.to = new THREE.Vector3(f.home.x, 0, f.home.z);
+    const gone = cur && !cur.persistent && foes.every(f => !f.alive);                    // a cleared patrol vanishes where it fell: no walking back first
+    for (const f of foes) f.to = gone ? f.from.clone() : new THREE.Vector3(f.home.x, 0, f.home.z);
   }
 
   function finishLeave() {
@@ -572,8 +573,7 @@ const Combat = (() => {
     for (const u of party) u.hp = u.hp <= 0 ? (won ? Math.round(u.hpMax * Tuning.patch) : 0) : Math.min(u.hpMax, u.hp + (won ? Math.round(u.hpMax * Tuning.patch) : 0));       // a win patches everyone up a little and gets the fallen on their feet
     for (const f of foes) {
       f.rig.combat = false; f.rig.clip = null;
-      f.rig.root.rotation.set(0, 0, 0); f.rig.root.position.set(f.home.x, 0, f.home.z);
-      if (!(won && !cur.persistent)) { f.alive = true; f.hp = f.hpMax; }
+      if (!(won && !cur.persistent)) { f.rig.root.rotation.set(0, 0, 0); f.rig.root.position.set(f.home.x, 0, f.home.z); f.alive = true; f.hp = f.hpMax; }
     }
     if (won && cur) {
       const loot = cur.id === 'alley' ? 1 : Math.round(Tuning.loot.base + Math.floor(cur.tier * Tuning.loot.perTier));
@@ -771,7 +771,7 @@ const Combat = (() => {
   }
   // The crew member whose command menu is open: the one picked by a tap while ready, else the first ready one (not while Ruen casts)
   const readyCrew = () => party.filter(u => u.alive && u.ready && !(u.id === 'ruen' && cast));
-  const menuOwner = () => (isBusy() ? null : readyCrew().find(u => u.id === menuWho) || readyCrew()[0] || null);
+  const menuOwner = () => readyCrew().find(u => u.id === menuWho) || readyCrew()[0] || null;     // stays up while an attack plays: the commands wait, the descriptions do not
   function updateUI(camera) {
     const show = phase !== 'explore', who = show ? menuOwner() : null;
     document.body.classList.toggle('in-battle', show);
@@ -804,6 +804,7 @@ const Combat = (() => {
     const cmds = who ? (itemMenu ? itemCommands(who) : commandsFor(who)) : [], key = who ? who.id + '|' + cmds.map(c => c.label + (c.off ? '-' : '')).join(',') : null;
     if (key !== menuFor) { menuFor = key; buildMenu(who, cmds); }
     ui.actions.hidden = !who || phase !== 'battle';
+    ui.actions.classList.toggle('waiting', isBusy());
     if (who && !ui.actions.hidden) placeMenu(who, camera);
   }
 
@@ -820,7 +821,7 @@ const Combat = (() => {
       const b = document.createElement('button');
       b.type = 'button'; b.textContent = c.label; b._cmd = c;
       b.classList.toggle('skill', !!c.skill); b.classList.toggle('link', !!c.link); b.classList.toggle('off', !!c.off);
-      b._go = () => { if (who.ready && !c.off) c.run(who); menuFor = null; showTip(null); };
+      b._go = () => { if (who.ready && !c.off && !isBusy()) c.run(who); menuFor = null; showTip(null); };
       b.addEventListener('pointerenter', () => showTip(c));
       b.addEventListener('pointerdown', () => { showTip(c); press = c.off ? null : b; });
       b.addEventListener('click', e => { if (e.detail === 0) b._go(); });
