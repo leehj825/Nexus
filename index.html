@@ -46,13 +46,29 @@
   <div id="battle" class="battle" hidden>
     <div class="vhint">Drag to rotate &middot; wheel or pinch to zoom &middot; two fingers or right-drag to pan &middot; double-tap to reset</div>
     <div id="log" class="log"></div>
+    <details class="legend">
+      <summary>How battle works</summary>
+      <dl>
+        <dt>Ready</dt><dd>A crew member with a full gauge. Tap a glowing name to open its menu; the menu floats above that crew member.</dd>
+        <dt>Commands</dt><dd>Hover or press a command to read it. Let go on it to use it, or slide off to cancel.</dd>
+        <dt>Target</dt><dd>Tap a foe's name to pick it. Strikes and Stagger go to the picked foe.</dd>
+        <dt>Stagger (Yuna)</dt><dd>Pushes the foe's gauge back, breaks its Crush and shield, and frees a locked crew member. The yellow bar under a foe is its gauge.</dd>
+        <dt>Weak Point (Yuna)</dt><dd>The foe hits about 30% softer for a while (WEAK and the seconds left).</dd>
+        <dt>Guard (Kyle)</dt><dd>A blow that would KO Ruen or Yuna lands on Kyle instead, if he is guarded and his gauge is at least half full.</dd>
+        <dt>Brace</dt><dd>Halves the damage taken for a few seconds (BRACE).</dd>
+        <dt>Crush (red !)</dt><dd>A husk winds up on a crew member. The timer counts down; Stagger or a Flash Grenade breaks it.</dd>
+        <dt>Shield (blue)</dt><dd>A foe takes half damage until it is broken. Stagger and Shockwave break most shields. The CEO's singularity shield is grounded only by Ruen's Data Burst.</dd>
+        <dt>Lock</dt><dd>The CEO freezes a crew member's gauge. Stagger frees them.</dd>
+      </dl>
+    </details>
     <div id="banner" class="banner" hidden></div>
     <div id="lvl" class="lvl" hidden></div>
-    <div id="actions" class="actions" hidden></div>
     <div id="party" class="party"></div>
   </div>
 </div>
-<div id="labels" class="labels"></div>
+<div id="labels" class="labels">
+  <div id="actions" class="actions" hidden></div>
+</div>
 
 <div id="camp" class="camp" hidden>
   <div class="camp-card" role="dialog" aria-labelledby="campTitle">

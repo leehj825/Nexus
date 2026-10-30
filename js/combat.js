@@ -35,10 +35,10 @@ const Combat = (() => {
   const CEO = { name: 'The CEO', ...Tuning.foes.ceo, color: '#fff0c0' };
   const BRUTE = { name: 'Husk Brute', ...Tuning.foes.brute, color: '#ff8a4a' };       // big and slow: no light attacks, only the telegraphed Crush, which hits hard
   const COMMANDS = {
-    you: [{ label: 'Strike', run: u => strike(u, 16, 'brawlPunch') }, { label: 'Brace', run: u => brace(u) }],
-    ruen: [{ label: 'Data Bolt', run: u => strike(u, 22, 'mgBolt') }, { label: 'Data Burst', run: u => startCast(u) }],
-    kyle: [{ label: 'Strike', run: u => strike(u, 18, 'brawlSwipe') }, { label: 'Guard', run: u => guard(u) }],
-    yuna: [{ label: 'Blast', run: u => { strike(u, 14, 'mgBolt2'); strike(u, 14, null); } }, { label: 'Stagger', run: u => stagger(u) }],
+    you: [{ label: 'Strike', text: 'A quick punch for about 16 damage.', run: u => strike(u, 16, 'brawlPunch') }, { label: 'Brace', text: `Halves the damage you take for ${BRACE_TIME} seconds.`, run: u => brace(u) }],
+    ruen: [{ label: 'Data Bolt', text: 'A bolt of data for about 22 damage.', run: u => strike(u, 22, 'mgBolt') }, { label: 'Data Burst', text: 'A slow cast that hits every foe hard. A hit on Ruen breaks it.', run: u => startCast(u) }],
+    kyle: [{ label: 'Strike', text: 'A heavy swing for about 18 damage.', run: u => strike(u, 18, 'brawlSwipe') }, { label: 'Guard', text: `Guards for ${GUARD_TIME} seconds. A blow that would KO Ruen or Yuna lands on Kyle instead, if his gauge is at least half full.`, run: u => guard(u) }],
+    yuna: [{ label: 'Blast', text: 'Two quick blasts for about 14 damage each.', run: u => { strike(u, 14, 'mgBolt2'); strike(u, 14, null); } }, { label: 'Stagger', text: 'Pushes the foe\'s gauge back, breaks its Crush and shield, and frees locked crew.', run: u => stagger(u) }],
   };
 
   // Difficulty (Settings): how hard the foes hit, how much they can take, and how much XP they give. Normal is what js/tuning.js and the balance simulator describe.
@@ -53,6 +53,7 @@ const Combat = (() => {
 
   let scene = null, phase = 'explore', phaseT = 0, clock = 0;
   let party = [], foes = [], altFoes = [], target = null, cast = null, shots = [], pops = [], menuFor = null;
+  let menuWho = null, press = null;                                         // the crew member whose menu is open (null: the first ready one), and the command button held down
   let explore = null;                                              // the exploration camera pose, read from the player each frame
   let ui = null;
   const v = new THREE.Vector3();
@@ -69,11 +70,12 @@ const Combat = (() => {
   // ---------------- Setup ----------------
   function init(s, camera) {
     scene = s;
-    ui = { engage: $('engage'), battle: $('battle'), banner: $('banner'), log: $('log'), actions: $('actions') };
+    ui = { engage: $('engage'), battle: $('battle'), banner: $('banner'), log: $('log'), actions: $('actions'), tip: null };
     for (const id of ORDER) {
       const rig = id === 'you' ? Player.rig() : Camp.crew.find(c => c.name === id).rig;
       const u = { id, name: PARTY[id].name, color: PARTY[id].color, rig, hp: PARTY[id].hp, hpMax: PARTY[id].hp, rate: PARTY[id].rate, atb: 0, ready: false, alive: true, guard: 0, brace: 0, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
       u.label = makeLabel(u.name, u.color, null);
+      u.label.el.addEventListener('pointerdown', e => { e.stopPropagation(); if (u.alive && u.ready) { menuWho = u.id; menuFor = null; } });
       party.push(u); refreshStats(u, false); u.hp = u.hpMax;
     }
     const alleyRigs = [];
@@ -85,6 +87,9 @@ const Combat = (() => {
     buildUI();
     bindView(document.getElementById('game'), camera);
     $('engage').addEventListener('click', start);
+    window.addEventListener('pointermove', hoverMenu);
+    window.addEventListener('pointerup', releaseMenu);
+    window.addEventListener('pointercancel', () => { press = null; });
     window.addEventListener('keydown', e => { if (e.code === 'KeyE') start(); });
     for (const u of party) setHome(u);
   }
@@ -135,10 +140,10 @@ const Combat = (() => {
     const el = document.createElement('div');
     el.className = 'lbl' + (foe ? ' foe' : '');
     el.hidden = true;
-    el.innerHTML = `<b style="color:${color}">${name}</b><div class="lbar"><i></i></div><span class="warn">!</span>`;
+    el.innerHTML = `<div class="tags"></div><b style="color:${color}">${name}</b><div class="lbar"><i></i></div>${foe ? '<div class="lbar atb"><i></i></div>' : ''}<span class="warn">!</span>`;
     $('labels').appendChild(el);
     if (foe) el.addEventListener('pointerdown', e => { e.stopPropagation(); if (foe.alive) target = foe; });
-    return { el, bar: el.querySelector('.lbar i'), warn: el.querySelector('.warn') };
+    return { el, bar: el.querySelector('.lbar i'), atb: foe ? el.querySelector('.lbar.atb i') : null, tags: el.querySelector('.tags'), tagKey: '', warn: el.querySelector('.warn') };
   }
 
   function buildUI() {
@@ -192,7 +197,7 @@ const Combat = (() => {
     if (from && from.weak > 0) dmg = Math.round(dmg * 0.7);
     const kyle = party.find(p => p.id === 'kyle');
     if (dmg >= u.hp && u.id !== 'kyle' && kyle.alive && kyle.guard > 0 && kyle.atb >= 0.5) {
-      kyle.atb = 0; kyle.guard = 0;
+      kyle.atb = 0; kyle.guard = 0; popup(kyle, 'INTERCEPT', '#ffd27a');
       log('Kyle intercepts the blow meant for ' + u.name + '!'); FX.shield(kyle.rig.root.position); Sound.sfx('shield');
       shot(u, kyle, '#ffd27a');
       damage(kyle, Math.round(dmg * 0.6));
@@ -280,20 +285,20 @@ const Combat = (() => {
   }
   function guard(u) {
     u.guard = GUARD_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block'); FX.shield(u.rig.root.position); Sound.sfx('shield');
-    log('Kyle raises his guard.'); endTurn(u);
+    popup(u, 'GUARD', '#9fd8ff'); log('Kyle raises his guard.'); endTurn(u);
   }
   function brace(u) {
     u.brace = BRACE_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block'); FX.shield(u.rig.root.position, 0xffffff); Sound.sfx('shield');
-    log('You brace.'); endTurn(u);
+    popup(u, 'BRACE', '#ffffff'); log('You brace.'); endTurn(u);
   }
   function stagger(u) {
     const t = selected(); if (!t) return;
     Chars.play(u.rig, 'brawlSwipe', false, SWING); const at = hitT('brawlSwipe', SWING); busy(at + 0.5);
     later(at, () => {
       const f = liveTarget(t); if (!f) return;
-      f.atb = Math.max(0, f.atb - STAGGER); f.guard = 0;
-      if (party.some(a => a.locked > 0)) { for (const a of party) a.locked = 0; log('Yuna breaks the lock on the crew!'); }
-      if (f.wind) { clearWind(f); log('Stagger breaks the wind-up.'); } else log('Stagger pushes ' + f.name + ' back.');
+      f.atb = Math.max(0, f.atb - STAGGER); f.guard = 0; popup(f, 'STAGGER', '#ffd24a');
+      if (party.some(a => a.locked > 0)) { for (const a of party) if (a.locked > 0) { a.locked = 0; popup(a, 'FREE', '#ff3fb4'); } log('Yuna breaks the lock on the crew!'); }
+      if (f.wind) { clearWind(f); popup(f, 'CRUSH BROKEN', '#ffd24a'); log('Stagger breaks the wind-up.'); } else log('Stagger pushes ' + f.name + ' back.');
       shot(u, f, u.color);
     });
     endTurn(u);
@@ -330,7 +335,7 @@ const Combat = (() => {
     later(hitT('mgBolt2', FAST), () => {
       const f = liveTarget(t); if (!f) return;
       Sound.sfx('blast'); shot(u, f, u.color); hitFoe(f, pdmg(u, 12));
-      f.weak = Tuning.weakTime; f.guard = 0; f.atb = Math.max(0, f.atb - STAGGER * 0.6); clearWind(f); log(f.name + ' is hit in a weak spot and will hit softer.');
+      f.weak = Tuning.weakTime; f.guard = 0; f.atb = Math.max(0, f.atb - STAGGER * 0.6); clearWind(f); popup(f, 'WEAK', '#c9a0ff'); log(f.name + ' is hit in a weak spot and will hit softer.');
     });
     endTurn(u, Tuning.delay.weak);
   }
@@ -391,16 +396,19 @@ const Combat = (() => {
   }
   // The Items menu replaces the command buttons: what is owned, greyed out when it would do nothing, and Back
   function itemCommands(u) {
-    const list = Items.IDS.filter(id => Items.count(id) > 0).map(id => ({ label: Tuning.items[id].name + ' ×' + Items.count(id), off: !itemOk(u, id), run: w => { itemMenu = false; useItem(w, id); } }));
-    list.push({ label: 'Back', run: () => { itemMenu = false; } });
+    const list = Items.IDS.filter(id => Items.count(id) > 0).map(id => ({ label: Tuning.items[id].name + ' ×' + Items.count(id), text: Tuning.items[id].text, off: !itemOk(u, id), run: w => { itemMenu = false; useItem(w, id); } }));
+    list.push({ label: 'Back', text: 'Return to the command list.', run: () => { itemMenu = false; } });
     return list;
   }
   // What a crew member's menu holds: the two basic commands, the skills their level has earned, and the links their bonds allow (greyed out unless the partner is up with half a gauge)
   function commandsFor(u) {
-    const list = COMMANDS[u.id].map(c => ({ label: c.label, run: c.run }));
-    for (const s of Growth.unlocked(u.id)) list.push({ label: s.name, run: SKILL_RUN[s.id], skill: true });
-    if (Items.any()) list.push({ label: 'Items', run: w => { itemMenu = true; itemMenuFor = w.id; } });
-    for (const l of Growth.LINKS) if (l.lead === u.id && Growth.bondLevel(l.lead, l.with) >= 2) { const p = partyOf(l.with); list.push({ label: l.name, run: LINK_RUN[l.id], link: true, off: !(p && p.alive && p.atb >= 0.5) }); }
+    const list = COMMANDS[u.id].map(c => ({ label: c.label, text: c.text, run: c.run }));
+    for (const s of Growth.unlocked(u.id)) list.push({ label: s.name, text: s.text, run: SKILL_RUN[s.id], skill: true });
+    if (Items.any()) list.push({ label: 'Items', text: 'Use something from your pack.', run: w => { itemMenu = true; itemMenuFor = w.id; } });
+    for (const l of Growth.LINKS) if (l.lead === u.id && Growth.bondLevel(l.lead, l.with) >= 2) {
+      const p = partyOf(l.with), name = PARTY[l.with].name, off = !(p && p.alive && p.atb >= 0.5);
+      list.push({ label: l.name, text: `${l.text}. ${off ? `Needs ${name} up with half a gauge.` : `Uses half of ${name}'s gauge.`}`, run: LINK_RUN[l.id], link: true, off });
+    }
     return list;
   }
 
@@ -430,7 +438,7 @@ const Combat = (() => {
     f.wind = { t: WIND, target: t, ring, dmg }; log(f.name + ' winds up on ' + t.name + '!'); Sound.sfx('growl');
   }
   function enforcerAct(f) {
-    if (!(f.guard > 0) && Math.random() < Tuning.enf.guardChance) { f.guard = Tuning.enf.guard; Chars.play(f.rig, 'block'); FX.shield(f.rig.root.position, 0x9fd8ff); Sound.sfx('shield'); busy(0.6); log(f.name + ' raises its shield.'); return; }
+    if (!(f.guard > 0) && Math.random() < Tuning.enf.guardChance) { f.guard = Tuning.enf.guard; Chars.play(f.rig, 'block'); FX.shield(f.rig.root.position, 0x9fd8ff); Sound.sfx('shield'); busy(0.6); popup(f, 'SHIELD', '#9fd8ff'); log(f.name + ' raises its shield.'); return; }
     const t = pick(); if (!t) return;
     Chars.play(f.rig, 'shoot'); busy(hitT('shoot') + 0.4); const dmg = Math.round(rand(...Tuning.enf.shot) * f.dmgMul);
     foeLater(f, 'shoot', 1, () => { Sound.sfx('blast'); shot(f, t, f.color); hitParty(t, dmg, f); }); log(f.name + ' fires at ' + t.name + '.');
@@ -739,13 +747,33 @@ const Combat = (() => {
     });
   }
 
+  // The short status tags over a unit's name: what is on it and how long it lasts, so the effects can be seen working
+  function statusChips(u) {
+    const c = [];
+    if (u.foe) {
+      if (u.shielded || u.guard > 0) c.push(['SHIELD', 'shield']);
+      if (u.weak > 0) c.push(['WEAK ' + Math.ceil(u.weak) + 's', 'weak']);
+      if (u.wind) c.push(['CRUSH ' + Math.ceil(u.wind.t) + 's', 'crush']);
+    } else {
+      if (u.ready) c.push(['READY', 'ready']);
+      if (u.locked > 0) c.push(['LOCKED ' + Math.ceil(u.locked) + 's', 'lock']);
+      if (u.guard > 0) c.push(['GUARD ' + Math.ceil(u.guard) + 's', 'guard']);
+      if (u.brace > 0) c.push(['BRACE ' + Math.ceil(u.brace) + 's', 'brace']);
+      if (u.id === 'ruen' && cast) c.push(['CASTING', 'cast']);
+    }
+    return c;
+  }
+
   // Projects a world point above a unit's head to the screen, and places the labels, pops and HUD bars
   function screenOf(pos, y, camera) {
     v.set(pos.x, y, pos.z).project(camera);
     return { x: (v.x * 0.5 + 0.5) * innerWidth, y: (-v.y * 0.5 + 0.5) * innerHeight, behind: v.z > 1 };
   }
+  // The crew member whose command menu is open: the one picked by a tap while ready, else the first ready one (not while Ruen casts)
+  const readyCrew = () => party.filter(u => u.alive && u.ready && !(u.id === 'ruen' && cast));
+  const menuOwner = () => (isBusy() ? null : readyCrew().find(u => u.id === menuWho) || readyCrew()[0] || null);
   function updateUI(camera) {
-    const show = phase !== 'explore';
+    const show = phase !== 'explore', who = show ? menuOwner() : null;
     document.body.classList.toggle('in-battle', show);
     for (const u of [...party, ...foes]) {
       const L = u.label, p = u.rig.root.position;
@@ -753,9 +781,14 @@ const Combat = (() => {
       L.el.hidden = !show || s.behind || (u.foe && !u.alive);
       L.el.style.transform = `translate(${s.x}px, ${s.y - 36}px)`;
       L.bar.style.width = (clamp(u.hp / u.hpMax, 0, 1) * 100) + '%';
+      if (L.atb) L.atb.style.width = (clamp(u.atb, 0, 1) * 100) + '%';
       L.el.classList.toggle('target', u === target && u.alive);
+      L.el.classList.toggle('picking', u === who);
+      L.el.classList.toggle('ready', !u.foe && u.ready && u.alive);
       L.warn.hidden = !(u.foe && u.wind);
       L.el.classList.toggle('guarded', !!(u.foe && (u.guard > 0 || u.shielded)));
+      const chips = statusChips(u), key = chips.map(c => c.join(':')).join('|');
+      if (key !== L.tagKey) { L.tagKey = key; L.tags.innerHTML = chips.map(([t, cls]) => `<span class="${cls}">${t}</span>`).join(''); }
     }
     for (const u of party) {
       u.card.hp.style.width = (clamp(u.hp / u.hpMax, 0, 1) * 100) + '%';
@@ -767,21 +800,55 @@ const Combat = (() => {
       const s = screenOf(p.u.rig.root.position, 2.4 + p.t * 0.6, camera);
       p.el.style.transform = `translate(${s.x}px, ${s.y}px)`;
     }
-    // The command menu: the first ready crew member (in order), who is not casting
-    const who = isBusy() ? null : party.find(u => u.alive && u.ready && !(u.id === 'ruen' && cast));
     if (itemMenu && (!who || who.id !== itemMenuFor)) itemMenu = false;
     const cmds = who ? (itemMenu ? itemCommands(who) : commandsFor(who)) : [], key = who ? who.id + '|' + cmds.map(c => c.label + (c.off ? '-' : '')).join(',') : null;
-    if (key !== menuFor) {
-      menuFor = key;
-      ui.actions.innerHTML = '';
-      for (const c of cmds) {
-        const b = document.createElement('button');
-        b.type = 'button'; b.textContent = c.label; b.disabled = !!c.off; b.classList.toggle('skill', !!c.skill); b.classList.toggle('link', !!c.link);
-        b.addEventListener('click', () => { if (who.ready && !c.off) c.run(who); menuFor = null; });
-        ui.actions.appendChild(b);
-      }
-    }
+    if (key !== menuFor) { menuFor = key; buildMenu(who, cmds); }
     ui.actions.hidden = !who || phase !== 'battle';
+    if (who && !ui.actions.hidden) placeMenu(who, camera);
+  }
+
+  // The command buttons, with a description strip on top. Hovering or pressing a command shows what it does; letting go on the same
+  // button uses it, and sliding off before letting go cancels. Keyboard activation (no pointer, so detail 0) uses it straight away.
+  const TIP_HINT = 'Hover or press a command to read what it does. Let go on it to use it, or slide off to cancel.';
+  function showTip(c, text) { ui.tip.innerHTML = c ? `<b>${c.label}</b>${c.text ? ' ' + c.text : ''}` : (text || TIP_HINT); }
+  function buildMenu(who, cmds) {
+    ui.actions.innerHTML = '';
+    ui.tip = document.createElement('div'); ui.tip.className = 'tip';
+    ui.actions.appendChild(ui.tip);
+    showTip(null);
+    for (const c of cmds) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = c.label; b._cmd = c;
+      b.classList.toggle('skill', !!c.skill); b.classList.toggle('link', !!c.link); b.classList.toggle('off', !!c.off);
+      b._go = () => { if (who.ready && !c.off) c.run(who); menuFor = null; showTip(null); };
+      b.addEventListener('pointerenter', () => showTip(c));
+      b.addEventListener('pointerdown', () => { showTip(c); press = c.off ? null : b; });
+      b.addEventListener('click', e => { if (e.detail === 0) b._go(); });
+      ui.actions.appendChild(b);
+    }
+  }
+  // The button under a point of the screen, even when a touch has been captured by another element
+  function buttonAt(x, y) { const el = document.elementFromPoint(x, y), b = el && el.closest ? el.closest('#actions button') : null; return b && ui.actions.contains(b) ? b : null; }
+  function placeMenu(who, camera) {
+    const s = screenOf(who.rig.root.position, 2.0, camera);
+    ui.actions.style.visibility = s.behind ? 'hidden' : '';
+    const w = ui.actions.offsetWidth, h = ui.actions.offsetHeight;                                  // measured after it is shown
+    const x = clamp(s.x, w / 2 + 12, innerWidth - w / 2 - 12), y = Math.max(8, s.y - 46 - h);
+    ui.actions.style.transform = `translate(${x - w / 2}px, ${y}px)`;
+  }
+  function hoverMenu(e) {
+    if (ui.actions.hidden || !ui.tip) return;
+    const b = buttonAt(e.clientX, e.clientY);
+    if (press) { ui.actions.querySelectorAll('button').forEach(x => x.classList.toggle('armed', x === press && b === press)); }
+    if (b) showTip(b._cmd); else if (!press) showTip(null);
+  }
+  function releaseMenu(e) {
+    if (!press) return;
+    const b = buttonAt(e.clientX, e.clientY), held = press;
+    press = null;
+    ui.actions.querySelectorAll('button.armed').forEach(x => x.classList.remove('armed'));
+    if (b === held) held._go();
+    else showTip(null, 'Cancelled. Nothing was used.');
   }
 
   return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone, hp: party.map(u => [u.id, Math.round(u.hp)]) }), debugRun: (id, label) => { const u = partyOf(id), c = u && commandsFor(u).find(q => q.label === label); if (!c) return 'missing'; if (c.off) return 'off'; u.atb = 1; u.ready = true; c.run(u); return 'ok'; }, debugFoeHp: f => { for (const x of foes) x.hp = Math.round(x.hpMax * f); }, debugFoeAct: () => { for (const f of foes) if (f.alive && !f.wind) foeAct(f); }, debugItem: id => { const u = party[0]; const ok = itemOk(u, id); useItem(u, id); return ok; }, debugReady: () => { for (const u of party) if (u.alive) u.atb = 1; }, restAll, refreshAll, setDifficulty, difficulty: () => diff, DIFF, partyInfo: () => party.map(u => ({ id: u.id, name: u.name, hp: u.hp, hpMax: u.hpMax })), setState(d) {
