@@ -73,6 +73,7 @@
     const m = Cutscene.active() ? 'scene' : Combat.active() ? 'battle' : zn;
     if (m !== lastMood) { lastMood = m; Sound.setMood(m); }
     Sound.setZone(zn === 'hub' || zn === 'spire' ? zn : 'default');
+    City.setZoneCorruption({ market: 0.12, hub: 0.3, spire: 0.45 }[zn] || 0);      // the districts past the Market are corrupt even without a story glitch
     Sound.update(dt, p);
     glitchT -= dt; if (glitchT <= 0 && City.glitch() > 0.25) { Sound.sfx('glitch', { vol: City.glitch() }); glitchT = 0.5 + Math.random() * 1.2; }
   }
