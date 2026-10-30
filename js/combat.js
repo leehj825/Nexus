@@ -160,11 +160,22 @@ const Combat = (() => {
   const alive = () => party.filter(u => u.alive);
   const foesAlive = () => foes.filter(f => f.alive);
   const selected = () => (target && target.alive ? target : foesAlive()[0] || null);
-  const pick = () => {                                              // husks prefer Ruen, who is fragile
+  // How much a husk wants a crew member: the hurt, the fragile (Ruen), anyone casting (a cast is worth breaking), and anyone whose gauge is
+  // about to fill (they would act next). A braced, guarded or locked one is less tempting. A random factor keeps it from being predictable.
+  const threat = u => {
+    let w = 1 + (1 - u.hp / u.hpMax) * 1.5;
+    if (u.id === 'ruen') w += cast ? 2.8 : 0.8;
+    if (u.ready || u.atb >= 0.6) w += 0.8;
+    if (u.brace > 0) w -= 0.6;
+    if (u.guard > 0) w -= 0.4;
+    if (u.locked > 0) w -= 0.5;
+    return Math.max(0.1, w) * (0.7 + Math.random() * 0.6);
+  };
+  const pick = () => {
     const a = alive(); if (!a.length) return null;
-    const ruen = a.find(u => u.id === 'ruen');
-    if (ruen && Math.random() < 0.5) return ruen;
-    return a[Math.floor(Math.random() * a.length)];
+    const ws = a.map(threat); let r = Math.random() * ws.reduce((x, y) => x + y, 0);
+    for (let i = 0; i < a.length; i++) { r -= ws[i]; if (r <= 0) return a[i]; }
+    return a[a.length - 1];
   };
   function log(text) { ui.log.insertBefore(Object.assign(document.createElement('div'), { textContent: text }), ui.log.firstChild); while (ui.log.childElementCount > 3) ui.log.lastChild.remove(); }
   function popup(u, text, color) { const el = document.createElement('div'); el.className = 'pop'; el.textContent = text; el.style.color = color; $('labels').appendChild(el); pops.push({ el, u, t: 0 }); }
