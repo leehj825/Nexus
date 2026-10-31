@@ -162,8 +162,10 @@ const Combat = (() => {
   const selected = () => (target && target.alive ? target : foesAlive()[0] || null);
   // How much a husk wants a crew member: the hurt, the fragile (Ruen), anyone casting (a cast is worth breaking), and anyone whose gauge is
   // about to fill (they would act next). A braced, guarded or locked one is less tempting. A random factor keeps it from being predictable.
+  let tauntT = 0;                                                                           // Kyle's taunt: seconds left
   const threat = u => {
     let w = 1 + (1 - u.hp / u.hpMax) * 1.5;
+    if (u.id === 'kyle' && tauntT > 0) w += 6;
     if (u.id === 'ruen') w += cast ? 2.8 : 0.8;
     if (u.ready || u.atb >= 0.6) w += 0.8;
     if (u.brace > 0) w -= 0.6;
@@ -355,7 +357,23 @@ const Combat = (() => {
     for (let i = 0; i < 5; i++) later(hitT('mgBolt2', FAST) + i * 0.12, () => { const fs = foesAlive(); if (!fs.length) return; const t = fs[Math.floor(Math.random() * fs.length)]; Sound.sfx('blast'); shot(u, t, u.color); hitFoe(t, pdmg(u, 10)); });
     log('Yuna\'s Barrage!'); endTurn(u, Tuning.delay.barrage);
   }
-  const SKILL_RUN = { arc, edge, mend, storm: u => startCast(u, 2), bulwark, shock: shockwave, weak: weakPoint, barrage };
+  function rising(u) { strike(u, 36, 'brawlSwipe', { delay: Tuning.delay.edge, slash: 150 }); }
+  function surge(u) {                                                                       // Ruen's surge: every other crew member's gauge fills by a quarter
+    Chars.play(u.rig, 'mgHeal', false, FAST); busy(hitT('mgHeal', FAST) + 0.4);
+    for (const a of alive()) if (a !== u) { a.atb = Math.min(1, a.atb + 0.25); FX.shield(a.rig.root.position, 0x3ff0ff); }
+    Sound.sfx('heal'); log('Ruen\'s Data Surge fills the crew\'s gauges.'); endTurn(u, Tuning.delay.mend);
+  }
+  function taunt(u) {                                                                       // Kyle's taunt: the husks pick him for a while
+    tauntT = 6; Chars.play(u.rig, 'block'); FX.shield(u.rig.root.position, 0xffd27a); Sound.sfx('shield'); popup(u, 'TAUNT', '#ffd27a');
+    log('Kyle draws the husks\' attention.'); endTurn(u, Tuning.delay.bulwark);
+  }
+  function snipe(u) {
+    const t = selected(); if (!t) return;
+    Chars.play(u.rig, 'mgBolt2', false, FAST); busy(hitT('mgBolt2', FAST) + 0.4);
+    later(hitT('mgBolt2', FAST), () => { const f = liveTarget(t); if (!f) return; Sound.sfx('blast'); shot(u, f, u.color); hitFoe(f, pdmg(u, 40)); });
+    log('Yuna takes a careful aim.'); endTurn(u, Tuning.delay.weak);
+  }
+  const SKILL_RUN = { arc, edge, mend, storm: u => startCast(u, 2), bulwark, shock: shockwave, weak: weakPoint, barrage, rising, surge, taunt, snipe };
   // A link spends half of the partner's gauge; at bond level 3 it hits 30% harder
   const partyOf = id => party.find(p => p.id === id);
   const lbonus = (a, b) => Growth.bondLevel(a, b) >= 3 ? 1.3 : 1;
@@ -542,7 +560,7 @@ const Combat = (() => {
       f.from = f.rig.root.position.clone(); const sp = W(spots[i][0], spots[i][1]); f.to = g.id === 'alley' ? f.from.clone() : new THREE.Vector3(sp.x, 0, sp.z);   // the alley's husks fight where they stand
       f.rig.root.rotation.set(0, stage.th, 0);
     });
-    cast = null; pending = []; target = foes[Math.floor(foes.length / 2)]; menuFor = null;
+    cast = null; pending = []; tauntT = 0; target = foes[Math.floor(foes.length / 2)]; menuFor = null;
     ui.log.innerHTML = ''; ui.banner.hidden = true;
     log(g.text || 'Husks! They have seen you.'); Sound.sfx('growl'); shake(0.15);
   }
@@ -555,7 +573,7 @@ const Combat = (() => {
     const lvl = $('lvl'); lvl.hidden = true;
     if (text === 'Cleared') {                                                 // the spoils: XP for everyone, level-ups, and the pairs grow closer
       const xp = Math.round(foes.reduce((n, f) => n + (f.xp || 0), 0) * DIFF[diff].xp), ups = Growth.award(xp), cr = foes.reduce((n, f) => n + (f.cr || 0), 0); Growth.fought(); refreshAll(true); Items.add(cr); Quests.defeated(foes.length, Player.state().z);
-      lvl.innerHTML = '<div class="xp">+' + xp + ' XP' + (cr ? ' \u00b7 +' + cr + ' credits' : '') + '</div>' + ups.map(g => '<div><b style="color:' + PARTY[g.id].color + '">' + PARTY[g.id].name + '</b> Lv ' + g.from + ' \u2192 ' + g.to + (g.skills.length ? ' \u00b7 New: ' + g.skills.join(', ') : '') + '</div>').join('');
+      lvl.innerHTML = '<div class="xp">+' + xp + ' XP' + (cr ? ' \u00b7 +' + cr + ' credits' : '') + '</div>' + (ups.length ? '<div class="cc-xpt">Pick a perk for each new level in the crew screen (I).</div>' : '') + ups.map(g => '<div><b style="color:' + PARTY[g.id].color + '">' + PARTY[g.id].name + '</b> Lv ' + g.from + ' \u2192 ' + g.to + (g.skills.length ? ' \u00b7 New: ' + g.skills.join(', ') : '') + '</div>').join('');
       lvl.hidden = false; if (ups.length) { resultWait = 5; setTimeout(() => Sound.sfx('levelup'), 900); }
     }
     ui.banner.textContent = text; ui.banner.hidden = false; Sound.sfx(text === 'Cleared' ? 'win' : 'lose');
@@ -691,6 +709,7 @@ const Combat = (() => {
       for (const u of party) {
         if (!u.alive) continue;
         u.guard = Math.max(0, u.guard - dt);
+        if (tauntT > 0) tauntT = Math.max(0, tauntT - dt);
         if (u.brace > 0) { u.brace = Math.max(0, u.brace - dt); if (u.brace === 0) u.rig.idleClip = u.rig.loco.battle; }
         if (u.id === 'kyle' && u.guard === 0 && u.rig.idleClip === 'blockIdle') u.rig.idleClip = u.rig.loco.battle;
         if (u.locked > 0) { u.locked = Math.max(0, u.locked - dt); u.ready = false; continue; }
