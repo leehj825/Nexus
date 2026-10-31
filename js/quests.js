@@ -26,6 +26,16 @@ const Quests = (() => {
     { id: 'scrap3', giver: 'thea', who: 'Thea', zone: 'spire', kind: 'scrap', n: 6, title: 'Cold Storage', reward: { cr: 280 },
       ask: ['The Spire\'s servers run hot and the cooling lines are failing. Six pieces of scrap will patch them. I\'ll pay properly.', 'The halls here are scattered with salvage. Careful with the drones.'],
       wait: 'Six pieces of scrap for the cooling lines.', done: 'The lines are holding. Take the payment, you\'ve saved a floor of servers.' },
+    // Follow-ups: offered once the first job from the same person is done (`after`)
+    { id: 'sweep4', giver: 'dax', who: 'Dax', zone: 'hub', kind: 'sweep', n: 5, after: 'courier1', title: 'The Checkpoint Pushback', reward: { cr: 160, items: { patch: 2 } },
+      ask: ['The husks found the pouch route. Clear five from the checkpoint lanes and the pouches can keep moving.', 'They come out of the works at dusk. Hold the choke points.'],
+      wait: 'Five husks off the checkpoint lanes.', done: 'The route is clear. You\'ve earned this.' },
+    { id: 'scrap4', giver: 'rook', who: 'Rook', zone: 'market', kind: 'scrap', n: 6, after: 'scrap1', title: 'Bigger Salvage', reward: { cr: 150, items: { stim: 1 } },
+      ask: ['The stall wants more now that word got round. Six pieces of scrap and there\'s a stim in it for you.', 'The bigger pieces are down by the old arches.'],
+      wait: 'Six pieces of scrap for the stall.', done: 'Now that\'s a proper haul. Here, and my thanks.' },
+    { id: 'sweep5', giver: 'vee', who: 'Vee', zone: 'spire', kind: 'sweep', n: 8, after: 'sweep3', title: 'The Drone Corridor', reward: { cr: 380, items: { revive: 1 } },
+      ask: ['They\'ve moved the drones into the east corridor. Eight of them down and the staff can use the lifts again.', 'The drones fly in pairs. Break one at a time.'],
+      wait: 'Eight security units from the east corridor.', done: 'The corridor\'s ours. Thank you. Take this before someone notices it\'s gone.' },
   ];
   const byId = id => DEFS.find(d => d.id === id);
   const st = {};                                                                                // id -> { s: 'active' | 'done', n }
@@ -33,6 +43,9 @@ const Quests = (() => {
 
   const toast = text => { const t = document.getElementById('toast'); if (t) { t.textContent = text; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600); } };
   const zoneAt = z => z < World.SPIRE_Z - 2 ? 'spire' : z < World.HUB_Z - 2 ? 'hub' : 'market';
+  // The job a giver has on offer: their first job not yet done whose follow-up condition is met
+  const offerFor = tag => DEFS.find(q => q.giver === tag && status(q.id) !== 'done' && (!q.after || status(q.after) === 'done'));
+  const lastDone = tag => DEFS.filter(q => q.giver === tag && status(q.id) === 'done').pop();
   const ready = d => { const s = st[d.id]; if (!s || s.s !== 'active') return false; if (d.kind === 'scrap') return Camp.parts >= d.n; if (d.kind === 'sweep') return s.n >= d.n; return false; };
 
   function give(d) {
@@ -48,12 +61,12 @@ const Quests = (() => {
   // What a person says when talked to, and what happens after. Null when they have no job business.
   function talkTo(npc) {
     if (!npc.tag) return null;
-    const d = DEFS.find(q => q.giver === npc.tag), c = DEFS.find(q => q.to === npc.tag && status(q.id) === 'active');
+    const c = DEFS.find(q => q.to === npc.tag && status(q.id) === 'active');
     if (c) return { lines: [L(c.turnIn || 'You\'re carrying something for me?'), L(c.done, 'nod')], done: () => finish(c) };
-    if (!d) return null;
+    const d = offerFor(npc.tag);
+    if (!d) return lastDone(npc.tag) ? { lines: [L('Thanks again. The crew\'s always welcome here.', 'nod')], done: null } : null;
     const s = status(d.id);
     if (s === 'new') return { lines: [L(d.ask[0]), L(d.ask[1], 'nod')], done: () => accept(d) };
-    if (s === 'done') return { lines: [L('Thanks again. The crew\'s always welcome here.', 'nod')], done: null };
     if (ready(d)) return { lines: [L(d.done, 'nod')], done: () => finish(d) };
     return { lines: [L(d.wait)], done: null };
   }
@@ -61,7 +74,7 @@ const Quests = (() => {
   function mark(npc) {
     if (!npc.tag) return 0;
     const c = DEFS.find(q => q.to === npc.tag && status(q.id) === 'active'); if (c) return 2;
-    const d = DEFS.find(q => q.giver === npc.tag); if (!d) return 0;
+    const d = offerFor(npc.tag); if (!d) return 0;
     const s = status(d.id); return s === 'new' ? 1 : s === 'active' && ready(d) ? 2 : 0;
   }
   function defeated(n, z) {
