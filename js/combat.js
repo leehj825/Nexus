@@ -21,7 +21,7 @@ const Combat = (() => {
   const groups = new Map();                                        // every husk group that can be fought: { id, x, z, rigs, tier, aggro, onClear }
   let cur = null, aggroCd = 4, alleyDone = false;                    // the husks that hold the alley's gate: beaten once, gone for good
   const PARTY = {
-    you: { name: 'You', hp: Tuning.party.you.hp, rate: Tuning.party.you.rate, color: '#ffffff' },
+    you: { name: 'Jin', hp: Tuning.party.you.hp, rate: Tuning.party.you.rate, color: '#ffffff' },
     ruen: { name: 'Ruen', hp: Tuning.party.ruen.hp, rate: Tuning.party.ruen.rate, color: '#c9a0ff' },
     kyle: { name: 'Kyle', hp: Tuning.party.kyle.hp, rate: Tuning.party.kyle.rate, color: '#ffd27a' },
     yuna: { name: 'Yuna', hp: Tuning.party.yuna.hp, rate: Tuning.party.yuna.rate, color: '#7ff7ff' },
@@ -300,7 +300,7 @@ const Combat = (() => {
   }
   function brace(u) {
     u.brace = BRACE_TIME; u.rig.idleClip = 'blockIdle'; Chars.play(u.rig, 'block'); FX.shield(u.rig.root.position, 0xffffff); Sound.sfx('shield');
-    popup(u, 'BRACE', '#ffffff'); log('You brace.'); endTurn(u);
+    popup(u, 'BRACE', '#ffffff'); log('Jin braces.'); endTurn(u);
   }
   function stagger(u) {
     const t = selected(); if (!t) return;
@@ -650,7 +650,7 @@ const Combat = (() => {
       if (ptr.size === 2) {
         const n = pair(); if (two) { view.zoom = clamp(view.zoom * two.d / Math.max(n.d, 1), 0.4, 2.2); pan(n.x - two.x, n.y - two.y); } two = n;
       } else if (p.btn === 2 || p.btn === 1 || p.shift) pan(dx, dy);
-      else { view.yaw -= dx * 0.006; view.pitch = clamp(view.pitch - dy * 0.004, -0.8, 0.9); }   // drag down lowers the camera, as in exploring }
+      else { view.yaw -= dx * 0.006; view.pitch = clamp(view.pitch + dy * 0.004, -0.8, 0.9); }   // drag down turns the view down, so the camera rises
     });
     const lift = e => {
       const p = ptr.get(e.pointerId); ptr.delete(e.pointerId); two = ptr.size === 2 ? pair() : null;
