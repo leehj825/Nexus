@@ -76,6 +76,8 @@ const World = (() => {
     g.userData.batch = null;
   }
   // A cylinder that is its own mesh (it moves: a landmark ring)
+  // A single mesh that moves: not merged into the chunk's batch, for the things that animate (mover functions run each frame)
+  const solo = (g, w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); g.add(o); return o; };
   function tubeSolid(g, r, h, m, x, y, z) { const o = new THREE.Mesh(cyl, m); o.scale.set(r, h, r); o.position.set(x, y, z); g.add(o); return o; }
 
   // How strong a zone's patrols are: grows with the row, per the tuning numbers (js/tuning.js)
@@ -110,7 +112,7 @@ const World = (() => {
   function build(cx, r) {
     const rnd = mulberry(hash(cx, r)), kind = kindOf(cx, r, rnd);
     const X = cx * CH, Z = Z0 - CH * (r + 0.5), g = new THREE.Group(); g.userData.batch = new Map();
-    const ch = { key: cx + ',' + r, cx, r, X, Z, kind, group: g, boxes: [], circles: [], signs: [], spin: [], scrap: [], npcs: [], steam: [] };
+    const ch = { key: cx + ',' + r, cx, r, X, Z, kind, group: g, boxes: [], circles: [], signs: [], spin: [], movers: [], scrap: [], npcs: [], steam: [] };
     const wins = [];                                                          // lit windows to instance: { x, y, z, ry, col }
 
     // Windows over the four faces of a tower: a grid of small lit panes, some off
@@ -243,6 +245,10 @@ const World = (() => {
       dropScrap(3, margin(w, d));
     } else if (kind === 'market' || kind === 'plaza') {
       box(g, CH - 1, 0.04, CH - 1, mat(kind === 'plaza' ? 0x1c2236 : 0x151a29, { roughness: 0.8 }), X, 0.02, Z);
+      for (let i = 0; i < 4; i++) {                                                    // lanterns on lines over the street, swaying in the air
+        const lx = X + (rnd() - 0.5) * (CH - 8), lz = Z + (rnd() - 0.5) * (CH - 8), piv = new THREE.Group(); piv.position.set(lx, 6.5, lz); g.add(piv);
+        solo(piv, 0.5, 0.7, 0.5, emis(0xffb04a, 1.8), 0, -1.2, 0), ch.movers.push(t => { piv.rotation.z = Math.sin(t * 1.1 + i * 1.7) * 0.2; });
+      }
       const nst = kind === 'plaza' ? 6 : 8, stripes = [['#b8232f', '#dcdcd6'], ['#1f6fb8', '#dcdcd6'], ['#b8802f', '#1e1a16'], ['#2fb87a', '#dcdcd6']];
       for (let i = 0; i < nst; i++) {
         const row = i % 2, col = Math.floor(i / 2), sx = X - 11 + col * 7.5 + (rnd() - 0.5), sz = Z + (row ? 7 : -7) + (rnd() - 0.5) * 2, face = row ? -1 : 1;
@@ -298,6 +304,8 @@ const World = (() => {
         const w = 14 + rnd() * 6, d = 12 + rnd() * 5, h = 8 + rnd() * 8, x = X + (n === 1 ? (rnd() - 0.5) * 4 : (k ? 8 : -8)), z = Z + (rnd() - 0.5) * 4 - (n === 2 ? 3 : 0);
         const m = mat(dark[Math.floor(rnd() * dark.length)], { roughness: 1 });
         box(g, w, h, d, m, x, h / 2, z); solid(x, z, w / 2, d / 2); facade(x, z, w, d, h, 0, OC);
+        const ram = solo(g, 0.8, 1.2, 0.8, emis(ORG, 1.2), x + w / 2 + 1.2, 1.5, z), rph = k * 2.1;
+        ch.movers.push(t => { ram.position.y = 1.5 + Math.abs(Math.sin(t * 1.8 + rph)) * 1.4; });
         for (let i = 0; i < Math.floor(w / 2.6); i++) box(g, 0.3, 0.5, d + 0.4, mat(0x1a1b1e), x - w / 2 + 1.3 + i * 2.6, h + 0.25, z);        // roof ribs
         for (let i = 0; i < 1 + Math.floor(rnd() * 2); i++) {                         // smokestacks, each capped with a glow
           const px = x - w * 0.3 + i * w * 0.5, pz = z - d * 0.2, sh = 9 + rnd() * 6;
@@ -337,6 +345,12 @@ const World = (() => {
       const gz = Z + 0.5;                                                              // the gantry: two legs and a beam across the yard, with a warning lamp
       for (const sx of [-13, 13]) { box(g, 0.9, 15, 0.9, steel, X + sx, 7.5, gz); post(X + sx, gz, 0.7); }
       box(g, 27, 1.2, 1.4, steel, X, 15.4, gz); box(g, 2, 1.6, 1.6, mat(0x6b5a24), X + (rnd() - 0.5) * 12, 14.2, gz); box(g, 0.3, 0.3, 0.3, emis(0xff3a3a, 2.2), X + 13, 16.2, gz); ch.signs.push({ x: X + 13, y: 12, z: gz + 2, c: 0xff3a3a });
+      const trolley = solo(g, 1.8, 0.9, 1.6, steel, X, 14.7, gz), crate = solo(g, 2.2, 2.0, 2.2, mat(cols[1], { roughness: 0.7, metalness: 0.2 }), X, 12.6, gz);
+      ch.movers.push(t => { const x = X + Math.sin(t * 0.35) * 10; trolley.position.x = x; crate.position.x = x; crate.position.y = 12.6 + Math.sin(t * 1.4) * 0.12; });   // the crane runs along the beam and the load sways
+      for (let k = 0; k < 3; k++) {                                                    // crates riding the conveyor
+        const cc = solo(g, 1.2, 0.9, 1.2, mat(cols[k], { roughness: 0.7, metalness: 0.2 }), X + 4, 1.3, Z);
+        ch.movers.push(t => { const u = (t * 0.09 + k / 3) % 1; cc.position.z = Z - 9 + u * 18; });
+      }
       box(g, 2.2, 0.7, 18, mat(0x1f2126), X + 4, 0.35, Z - 1); box(g, 0.12, 0.74, 18, emis(ORG, 0.9), X + 4 + 1.15, 0.36, Z - 1); ch.boxes.push({ x: X + 4, z: Z - 1, hw: 1.1, hd: 9 });
       ch.signs.push({ x: X - 4, y: 3, z: Z + 12, c: ORG });
       for (let i = 0; i < 6; i++) { const x = X + (rnd() - 0.5) * (CH - 6), z = Z + (rnd() - 0.5) * (CH - 6); if (free(x, z, 1.6)) clutter(x, z); }
@@ -404,6 +418,8 @@ const World = (() => {
       };
       const sLight = (x, z, c = CY) => ch.signs.push({ x, y: 3.5, z, c });
       if (kind === 'lobby') {                                                                  // where the lift lets out: a hall of pillars, a long desk and the company's mark
+        const shx = X + 12, shz = Z + 12, car = solo(g, 2.6, 2.2, 2.6, emis(CY, 0.8), shx, 2, shz);
+        solo(g, 3.2, 12, 3.2, GL, shx, 6, shz); ch.movers.push(t => { car.position.y = 1.2 + (Math.sin(t * 0.45) + 1) * 4.3; });      // a lift car rising and falling in its shaft
         for (let i = 0; i < 6; i++) { const px = X + (i % 2 ? 1 : -1) * 9.5, pz = Z - 11 + Math.floor(i / 2) * 9; tube(g, 0.9, 12, WH, px, 6, pz); post(px, pz, 1.1); tube(g, 1.0, 0.3, emis(CY, 1.4), px, 12.1, pz); sLight(px, pz + 1.5); }
         box(g, 12, 1.1, 2.2, WH, X, 0.55, Z - 6); box(g, 12.1, 0.06, 2.3, emis(CY, 1.0), X, 1.12, Z - 6); solid(X, Z - 6, 6, 1.1);
         const logo = new THREE.Mesh(new THREE.PlaneGeometry(14, 2.8), new THREE.MeshBasicMaterial({ map: Tex.led('NEXUS CORP', '#bff6ff', 1024, 200, 50), toneMapped: false, color: new THREE.Color(1.6, 1.6, 1.6) })); logo.position.set(X, 8.5, Z - 14.6); g.add(logo); ch.tears = ch.tears || [];
@@ -641,6 +657,7 @@ const World = (() => {
     if (!Combat.active()) for (const ch of [...chunks.values()]) if (Math.max(Math.abs(p.x - ch.X), Math.abs(p.z - ch.Z)) > DROP) drop(ch);
     for (const ch of chunks.values()) {
       for (const s of ch.spin) s.rotation.y += dt * 0.8;
+      for (const mv of ch.movers) mv(t);
       if (ch.tears) for (const tp of ch.tears) tp.material.opacity = (Math.sin(t * 9 + tp.position.x) > 0.55 ? 0.05 : 0.22) * (0.6 + 0.4 * Math.sin(t * 2.3 + tp.position.z));
       if (ch.flames) for (const f of ch.flames) { const k = 0.85 + 0.25 * Math.sin(t * 9 + f.ph) * Math.sin(t * 4.3 + f.ph * 0.7); f.m.scale.set(1, k, 1); f.m.position.y = f.base + (k - 1) * 0.2; }
       if (ch.node) {                                                                    // access nodes show once the story asks for them, and are picked up by walking close
