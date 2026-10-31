@@ -196,9 +196,10 @@ const Camp = (() => {
     Camp.restoreCrew(Player.state());
   }
   // Resting at a camp (opening its menu): the crew are healed, the camp becomes the place they wake at, and the game saves
+  let rests = 0;                                                  // how many times the crew have rested this session (the story waits on a rest)
   function rest(id) {
     if (!id) return;
-    discover(id); lastCamp = id; Combat.restAll(); Save.save();
+    rests++; discover(id); lastCamp = id; Combat.restAll(); Save.save();
     const toast = document.getElementById('toast'); if (toast) { toast.textContent = 'The crew rest. Everyone is back on their feet.'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
     Sound.sfx('rest');
   }
@@ -324,7 +325,7 @@ const Camp = (() => {
     build, update, crew, colliders, SEATS,
     UPGRADES, GEAR, buy, damageMult, hpMult, nextGear, wornName, nearFire, nearCamp, rest, siteList, discover, travel, wake, fadeThen, FIRE_R,
     found: () => [...found], lastCamp: () => lastCamp, setLast: id => { lastCamp = id; }, skitSeen: id => skits.has(id), markSkit: id => skits.add(id), addScrap, dropScrap, seatAll, gatherAt, release, afterBattle, addParts: n => { parts += n; },
-    isOwned: id => owned.has(id),
+    isOwned: id => owned.has(id), restCount: () => rests,
     spend: n => { if (parts < n) return false; parts -= n; return true; },
     getState: () => ({ parts, owned: [...owned], found: [...found], last: lastCamp, skits: [...skits] }),
     setState(d) {

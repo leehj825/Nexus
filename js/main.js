@@ -32,10 +32,10 @@
   ModelCheck.init();
   Cutscene.init();
   // Saving: each part of the game registers what it keeps; the world goes first and the player last, so the avatar lands in a loaded world
-  let gateWas = false;
+  let gateWas = false, gateFirst = true;
   Save.init();
   Save.register('world', World.getState, World.setState);
-  Save.register('combat', Combat.getState, d => { Combat.setState(d); if (d.alley) { City.setGate(true, true); gateWas = true; } });
+  Save.register('combat', Combat.getState, d => { Combat.setState(d); gateFirst = true; });   // gateWatch sets the gate on the next frame, once the story is loaded too
   Save.register('camp', Camp.getState, Camp.setState);
   Save.register('items', Items.getState, Items.setState);
   Save.register('quests', Quests.getState, Quests.setState);
@@ -73,6 +73,7 @@
     const m = Cutscene.active() ? 'scene' : Combat.active() ? 'battle' : zn;
     if (m !== lastMood) { lastMood = m; Sound.setMood(m); }
     Sound.setZone(zn === 'hub' || zn === 'spire' ? zn : 'default');
+    City.setZoneCorruption({ market: 0.12, hub: 0.3, spire: 0.45 }[zn] || 0);      // the districts past the Market are corrupt even without a story glitch
     Sound.update(dt, p);
     glitchT -= dt; if (glitchT <= 0 && City.glitch() > 0.25) { Sound.sfx('glitch', { vol: City.glitch() }); glitchT = 0.5 + Math.random() * 1.2; }
   }
@@ -80,12 +81,18 @@
   // The gate: sealed by a barrier until the alley's husks are beaten, then it dissolves. Bumping into it says why.
   let gateHint = 0;
   function gateWatch(dt) {
-    const cleared = Combat.alleyCleared();
-    if (cleared !== gateWas) { gateWas = cleared; City.setGate(cleared); if (cleared) { Sound.sfx('door'); Cutscene.gateOpened(); } }
+    // The gate opens only when the story has reached the Act 2 stage past the Resonance, so the crew cannot walk on without the talk
+    const cleared = Combat.alleyCleared(), open = cleared && Cutscene.stage() >= 2;
+    if (open !== gateWas) {
+      gateWas = open;
+      if (gateFirst) City.setGate(open, true); else { City.setGate(open); if (open) { Sound.sfx('door'); Cutscene.gateOpened(); } }
+    }
+    gateFirst = false;
     gateHint -= dt;
-    if (!cleared && gateHint <= 0 && Player.state().z < City.FAR + 4.4) {
+    if (!open && gateHint <= 0 && Player.state().z < City.FAR + 10) {                   // the barrier stops the crew about 9 m short of the gate: that is where the hint is said
       gateHint = 6; const toast = document.getElementById('toast');
-      if (toast) { toast.textContent = 'The gate is sealed. Something is guarding it.'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
+      const msg = cleared ? 'The barrier holds. Go back to the crew at the fire.' : 'The gate is sealed. Something is guarding it.';
+      if (toast) { toast.textContent = msg; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
     }
   }
   function frame(ms) {

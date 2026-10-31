@@ -18,7 +18,7 @@ const City = (() => {
   const colliders = [];
   const buzzers = [];
   let portalDust = null, portalGlow = null, portalFace = null, portalLight = null, gateK = 0, gateGoal = 0;      // the portal is a sealed barrier until the alley's ambush is beaten: gateK 0 sealed .. 1 open
-  let glitchK = 0, resonK = 0, holo = null, rings = [], ringT = 0;
+  let glitchK = 0, zoneK = 0, resonK = 0, holo = null, rings = [], ringT = 0;
 
   // Blocks along both walls: each shows a grid of windows, some lit in warm, cyan and pink
   function blocks(root) {
@@ -218,6 +218,8 @@ const City = (() => {
   }
   const setGlitch = k => { glitchK = Math.max(0, Math.min(1, k)); };
   const setResonance = k => { resonK = Math.max(0, Math.min(1, k)); };
+  // The district's own corruption, always on: it grows with each district (Market, Hub, Spire) and keeps some signs failing even when no story glitch is running
+  const setZoneCorruption = k => { zoneK = Math.max(0, Math.min(1, k)); };
   function updateGlitch(t, dt) {
     if (holo) {
       holo.visible = glitchK > 0.05;
@@ -258,7 +260,7 @@ const City = (() => {
     for (const b of buzzers) {
       // Mostly steady, with the odd stutter as a failing tube does
       const stutter = Math.sin(t * 23 + b.phase * 5) > 0.9995 || Math.sin(t * 7.3 + b.phase) < -0.9985;
-      const fail = glitchK > 0 && Math.sin(Math.floor(t * 10) * 3.7 + b.phase * 11) > 1 - glitchK * 0.9;                // under the glitch whole signs cut out in bursts
+      const g = Math.max(glitchK, zoneK), fail = g > 0 && Math.sin(Math.floor(t * 10) * 3.7 + b.phase * 11) > 1 - g * 0.9;   // under the glitch, or in a corrupt district, whole signs cut out in bursts
       const k = stutter || fail ? 0.2 + 0.3 * (b.phase % 1) : 1;
       b.mesh.material.color.setScalar(k * 1.8);   // above 1 so the neon blooms
       b.halo.material.opacity = 0.6 * k;
@@ -281,5 +283,5 @@ const City = (() => {
     }
   }
 
-  return { build, update, colliders, HALF, FAR, setGate: (open, instant) => { gateGoal = open ? 1 : 0; if (instant) { gateK = gateGoal; if (portalFace) { portalFace.visible = !open; portalFace.material.opacity = 1 - gateK; portalLight.intensity = 3.0 * (1 - 0.75 * gateK); portalDust.material.opacity = 0.9 * (1 - 0.6 * gateK); } } }, gateOpen: () => gateK >= 0.5, setGlitch, setResonance, glitch: () => glitchK };
+  return { build, update, colliders, HALF, FAR, setGate: (open, instant) => { gateGoal = open ? 1 : 0; if (instant) { gateK = gateGoal; if (portalFace) { portalFace.visible = !open; portalFace.material.opacity = 1 - gateK; portalLight.intensity = 3.0 * (1 - 0.75 * gateK); portalDust.material.opacity = 0.9 * (1 - 0.6 * gateK); } } }, gateOpen: () => gateK >= 0.5, setGlitch, setZoneCorruption, setResonance, glitch: () => glitchK };
 })();

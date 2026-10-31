@@ -495,7 +495,7 @@ const Chars = (() => {
     ruen: { kind: 'seated', seatH: 0.62, seed: 1.3, seat: SEAT_POSE.ruen, extra: c => addOrb(c) },
     kyle: { kind: 'seated', seatH: 0.72, seed: 2.1, seat: SEAT_POSE.kyle, extra: () => {} },
     yuna: { kind: 'seated', seatH: 0.62, seed: 4.0, extra: c => blasters(c),
-      seat: { torso: [0.1, 0, 0], shL: [-0.3, 0, -0.02], shR: [-0.3, 0, 0.02], elL: [-1.0, 0, 0], elR: [-1.0, 0, 0], wrL: [0.1, 0, 0], wrR: [0.1, 0, 0] } },
+      seat: { torso: [0.1, 0, 0], shL: [-0.1, 0, 0.12], shR: [-0.1, 0, -0.12], elL: [-0.85, 0, 0], elR: [-0.85, 0, 0], wrL: [0.5, 0, 0], wrR: [0.5, 0, 0] } },   // hands resting on her thighs
     husk: { kind: 'stand', seed: 5.5, extra: () => {} },
     loader: { kind: 'stand', seed: 9.2, extra: () => {} },
     enforcer: { kind: 'stand', seed: 8.1, extra: () => {} },
@@ -709,7 +709,7 @@ const Chars = (() => {
       if (c.orbAim > 0.002) {                                                     // the orb drifts out toward the alley's far end, like a compass needle
         gv.set(0, 0.25, -2.0).multiplyScalar(c.orbAim); c.root.localToWorld(gv.set(orbAt.x, orbAt.y + 0.3, orbAt.z)); gv.add(tmpAim.set(0, 0.2 * c.orbAim, -2.2 * c.orbAim)); c.root.worldToLocal(gv);
         c.orbit.position.set(gv.x, gv.y + Math.sin(t * 2.2) * 0.025, gv.z);
-      } else c.orbit.position.set(orbAt.x, orbAt.y + 0.3 + Math.sin(t * 2.2) * 0.025, orbAt.z);
+      } else c.orbit.position.set(orbAt.x, orbAt.y + 0.12 + Math.sin(t * 2.2) * 0.02, orbAt.z);   // just above the palm, not up by the head
       c.orb.rotation.y = t * 0.8;
       for (const sp of c.specks) {
         const u = sp.userData, a = u.a + t * u.v;
