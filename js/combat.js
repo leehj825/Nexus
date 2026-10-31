@@ -43,6 +43,8 @@ const Combat = (() => {
 
   // Difficulty (Settings): how hard the foes hit, how much they can take, and how much XP they give. Normal is what js/tuning.js and the balance simulator describe.
   const DIFF = { easy: { name: 'Easy', dmg: 0.7, hp: 0.8, xp: 1.25 }, normal: { name: 'Normal', dmg: 1, hp: 1, xp: 1 }, hard: { name: 'Hard', dmg: 1.3, hp: 1.25, xp: 0.9 } };
+  const CHAL = { dmg: 1.3, hp: 1.6, xp: 1.5 };                          // challenge mode (after the ending): what the foes hit with, how much they take, what the crew earns
+  const chalOn = () => typeof Growth !== 'undefined' && Growth.challenge();
   let diff = 'normal'; try { diff = localStorage.getItem('nexus.diff') || 'normal'; } catch (e) {} if (!DIFF[diff]) diff = 'normal';
   const setDifficulty = d => { if (!DIFF[d]) return; diff = d; try { localStorage.setItem('nexus.diff', d); } catch (e) {} };
 
@@ -206,7 +208,7 @@ const Combat = (() => {
   }
   // A husk's attack on a crew member. Kyle may intercept a fatal blow on Ruen or Yuna
   function hitParty(u, dmg, from) {
-    dmg = Math.max(1, Math.round(dmg * DIFF[diff].dmg));
+    dmg = Math.max(1, Math.round(dmg * DIFF[diff].dmg * (chalOn() ? CHAL.dmg : 1)));
     if (from && from.weak > 0) dmg = Math.round(dmg * 0.7);
     const kyle = party.find(p => p.id === 'kyle');
     if (dmg >= u.hp && u.id !== 'kyle' && kyle.alive && kyle.guard > 0 && kyle.atb >= 0.5) {
@@ -223,7 +225,7 @@ const Combat = (() => {
   // Foe takes a hit from a crew member's command
   function hitFoe(f, dmg) {
     if (!f.alive) return;
-    dmg = Math.max(1, Math.round(dmg / DIFF[diff].hp));
+    dmg = Math.max(1, Math.round(dmg / (DIFF[diff].hp * (chalOn() ? CHAL.hp : 1))));
     if (f.guard > 0) dmg = Math.round(dmg * 0.5);
     if (f.shielded) { dmg = Math.round(dmg * Tuning.ceo.shieldSoak); if (Math.random() < 0.25) log(f.name + '\'s shield soaks the blow.'); }
     damage(f, dmg);
@@ -573,7 +575,7 @@ const Combat = (() => {
     for (const u of party) u.ready = false;
     const lvl = $('lvl'); lvl.hidden = true;
     if (text === 'Cleared') {                                                 // the spoils: XP for everyone, level-ups, and the pairs grow closer
-      const xp = Math.round(foes.reduce((n, f) => n + (f.xp || 0), 0) * DIFF[diff].xp), ups = Growth.award(xp), cr = foes.reduce((n, f) => n + (f.cr || 0), 0); Growth.fought(); refreshAll(true); Items.add(cr); Quests.defeated(foes.length, Player.state().z);
+      const cm = chalOn() ? CHAL.xp : 1, xp = Math.round(foes.reduce((n, f) => n + (f.xp || 0), 0) * DIFF[diff].xp * cm), ups = Growth.award(xp), cr = Math.round(foes.reduce((n, f) => n + (f.cr || 0), 0) * cm); Growth.fought(); refreshAll(true); Items.add(cr); Quests.defeated(foes.length, Player.state().z);
       lvl.innerHTML = '<div class="xp">+' + xp + ' XP' + (cr ? ' \u00b7 +' + cr + ' credits' : '') + '</div>' + (ups.length ? '<div class="cc-xpt">Pick a perk for each new level in the crew screen (I).</div>' : '') + ups.map(g => '<div><b style="color:' + PARTY[g.id].color + '">' + PARTY[g.id].name + '</b> Lv ' + g.from + ' \u2192 ' + g.to + (g.skills.length ? ' \u00b7 New: ' + g.skills.join(', ') : '') + '</div>').join('');
       lvl.hidden = false; if (ups.length) { resultWait = 5; setTimeout(() => Sound.sfx('levelup'), 900); }
     }

@@ -227,7 +227,9 @@ const ModelCheck = (() => {
     $('setDebug').addEventListener('click', () => { Perf.setDebug(!Perf.debug()); syncQ(); });
     const syncD = () => { $('setDiff').textContent = Combat.DIFF[Combat.difficulty()].name; };
     $('setDiff').addEventListener('click', () => { Combat.setDifficulty({ easy: 'normal', normal: 'hard', hard: 'easy' }[Combat.difficulty()]); syncD(); });
-    $('btnSettings').addEventListener('click', syncD); syncD();
+    const syncC = () => { $('setChallenge').textContent = Growth.challenge() ? 'On' : 'Off'; $('setChallengeRow').hidden = !(typeof Cutscene !== 'undefined' && Cutscene.stage() >= 18); };
+    $('setChallenge').addEventListener('click', () => { Growth.setChallenge(!Growth.challenge()); Save.save(); syncC(); });
+    $('btnSettings').addEventListener('click', () => { syncD(); syncC(); }); syncD(); syncC();
     $('setSave').addEventListener('click', () => { const ok = Save.save(); $('setSave').textContent = ok ? 'Saved' : 'Not now'; setTimeout(() => { $('setSave').textContent = 'Save now'; }, 1500); });
     $('btnSettings').addEventListener('click', () => { sync(); syncQ(); }); sync(); syncQ();
     $('openModelCheck').addEventListener('click', () => { $('settings').hidden = true; show(); });
