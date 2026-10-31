@@ -495,7 +495,7 @@ const Chars = (() => {
     ruen: { kind: 'seated', seatH: 0.62, seed: 1.3, seat: SEAT_POSE.ruen, extra: c => addOrb(c) },
     kyle: { kind: 'seated', seatH: 0.72, seed: 2.1, seat: SEAT_POSE.kyle, extra: () => {} },
     yuna: { kind: 'seated', seatH: 0.62, seed: 4.0, extra: c => blasters(c),
-      seat: { torso: [0.1, 0, 0], shL: [-0.1, 0, 0.12], shR: [-0.1, 0, -0.12], elL: [-0.85, 0, 0], elR: [-0.85, 0, 0], wrL: [0.5, 0, 0], wrR: [0.5, 0, 0] } },   // hands resting on her thighs
+      seat: { torso: [0.1, 0, 0], shL: [-0.05, 0, 0.1], shR: [-0.05, 0, -0.1], elL: [-0.4, 0, 0], elR: [-0.4, 0, 0], wrL: [0, 0, 0], wrR: [0, 0, 0] } },   // relaxed, hands open: no grip on her legs
     husk: { kind: 'stand', seed: 5.5, extra: () => {} },
     loader: { kind: 'stand', seed: 9.2, extra: () => {} },
     enforcer: { kind: 'stand', seed: 8.1, extra: () => {} },
