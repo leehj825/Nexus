@@ -401,7 +401,32 @@ const Cutscene = (() => {
     return null;
   }
   // Place triggers: each plays once, when the crew first reaches the place at that stage
+  // Bond scenes: two of the crew talk after they have fought together enough to reach a bond level. Each plays once.
+  const BOND_SCENES = [
+    { key: 'jin-yuna-2', a: 'you', b: 'yuna', lvl: 2, steps: [
+      { shot: 'who', who: 'yuna', mood: 'firm', text: 'You didn\'t hesitate back there. Not once.' },
+      { shot: 'who', who: 'jin', mood: 'nod', text: 'Neither did you. Every shot landed right on time.' },
+      { shot: 'who', who: 'yuna', mood: 'talk', text: 'Don\'t get used to it. I still don\'t like you.' },
+      { shot: 'who', who: 'jin', mood: 'nod', text: 'Fair. Then I\'ll keep being annoying until you do.' }] },
+    { key: 'ruen-kyle-2', a: 'ruen', b: 'kyle', lvl: 2, steps: [
+      { shot: 'who', who: 'kyle', mood: 'nod', text: 'You were steady out there. Steadier than I was.' },
+      { shot: 'who', who: 'ruen', mood: 'worry', text: 'I felt the pull the whole time. Like something was listening.' },
+      { shot: 'who', who: 'kyle', mood: 'firm', text: 'Then listen to me instead. I\'ll be the one you hear.' }] },
+    { key: 'jin-kyle-3', a: 'you', b: 'kyle', lvl: 3, steps: [
+      { shot: 'who', who: 'kyle', mood: 'talk', text: 'You fight like you\'ve already decided to get back up.' },
+      { shot: 'who', who: 'jin', mood: 'firm', text: 'I have. Somebody has to hold the line when you\'re not in front.' },
+      { shot: 'who', who: 'kyle', mood: 'nod', text: 'Then we hold it together. Same as always.' }] },
+  ];
+  // Plays the next bond scene that is due, if any. Returns true when one started.
+  function bondScene() {
+    if (typeof Growth === 'undefined') return false;
+    const s = BOND_SCENES.find(q => Growth.bondLevel(q.a, q.b) >= q.lvl && !Growth.told(q.key));
+    if (!s) return false;
+    begin(s.steps, () => { Growth.markTold(s.key); Save.save(); }, { anchor: 'here' });
+    return true;
+  }
   function checkTriggers() {
+    if (bondScene()) return;
     const p = Player.state(), dT = Math.hypot(p.x - World.TOWER.x, p.z - World.TOWER.z);
     if (stage === 2 && p.z < World.Z0 - 6) begin(ARRIVAL, () => setStage(3), { anchor: 'here' });
     else if (stage === 3 && dT < 70) begin(TOWER_SIGHT, () => setStage(4), { anchor: 'here' });

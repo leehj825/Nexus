@@ -51,13 +51,16 @@ const Growth = (() => {
     }
     return ups;
   }
-  const getState = () => ({ chars: JSON.parse(JSON.stringify(chars)), bonds: Object.assign({}, bonds) });
+  // Bond scenes already played, by key
+  const told = {};
+  const getState = () => ({ chars: JSON.parse(JSON.stringify(chars)), bonds: Object.assign({}, bonds), told: Object.assign({}, told) });
   function setState(d) {
     for (const id of IDS) if (d.chars && d.chars[id]) Object.assign(chars[id], d.chars[id]);
     for (const k in bonds) delete bonds[k]; Object.assign(bonds, d.bonds || {});
+    for (const k in told) delete told[k]; Object.assign(told, d.told || {});
   }
   return {
-    IDS, NAME, ROLE, MAXLV, chars, need, SKILLS, LINKS, BOND_NAME, PERKS, choosePerk, has, unlocked, award, addBond, bondPts, bondLevel, fought, getState, setState,
+    IDS, NAME, ROLE, MAXLV, chars, need, SKILLS, LINKS, BOND_NAME, PERKS, choosePerk, told: k => !!told[k], markTold: k => { told[k] = true; }, has, unlocked, award, addBond, bondPts, bondLevel, fought, getState, setState,
     lv: id => chars[id].lv, hpMult: id => hpMult(chars[id].lv) * (1 + chars[id].perk.hp), dmgMult: id => dmgMult(chars[id].lv) * (1 + chars[id].perk.dmg), rateMult: id => rateMult(chars[id].lv) * (1 + chars[id].perk.rate),
   };
 })();
