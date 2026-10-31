@@ -543,6 +543,7 @@ const Combat = (() => {
     if (phase !== 'explore') return;
     const g = nearestGroup(); if (!g || (typeof Cutscene !== 'undefined' && Cutscene.active())) return;
     cur = g; foes = foesOf(g); placeStage(g);
+    for (const u of party) Chars.setWeaponTier(u.rig, Camp.tiersOwned(u.id, 'w'));           // the weapons glow with their upgrade tier
     phase = 'enter'; phaseT = 0; resetView();
     Player.setFrozen(true);
     for (const u of party) {

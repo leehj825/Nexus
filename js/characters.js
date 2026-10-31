@@ -123,6 +123,7 @@ const Chars = (() => {
   };
   function addBlade(c, m) {
     const blade = joint(c.j.wrR, 0, -0.08, 0.01); c.blade = blade; c.weapons = [blade]; c.bladeDir = new THREE.Vector3(...BLADE_FIGHT);
+    c.glowMats = [m.bladeEdge, m.bladeCore];                                                    // recoloured by weapon tier (setWeaponTier)
     add(blade, box(0.042, 0.27, 0.042), m.steelD, 0, -0.04, 0);                                                // the grip
     add(blade, box(0.04, 0.05, 0.05), m.steelD, 0, 0.1, 0);                                                    // the pommel
     add(blade, box(0.16, 0.03, 0.075), m.steelD, 0, -0.19, 0);                                                 // the guard
@@ -510,7 +511,7 @@ const Chars = (() => {
       gun: std(0x77808c, { metalness: 0.35, roughness: 0.45 }), gunD: std(0x23282f, { metalness: 0.4, roughness: 0.4 }),
       gunTop: std(0xb4aaa6, { metalness: 0.3, roughness: 0.45 }), plasma: lit(0x3ff0ff, 1.7), glove: std(0x2b2629),
     };
-    c.weapons = [];
+    c.weapons = []; c.glowMats = [m.plasma];
     for (const k of ['L', 'R']) {
       const gun = joint(c.j['wr' + k], 0, -0.11, 0.045); gun.rotation.x = Math.PI / 2 - 0.1; c.weapons.push(gun);
       add(gun, box(0.06, 0.09, 0.07), m.gunD, 0, -0.045, -0.055);                                             // grip, in the fist
@@ -719,5 +720,8 @@ const Chars = (() => {
     if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = -Math.min(speed, 4) * 0.06; }
   }
 
-  return { create, update, play, clipLength, morph, setTalk, setLook, setOrbAim };
+  // Weapon tier glow: 0 is the starting cyan, then gold and magenta as the crew upgrade at camp
+  const TIER_GLOW = [0x3ff0ff, 0xffd24a, 0xff3fb4];
+  function setWeaponTier(c, tier) { for (const m of c.glowMats || []) m.emissive.set(TIER_GLOW[Math.min(tier, TIER_GLOW.length - 1)]); }
+  return { create, update, play, clipLength, morph, setTalk, setLook, setOrbAim, setWeaponTier };
 })();
