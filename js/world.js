@@ -525,7 +525,7 @@ const World = (() => {
       }
     }
     // A husk patrol: two or three husks standing in the street, which Combat fights (tougher the further from the gate). Gone for good once beaten.
-    if (kind !== 'wall' && kind !== 'plaza' && kind !== 'gate' && kind !== 'foundry' && kind !== 'lobby' && kind !== 'atrium' && kind !== 'summit' && r >= 1 && rnd() < 0.6 && !clearedPacks.has(ch.key)) {
+    if (kind !== 'wall' && kind !== 'plaza' && kind !== 'gate' && kind !== 'foundry' && kind !== 'lobby' && kind !== 'atrium' && kind !== 'summit' && r >= 1 && rnd() < 0.9 && !clearedPacks.has(ch.key)) {          // most streets have a patrol; beaten ones stay gone
       for (let tries = 0; tries < 14; tries++) {
         const px = X + (rnd() - 0.5) * (CH - 10), pz = Z + (rnd() - 0.5) * (CH - 10);
         if (!free(px, pz, 3.2)) continue;
