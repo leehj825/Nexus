@@ -581,6 +581,34 @@ const World = (() => {
     chunks.delete(ch.key);
   }
 
+  // ---------- district weather: rain in the Market, embers over the Hub, cold data motes in the Spire. Each layer is a box of particles
+  // that follows the player and fades in only in its own district ----------
+  const WX = { n: 240, box: 44, top: 14 };
+  const weather = [];
+  function weatherLayer(color, size, blend, fall, drift) {
+    const pos = new Float32Array(WX.n * 3);
+    for (let i = 0; i < WX.n; i++) { pos[i * 3] = (Math.random() - 0.5) * WX.box; pos[i * 3 + 1] = Math.random() * WX.top; pos[i * 3 + 2] = (Math.random() - 0.5) * WX.box; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const m = new THREE.PointsMaterial({ color, size, transparent: true, opacity: 0, depthWrite: false, blending: blend });
+    const pts = new THREE.Points(g, m); pts.frustumCulled = false; pts.visible = false; root.add(pts);
+    const L = { pts, pos, m, fall, drift, ph: Math.random() * 6 };
+    weather.push(L); return L;
+  }
+  const weatherUpdate = (L, t, dt, p, w) => {
+    L.pts.visible = w > 0.01; if (!L.pts.visible) return;
+    L.m.opacity = 0.9 * w; const pos = L.pos, half = WX.box / 2;
+    for (let i = 0; i < WX.n; i++) {
+      const k = i * 3, ph = i * 0.73 + L.ph;
+      pos[k + 1] += (L.fall + Math.sin(t * 0.9 + ph) * 0.3) * dt;
+      pos[k] += (Math.sin(t * 0.6 + ph) * L.drift + (L.drift ? 0.6 : 0)) * dt;
+      if (pos[k + 1] < 0) pos[k + 1] += WX.top; else if (pos[k + 1] > WX.top) pos[k + 1] -= WX.top;
+      if (pos[k] - p.x > half) pos[k] -= WX.box; else if (pos[k] - p.x < -half) pos[k] += WX.box;
+      if (pos[k + 2] - p.z > half) pos[k + 2] -= WX.box; else if (pos[k + 2] - p.z < -half) pos[k + 2] += WX.box;
+    }
+    L.pts.geometry.attributes.position.needsUpdate = true;
+  };
+  let rainL = null, emberL = null, moteL = null;
+
   // ---------- public ----------
   function init(s) {
     scene = s; root = new THREE.Group(); scene.add(root);
@@ -597,6 +625,9 @@ const World = (() => {
     const fbandM = new THREE.MeshBasicMaterial({ color: 0xffb870, fog: false, toneMapped: false });
     for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(cyl, fbandM); b.scale.set(3.6 - i * 0.4, 0.5, 3.6 - i * 0.4); b.position.set(FOUNDRY.x, 60 + i * 5, FOUNDRY.z - 15); root.add(b); }
     for (let i = 0; i < LIGHTS; i++) { const l = new THREE.PointLight(0xffffff, 0, 12, 1.5); l.position.set(0, 3, -40); scene.add(l); lights.push(l); }
+    rainL = weatherLayer(0xb8d8ff, 0.2, THREE.NormalBlending, -16, 0);
+    emberL = weatherLayer(0xff9a3a, 0.16, THREE.AdditiveBlending, 1.6, 0.5);
+    moteL = weatherLayer(0x9ff8ff, 0.12, THREE.AdditiveBlending, -0.35, 0.25);
   }
 
   // Every frame: stream chunks around the player (one built per frame), spin the landmarks, and park the lights on the nearest signs
@@ -633,6 +664,8 @@ const World = (() => {
       });
     }
     const hub = Math.max(0, Math.min(1, (HUB_Z + 10 - p.z) / 24)), sp = Math.max(0, Math.min(1, (SPIRE_Z + 6 - p.z) / 14));        // beyond the gate the air turns the Hub's smoky amber; in the Spire it goes cold and bright
+    const mk = Math.max(0, Math.min(1, (Z0 - 2 - p.z) / 6)) * (1 - hub) * (1 - sp);       // the Market: rain
+    weatherUpdate(rainL, t, dt, p, mk); weatherUpdate(emberL, t, dt, p, hub * (1 - sp)); weatherUpdate(moteL, t, dt, p, sp);
     if (hub + sp * 10 !== hubK) { hubK = hub + sp * 10; scene.fog.color.lerpColors(FOG_MKT, FOG_HUB, hub).lerp(FOG_SPIRE, sp); scene.background.copy(scene.fog.color); scene.fog.density = 0.03 + hub * 0.006 - sp * 0.01; }
     lightT -= dt;
     if (lightT <= 0) {
