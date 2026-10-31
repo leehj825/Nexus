@@ -635,7 +635,7 @@ const Combat = (() => {
       const kk = camera.position.distanceTo(blook) * 2 * Math.tan(camera.fov * Math.PI / 360) / innerHeight;
       camera.updateMatrixWorld();
       const rt = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0), up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
-      view.pan.addScaledVector(rt, -dx * kk).addScaledVector(up, dy * kk);
+      view.pan.addScaledVector(rt, -dx * kk).addScaledVector(up, -dy * kk);      // drag down moves the camera down, as the drag does for the angle
       view.pan.set(clamp(view.pan.x, -8, 8), clamp(view.pan.y, -1.5, 4), clamp(view.pan.z, -8, 8));
     };
     canvas.addEventListener('pointerdown', e => {
