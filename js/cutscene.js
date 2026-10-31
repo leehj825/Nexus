@@ -370,15 +370,15 @@ const Cutscene = (() => {
 
   // The story stage: 0 the campfire, 1 the resonance (both at the fire), 2 go through the gate, 3 follow the orb up the avenue,
   // 4 reach the tower, 5 Act 2 done. Stages 2-4 each end with a scene that plays where the crew stands when they reach a place.
-  let stage = 0;
+  let stage = 0, restBase = 0;                                  // restBase: the crew's rest count when the Resonance stage began; the Resonance waits on a rest after it
   const QUEST = ['\u25c6 Speak with the crew', '\u25c6 Rest by the fire and feel for the resonance', '\u25c6 Go through the gate into the Neon Market', '\u25c6 Follow the orb up the avenue', '\u25c6 Reach the foot of the tower', '\u25c6 Follow the pull to the Industrial Hub gate', '\u25c6 Cross the Hub to the Foundry', '\u25c6 Reach the Foundry\'s shutter', '\u25c6 Find the three access nodes', '\u25c6 Return to the Foundry\'s shutter', '\u25c6 Enter the Foundry', '\u25c6 Defeat the Loader Mech', '\u25c6 Take the Data Core', '\u25c6 Ride the freight lift to the Corporate Spire', '\u25c6 Cross the Spire lobby to the server atrium', '\u25c6 Climb to the summit', '\u25c6 Face the CEO at the summit', '\u25c6 Defeat the CEO', '\u25c6 The city is free. The road goes on.'];
   function setQuest(n) {
     const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; if (n > 0) Sound.sfx('quest');
     const toast = $('toast'); if (toast && n > 0) { toast.textContent = 'Quest updated'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
   }
-  const setStage = n => { stage = n; setQuest(n); Save.touch(); Save.save(); };
+  const setStage = n => { stage = n; if (n === 1) restBase = Camp.restCount(); setQuest(n); Save.touch(); Save.save(); };
   // After a load: the story stage is set without the chime or the toast
-  function restore(n) { stage = n; const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; }
+  function restore(n) { stage = n; if (n === 1) restBase = Camp.restCount(); const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; }
   // The alley's husks are beaten and the gate opens: the quest line says so
   function gateOpened() {
     const toast = $('toast'); if (toast) { toast.textContent = 'The gate\'s barrier dissolves'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); }
@@ -441,7 +441,7 @@ const Cutscene = (() => {
   function interactable() {
     const p = Player.state();
     const camp = Camp.nearCamp(p);
-    if (camp === 'fire') return { kind: 'story', label: LABEL[Math.min(stage, 2)] };
+    if (camp === 'fire') return stage === 1 && Camp.restCount() <= restBase ? null : { kind: 'story', label: LABEL[Math.min(stage, 2)] };   // the Resonance comes after a rest, not straight after the first talk
     if (camp && SKITS[camp] && !Camp.skitSeen(camp)) return { kind: 'skit', id: camp, label: 'Talk' };
     if (stage === 13 && World.liftAt(p)) return { kind: 'lift', label: 'Ride the lift' };
     const n = World.nearNpc(p, 2.8); return n ? { kind: 'npc', npc: n, label: (n.shop ? 'Trade \u00b7 ' : 'Talk \u00b7 ') + n.name + ['', ' (!)', ' (\u2713)'][Quests.mark(n)] } : null;
