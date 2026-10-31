@@ -57,7 +57,7 @@ const Player = (() => {
       if (p.look) {
         const k = pointers.size > 1 ? 0.5 : 1;                                  // two fingers share one look
         yaw -= dx * 0.006 * k;
-        elev = clamp(elev - dy * 0.004 * k, EMIN, EMAX);
+        elev = clamp(elev + dy * 0.004 * k, EMIN, EMAX);                        // drag down turns the view down, so the camera rises
       }
       if (pointers.size === 2) {                                                // a pinch zooms
         const [a, b] = [...pointers.values()], d = Math.hypot(a.x - b.x, a.y - b.y);
@@ -131,7 +131,7 @@ const Player = (() => {
 
   function update(t, dt) {
     // Camera: orbits the avatar. The arrow keys turn and tilt it; it keeps the avatar in view and is pulled in when a wall is in the way.
-    if (!frozen) { yaw += ((keys.ArrowLeft ? 1 : 0) - (keys.ArrowRight ? 1 : 0)) * 1.8 * dt; elev = clamp(elev + ((keys.ArrowDown ? -1 : 0) + (keys.ArrowUp ? 1 : 0)) * 0.9 * dt, EMIN, EMAX); }
+    if (!frozen) { yaw += ((keys.ArrowLeft ? 1 : 0) - (keys.ArrowRight ? 1 : 0)) * 1.8 * dt; elev = clamp(elev + ((keys.ArrowDown ? 1 : 0) + (keys.ArrowUp ? -1 : 0)) * 0.9 * dt, EMIN, EMAX); }
     const k = Math.min(1, dt * 14);
     tgt.x += (pos.x - tgt.x) * k; tgt.z += (pos.z - tgt.z) * k; tgt.y = EYE;
     look.copy(tgt);
