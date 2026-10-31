@@ -94,12 +94,13 @@ const Player = (() => {
 
   // Keeps the avatar inside the alley (or the world beyond its gate) and out of the props. The alley is narrower than the world, and
   // the gate between them is a doorway: the allowed half-width closes in toward it and opens out again on the far side.
+  const gateOpen = () => Combat.alleyCleared() && typeof Cutscene !== 'undefined' && Cutscene.stage() >= 2;             // the same rule main.js uses to open the gate
   function collide(x, z) {
     const b = City.HALF - 0.9, gz = City.FAR, gate = 3.2;
     const half = z > gz + 6 ? b : z > gz + 2 ? b + (gate - b) * (gz + 6 - z) / 4 : z > gz - 4.5 ? gate : z > gz - 8 ? gate + (World.HALF_X - gate) * (gz - 4.5 - z) / 3.5 : World.HALF_X;
     x = clamp(x, -half, half);
     z = clamp(z, World.MIN_Z, 9);
-    if (!Combat.alleyCleared()) z = Math.max(z, gz + 3.2);                           // the gate's barrier holds until the husks that guard it are beaten
+    if (!gateOpen()) z = Math.max(z, gz + 3.2);                                       // the gate's barrier holds until the husks are beaten and the story has reached the stage past the Resonance
     for (const c of [...Camp.colliders, ...City.colliders]) {
       const dx = x - c.x, dz = z - c.z, d = Math.hypot(dx, dz), min = c.r + 0.35;
       if (d < min && d > 0.0001) { x = c.x + dx / d * min; z = c.z + dz / d * min; }
