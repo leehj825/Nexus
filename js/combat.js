@@ -196,6 +196,12 @@ const Combat = (() => {
   const shake = a => { shakeA = Math.max(shakeA, a); };
 
   // ---------------- Damage ----------------
+  // Finishers: a big blow, or a foe going down, slows the moment for a beat with a flash and a jolt
+  let slowT = 0, slowK = 1;
+  function finisher(f, big) {
+    slowT = Math.max(slowT, big ? 0.45 : 0.6); slowK = big ? 0.3 : 0.4;
+    FX.nova(f.rig.root.position, big ? 0xffe9a8 : 0xff3fb4); shake(big ? 0.4 : 0.3); Sound.sfx('crit');
+  }
   function kill(u) {
     u.alive = false; u.ready = false; u.rush = null; clearWind(u);
     Chars.play(u.rig, 'die', true); FX.dissolve(u.rig.root.position, u.foe ? 0xff3fb4 : 0x7fe9ff); Sound.sfx('die'); shake(0.3);
@@ -232,6 +238,7 @@ const Combat = (() => {
     if (f.guard > 0) dmg = Math.round(dmg * 0.5);
     if (f.shielded) { dmg = Math.round(dmg * Tuning.ceo.shieldSoak); if (Math.random() < 0.25) log(f.name + '\'s shield soaks the blow.'); }
     damage(f, dmg);
+    if (!f.alive) finisher(f, false); else if (dmg >= 24) finisher(f, true);
   }
   // A burst of Ruen's grounds the singularity's shield for a time
   function breakShield(f) { if (f.shielded) { f.shielded = false; f.shieldT = Tuning.ceo.shieldDown; log('The shield is grounded!'); FX.nova(f.rig.root.position, 0xc9a0ff); } }
@@ -599,6 +606,7 @@ const Combat = (() => {
   let resultWait = RESULT_WAIT;
   function end(text) {
     phase = 'result'; phaseT = 0; resultWait = RESULT_WAIT;
+    if (text === 'Cleared') { slowT = 1.2; slowK = 0.35; }
     cast = null; pending = []; menuFor = null;
     for (const u of party) u.ready = false;
     const lvl = $('lvl'); lvl.hidden = true;
@@ -719,6 +727,7 @@ const Combat = (() => {
 
   // ---------------- Per-frame ----------------
   function update(dt, camera) {
+    const slowK0 = slowT > 0 ? slowK : 1; slowT = Math.max(0, slowT - dt); dt *= slowK0;      // a finisher slows the moment for a beat
     clock += dt; phaseT += dt;
     shakeA *= Math.exp(-dt * 7); flashA = Math.max(0, flashA - dt * 1.6); const fl = document.getElementById('flash'); if (fl) fl.style.opacity = flashA.toFixed(3);
     const pp = Player.state();
