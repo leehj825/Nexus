@@ -283,3 +283,8 @@ body.touch .hints { display: none; }
 .dlg-portrait { float: left; width: 84px; height: 84px; margin: 2px 12px 6px 0; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5); }
 .dlg-portrait[hidden] { display: none; }
 .dlg-portrait svg { display: block; width: 100%; height: 100%; }
+/* The journal's tabs, and entries not met or spent yet */
+.j-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+.j-tabs button { padding: 7px 12px; background: rgba(8, 8, 14, 0.88); border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 5px; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.j-tabs button.on { border-color: var(--gold); color: var(--gold); }
+.j-none { opacity: 0.5; }

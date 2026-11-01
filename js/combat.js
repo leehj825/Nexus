@@ -581,6 +581,7 @@ const Combat = (() => {
     const g = nearestGroup(); if (!g || (typeof Cutscene !== 'undefined' && Cutscene.active())) return;
     cur = g; foes = foesOf(g); placeStage(g);
     for (const u of party) Chars.setWeaponTier(u.rig, Camp.tiersOwned(u.id, 'w'));           // the weapons glow with their upgrade tier
+    for (const f of foes) Growth.seeFoe(f.name);                                               // the journal's Foes tab
     phase = 'enter'; phaseT = 0; resetView();
     Player.setFrozen(true);
     for (const u of party) {

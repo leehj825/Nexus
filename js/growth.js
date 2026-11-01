@@ -53,17 +53,20 @@ const Growth = (() => {
   }
   // Bond scenes already played, by key
   const told = {};
+  // Foes the crew have met, by name (the journal's Foes tab)
+  const seen = {};
   // Challenge mode: after the ending, the foes are tougher and pay more. Saved with the game.
   let chal = false;
-  const getState = () => ({ chars: JSON.parse(JSON.stringify(chars)), bonds: Object.assign({}, bonds), told: Object.assign({}, told), chal });
+  const getState = () => ({ chars: JSON.parse(JSON.stringify(chars)), bonds: Object.assign({}, bonds), told: Object.assign({}, told), chal, seen: Object.assign({}, seen) });
   function setState(d) {
     for (const id of IDS) if (d.chars && d.chars[id]) Object.assign(chars[id], d.chars[id]);
     for (const k in bonds) delete bonds[k]; Object.assign(bonds, d.bonds || {});
     for (const k in told) delete told[k]; Object.assign(told, d.told || {});
     chal = !!d.chal;
+    for (const k in seen) delete seen[k]; Object.assign(seen, d.seen || {});
   }
   return {
-    IDS, NAME, ROLE, MAXLV, chars, need, SKILLS, LINKS, BOND_NAME, PERKS, choosePerk, told: k => !!told[k], markTold: k => { told[k] = true; }, challenge: () => chal, setChallenge: on => { chal = !!on; }, has, unlocked, award, addBond, bondPts, bondLevel, fought, getState, setState,
+    IDS, NAME, ROLE, MAXLV, chars, need, SKILLS, LINKS, BOND_NAME, PERKS, choosePerk, told: k => !!told[k], markTold: k => { told[k] = true; }, sawFoe: n => !!seen[n], seeFoe: n => { seen[n] = true; }, challenge: () => chal, setChallenge: on => { chal = !!on; }, has, unlocked, award, addBond, bondPts, bondLevel, fought, getState, setState,
     lv: id => chars[id].lv, hpMult: id => hpMult(chars[id].lv) * (1 + chars[id].perk.hp), dmgMult: id => dmgMult(chars[id].lv) * (1 + chars[id].perk.dmg), rateMult: id => rateMult(chars[id].lv) * (1 + chars[id].perk.rate),
   };
 })();

@@ -24,6 +24,7 @@
   <div class="corner">
     <button id="btnRun" type="button" aria-label="Run" title="Running (R)">&raquo;</button>
     <button id="btnCrew" type="button" aria-label="Crew" title="Crew (I)">&#9786;</button>
+    <button id="btnJournal" type="button" aria-label="Journal" title="Journal (J)">&#9636;</button>
     <button id="btnMap" type="button" aria-label="Map" title="Map">&#9638;</button>
     <button id="btnPause" type="button" aria-label="Pause" title="Pause (P)">&#10074;&#10074;</button>
     <button id="btnSound" type="button" aria-label="Sound" title="Sound">&#9834;</button>
@@ -103,6 +104,14 @@
   </div>
 </div>
 
+<div id="journal" class="camp" hidden>
+  <div class="camp-card crew-card" role="dialog" aria-label="Journal">
+    <header><h2>Journal</h2></header>
+    <nav class="j-tabs"><button type="button" data-tab="items">Items</button><button type="button" data-tab="foes">Foes</button><button type="button" data-tab="jobs">Jobs</button><button type="button" data-tab="story">Story</button></nav>
+    <div id="journalBody" class="crew-body"></div>
+    <button id="journalClose" class="camp-close" type="button">Close</button>
+  </div>
+</div>
 <div id="crew" class="camp" hidden>
   <div class="camp-card crew-card" role="dialog" aria-label="Crew">
     <header><h2>Crew</h2></header>
@@ -208,6 +217,7 @@
 <script src="js/cutscene.js"></script>
 <script src="js/modelcheck.js"></script>
 <script src="js/crewui.js"></script>
+<script src="js/journal.js"></script>
 <script src="js/shopui.js"></script>
 <script src="js/quests.js"></script>
 <script src="js/title.js"></script>
