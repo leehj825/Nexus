@@ -1,7 +1,7 @@
 // Nexus - battle: an ATB (active time battle) encounter with the crew against a group of husks: the three in the alley, or a patrol met in the Neon Market.
 // Phases: explore -> enter (the camera eases to the battle angle, the crew stand, the husks come forward) -> battle -> result -> leave.
-// Every combatant fills an ATB gauge in real time. A full gauge makes a crew member ready; the player picks the command from the
-// menu. Husks act on their own when full, and a few wind up a telegraphed Crush that can be broken with a Stagger.
+// Every combatant fills an ATB gauge while the turn runs. A full gauge makes a crew member ready, and then every gauge waits until the
+// player has picked the command from the menu: turn based. Husks act on their own when full, and a few wind up a telegraphed Crush that can be broken with a Stagger.
 // The crew's mechanics:
 //   Ruen: dual gauge. Her ATB refills as normal, and Data Burst runs a casting meter first; a hit on her breaks the cast.
 //   Kyle: Intercept. While Guard is up, a fatal hit on Ruen or Yuna is taken by Kyle instead if his ATB is at least half full.
@@ -746,7 +746,7 @@ const Combat = (() => {
 
     if (phase === 'battle') {
       actT = Math.max(0, actT - dt); runPending(dt);
-      const wait = isBusy();
+      const wait = isBusy() || party.some(u => u.alive && u.ready);            // turn based: while a crew member is ready, every gauge (theirs and the foes') waits
       for (const u of party) {
         if (!u.alive) continue;
         u.guard = Math.max(0, u.guard - dt);
