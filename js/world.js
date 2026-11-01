@@ -15,6 +15,10 @@ const World = (() => {
   const tmpP = new THREE.Vector3(), FOG_MKT = new THREE.Color(0x070b16), FOG_HUB = new THREE.Color(0x1a0f08), FOG_SPIRE = new THREE.Color(0x2c4258); let hubK = -1;
   const taken = new Set(), clearedPacks = new Set();
   let shutterOpen = false, bossArmed = false, bossDown = false, doorT = 0, spireBossArmed = false, spireBossDown = false;             // the Foundry's story state: shutter, boss, and the core
+  // The vault: a walled room in a Market block with three terminals, a note and three chests. Power the terminals in the order the note gives
+  // and the door opens. Saved with the game.
+  const VAULT_KEY = '2,2', VAULT_ORDER = ['blue', 'gold', 'red'], vaultS = { step: 0, door: false, chests: [false, false, false] };
+  const VAULT_LAMP = { red: 0xff3a5a, blue: 0x3ff0ff, gold: 0xffd24a };
   const NODE_CHUNKS = ['-2,9', '2,10', '-2,12'], nodesTaken = new Set();           // where the three access nodes lie, and which are picked up
   const TOWER = { x: 0, z: Z0 - CH * (MROWS - 3 + 0.5) };                            // the landmark tower's chunk centre (the story's goal)                                                          // scrap already picked up, by key
 
@@ -97,6 +101,65 @@ const World = (() => {
     const v = rnd(); return v < 0.5 ? 'block' : v < 0.78 ? 'market' : 'yard';
   }
 
+  const toast = text => { const t = document.getElementById('toast'); if (t) { t.textContent = text; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2400); } };
+  // The vault's walls, door, terminals, note and chests. The door and lamps and lids are shown as the saved state says
+  function buildVault(ch, g, X, Z) {
+    const wall = mat(0x1a1f2e, { roughness: 0.8 }), floor = mat(0x0e1220, { roughness: 0.9 });
+    box(g, 12, 0.05, 12, floor, X, 0.03, Z);
+    box(g, 12, 3, 0.8, wall, X, 1.5, Z - 6); ch.boxes.push({ x: X, z: Z - 6, hw: 6, hd: 0.4 });
+    box(g, 0.8, 3, 12, wall, X - 6, 1.5, Z); ch.boxes.push({ x: X - 6, z: Z, hw: 0.4, hd: 6 });
+    box(g, 0.8, 3, 12, wall, X + 6, 1.5, Z); ch.boxes.push({ x: X + 6, z: Z, hw: 0.4, hd: 6 });
+    box(g, 4.2, 3, 0.8, wall, X - 3.9, 1.5, Z + 6); ch.boxes.push({ x: X - 3.9, z: Z + 6, hw: 2.1, hd: 0.4 });
+    box(g, 4.2, 3, 0.8, wall, X + 3.9, 1.5, Z + 6); ch.boxes.push({ x: X + 3.9, z: Z + 6, hw: 2.1, hd: 0.4 });
+    const door = solo(g, 3.6, 3, 0.3, mat(0x2a3142, { metalness: 0.4, roughness: 0.5 }), X, 1.5, Z + 6);
+    const doorBox = { x: X, z: Z + 6, hw: 1.8, hd: 0.4 }; ch.boxes.push(doorBox);
+    door.position.y = vaultS.door ? 4.5 : 1.5;
+    ch.movers.push(() => { const want = vaultS.door ? 4.5 : 1.5; door.position.y += (want - door.position.y) * 0.08; doorBox.hw = vaultS.door ? 0 : 1.8; });
+    // Terminals: a lamp each, lit once that terminal has been powered
+    ch.vault = { X, Z, terms: {}, chests: [], note: { x: X + 5.6, z: Z + 2 }, in: {}, noteT: 0 };
+    const spots = { blue: [X - 4, Z - 3.5], gold: [X + 4, Z - 3.5], red: [X, Z + 1] };
+    for (const k of VAULT_ORDER) {
+      const [tx, tz] = spots[k], lit = vaultS.step > VAULT_ORDER.indexOf(k) || (vaultS.step === VAULT_ORDER.length);
+      const lamp = solo(g, 0.7, 1.6, 0.7, emis(VAULT_LAMP[k], lit ? 2.2 : 0.4), tx, 0.8, tz);
+      solo(g, 1.2, 0.2, 1.2, wall, tx, 1.6, tz);
+      ch.vault.terms[k] = { x: tx, z: tz, lamp };
+    }
+    // The note on the east wall, read by walking up to it
+    solo(g, 0.1, 0.9, 1.4, emis(0xffe9a8, 1.1), X + 5.55, 1.5, Z + 2);
+    // Chests: a lid that lifts when opened
+    [[X - 4.5, Z + 4], [X, Z + 4.5], [X + 4.5, Z + 4]].forEach(([cx, cz], i) => {
+      solo(g, 1.6, 0.8, 1.1, mat(0x5a4a2c, { roughness: 0.6 }), cx, 0.4, cz);
+      const lid = solo(g, 1.6, 0.25, 1.1, mat(0x6b5a34, { roughness: 0.6 }), cx, 0.85, cz);
+      ch.vault.chests.push({ x: cx, z: cz, i, lid });
+      ch.movers.push(() => { const open = vaultS.chests[i]; lid.rotation.x += ((open ? -1.2 : 0) - lid.rotation.x) * 0.1; });
+    });
+  }
+  // Each frame: walking up to a terminal powers it (in order), walking up to the note reads it, walking up to a chest opens it
+  function vaultTick(ch, p) {
+    const V = ch.vault, near = (x, z, d) => Math.hypot(p.x - x, p.z - z) < d;
+    const enter = (key, cond) => { const was = V.in[key]; V.in[key] = cond; return cond && !was; };
+    if (enter('note', near(V.note.x, V.note.z, 2.2))) toast('A note: "Blue first. Then gold. Red last. A wrong guess starts you over."');
+    if (!vaultS.door) for (const k of Object.keys(V.terms)) {
+      const t = V.terms[k];
+      if (!enter('t' + k, near(t.x, t.z, 1.5))) continue;
+      if (k === VAULT_ORDER[vaultS.step]) {
+        vaultS.step++; t.lamp.material.emissiveIntensity = 2.2; Sound.sfx('pickup');
+        if (vaultS.step === VAULT_ORDER.length) { vaultS.door = true; toast('The vault door opens.'); Sound.sfx('door'); }
+        else toast('Terminal powered: ' + vaultS.step + ' of ' + VAULT_ORDER.length + '.');
+      } else {
+        vaultS.step = 0; for (const j of Object.keys(V.terms)) V.terms[j].lamp.material.emissiveIntensity = 0.4;
+        toast('Wrong order. The terminals reset.'); Sound.sfx('shield');
+      }
+    }
+    if (vaultS.door) for (const c of V.chests) {
+      if (!enter('c' + c.i, near(c.x, c.z, 1.6))) continue;
+      if (vaultS.chests[c.i]) continue;
+      vaultS.chests[c.i] = true; const cr = [60, 90, 140][c.i];
+      Items.add(cr); Items.give(['stim', 'patch', 'revive'][c.i], 1); Sound.sfx('pickup');
+      toast('Chest opened: ' + cr + ' credits and an item.');
+    }
+  }
+
   // ---------- people ----------
   const NAMES = ['Mox', 'Pell', 'Sable', 'Lio', 'Wren', 'Cass', 'Hob', 'Ines'], HUB_NAMES = ['Marek', 'Tor', 'Kesh', 'Odalys', 'Bram', 'Sunniva'], SPIRE_NAMES = ['Anselm', 'Perrin', 'Sol', 'Mirelle', 'Ward', 'Ezra'];
   const GIVERS = { '0,0': ['rook', 'Rook'], '-1,3': ['tamsin', 'Tamsin'], '1,2': ['juno', 'Juno'], '1,9': ['okoro', 'Okoro'], '-2,11': ['ivo', 'Ivo'], '0,14': ['vee', 'Vee'], '-1,17': ['thea', 'Thea'] };      // chunk -> who gives a job there
@@ -110,7 +173,7 @@ const World = (() => {
   }
 
   function build(cx, r) {
-    const rnd = mulberry(hash(cx, r)), kind = kindOf(cx, r, rnd);
+    const rnd = mulberry(hash(cx, r)), kind = cx + ',' + r === VAULT_KEY ? 'vault' : kindOf(cx, r, rnd);
     const X = cx * CH, Z = Z0 - CH * (r + 0.5), g = new THREE.Group(); g.userData.batch = new Map();
     const ch = { key: cx + ',' + r, cx, r, X, Z, kind, group: g, boxes: [], circles: [], signs: [], spin: [], movers: [], scrap: [], npcs: [], steam: [] };
     const wins = [];                                                          // lit windows to instance: { x, y, z, ry, col }
@@ -483,6 +546,7 @@ const World = (() => {
       for (let i = 0; i < 9; i++) clutter(X + (rnd() - 0.5) * (CH - 6), Z + (rnd() - 0.5) * (CH - 6));
       dropScrap(4, () => [X + (rnd() - 0.5) * (CH - 6), Z + (rnd() - 0.5) * (CH - 6)]);
     }
+    if (kind === 'vault') buildVault(ch, g, X, Z);
     // An access node (stage 8 of the story): a cyan pylon with a ring, standing in the open
     if (NODE_CHUNKS.includes(ch.key) && !nodesTaken.has(ch.key)) {
       for (let tries = 0; tries < 40; tries++) {
@@ -541,7 +605,7 @@ const World = (() => {
       }
     }
     // A husk patrol: two or three husks standing in the street, which Combat fights (tougher the further from the gate). Gone for good once beaten.
-    if (kind !== 'wall' && kind !== 'plaza' && kind !== 'gate' && kind !== 'foundry' && kind !== 'lobby' && kind !== 'atrium' && kind !== 'summit' && r >= 1 && rnd() < 0.9 && !clearedPacks.has(ch.key)) {          // most streets have a patrol; beaten ones stay gone
+    if (kind !== 'vault' && kind !== 'wall' && kind !== 'plaza' && kind !== 'gate' && kind !== 'foundry' && kind !== 'lobby' && kind !== 'atrium' && kind !== 'summit' && r >= 1 && rnd() < 0.9 && !clearedPacks.has(ch.key)) {          // most streets have a patrol; beaten ones stay gone
       for (let tries = 0; tries < 14; tries++) {
         const px = X + (rnd() - 0.5) * (CH - 10), pz = Z + (rnd() - 0.5) * (CH - 10);
         if (!free(px, pz, 3.2)) continue;
@@ -666,6 +730,7 @@ const World = (() => {
       for (const mv of ch.movers) mv(t);
       if (ch.tears) for (const tp of ch.tears) tp.material.opacity = (Math.sin(t * 9 + tp.position.x) > 0.55 ? 0.05 : 0.22) * (0.6 + 0.4 * Math.sin(t * 2.3 + tp.position.z));
       if (ch.flames) for (const f of ch.flames) { const k = 0.85 + 0.25 * Math.sin(t * 9 + f.ph) * Math.sin(t * 4.3 + f.ph * 0.7); f.m.scale.set(1, k, 1); f.m.position.y = f.base + (k - 1) * 0.2; }
+      if (ch.vault) vaultTick(ch, p);
       if (ch.node) {                                                                    // access nodes show once the story asks for them, and are picked up by walking close
         const on = typeof Cutscene !== 'undefined' && Cutscene.stage() >= 8 && !nodesTaken.has(ch.key);
         ch.node.group.visible = on;
@@ -769,9 +834,10 @@ const World = (() => {
   const footprints = () => { const out = []; for (const ch of chunks.values()) for (const b of ch.boxes) out.push(b); return out; };
   const markTaken = key => taken.add(key);
   // Progress for the save: what was picked up, which patrols and nodes are gone, and the Foundry's state. Setting it rebuilds every loaded chunk.
-  const getState = () => ({ taken: [...taken], packs: [...clearedPacks], nodes: [...nodesTaken], shutter: shutterOpen, bossDown, bossArmed, spireBossArmed, spireBossDown });
+  const getState = () => ({ taken: [...taken], packs: [...clearedPacks], nodes: [...nodesTaken], vault: { step: vaultS.step, door: vaultS.door, chests: vaultS.chests.slice() }, shutter: shutterOpen, bossDown, bossArmed, spireBossArmed, spireBossDown });
   function setState(d) {
     taken.clear(); clearedPacks.clear(); nodesTaken.clear();
+    if (d.vault) { vaultS.step = d.vault.step || 0; vaultS.door = !!d.vault.door; vaultS.chests = (d.vault.chests || [false, false, false]).slice(); }
     (d.taken || []).forEach(k => taken.add(k)); (d.packs || []).forEach(k => clearedPacks.add(k)); (d.nodes || []).forEach(k => nodesTaken.add(k));
     shutterOpen = !!d.shutter; bossDown = !!d.bossDown; bossArmed = !!d.bossArmed; spireBossArmed = !!d.spireBossArmed; spireBossDown = !!d.spireBossDown; doorT = 0;
     for (const ch of [...chunks.values()]) drop(ch); queue.length = 0;
