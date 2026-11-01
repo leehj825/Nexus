@@ -282,7 +282,7 @@ const Cutscene = (() => {
     { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], caption: 'The crew of four, battered but unbroken, shoulders their gear and walks into the glowing, glitching horizon, ready for whatever comes next.' },
   ];
   const moodOf = st => st.mood || 'talk';
-  const typed = () => steps && steps[i] ? (steps[i].text || steps[i].caption || steps[i].note || '') : '';
+  const typed = () => steps && steps[i] ? I18n.tr(steps[i].text || steps[i].caption || steps[i].note || '') : '';
 
   // A shot's target camera pose
   function shotFor(st) {
@@ -327,9 +327,9 @@ const Cutscene = (() => {
     const st = steps[i], who = st.name ? { name: st.name, color: st.color } : st.who && WHO[st.who];
     applyFx(st.fx);
     $('dlgCount').textContent = (i + 1) + ' / ' + steps.length;
-    $('dlgName').textContent = who ? who.name : '';
+    $('dlgName').textContent = who ? I18n.tr(who.name) : '';
     $('dlgName').style.color = who ? who.color : '';
-    $('dlgNote').textContent = st.note || '';
+    $('dlgNote').textContent = I18n.tr(st.note || '');
     $('dlgNote').hidden = !st.note;
     const pt = st.who && !st.name && !st.caption && WHO[st.who] ? Portraits.svg(st.who, st.mood) : '';
     $('dlgPortrait').innerHTML = pt; $('dlgPortrait').hidden = !pt;
@@ -401,6 +401,7 @@ const Cutscene = (() => {
     c.options.forEach((o, k) => {
       const b = document.createElement('button'); b.type = 'button'; b.textContent = o.text;
       b.addEventListener('click', e => { e.stopPropagation(); choose(k); });
+      b.textContent = I18n.tr(o.text);
       box.appendChild(b);
     });
   }
@@ -419,19 +420,19 @@ const Cutscene = (() => {
   let stage = 0, restBase = 0;                                  // restBase: the crew's rest count when the Resonance stage began; the Resonance waits on a rest after it
   const QUEST = ['\u25c6 Speak with the crew', '\u25c6 Rest by the fire and feel for the resonance', '\u25c6 Go through the gate into the Neon Market', '\u25c6 Follow the orb up the avenue', '\u25c6 Reach the foot of the tower', '\u25c6 Follow the pull to the Industrial Hub gate', '\u25c6 Cross the Hub to the Foundry', '\u25c6 Reach the Foundry\'s shutter', '\u25c6 Find the three access nodes', '\u25c6 Return to the Foundry\'s shutter', '\u25c6 Enter the Foundry', '\u25c6 Defeat the Loader Mech', '\u25c6 Take the Data Core', '\u25c6 Ride the freight lift to the Corporate Spire', '\u25c6 Cross the Spire lobby to the server atrium', '\u25c6 Climb to the summit', '\u25c6 Face the CEO at the summit', '\u25c6 Defeat the CEO', '\u25c6 The city is free. The road goes on.'];
   function setQuest(n) {
-    const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; if (n > 0) Sound.sfx('quest');
+    const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : I18n.tr(QUEST[n]); if (n > 0) Sound.sfx('quest');
     const toast = $('toast'); if (toast && n > 0) { toast.textContent = 'Quest updated'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
   }
   const setStage = n => { stage = n; if (n === 1) restBase = Camp.restCount(); setQuest(n); Save.touch(); Save.save(); };
   // After a load: the story stage is set without the chime or the toast
-  function restore(n, f) { stage = n; for (const k in flags) delete flags[k]; Object.assign(flags, f || {}); if (n === 1) restBase = Camp.restCount(); const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; }
+  function restore(n, f) { stage = n; for (const k in flags) delete flags[k]; Object.assign(flags, f || {}); if (n === 1) restBase = Camp.restCount(); const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : I18n.tr(QUEST[n]); }
   // The alley's husks are beaten and the gate opens: the quest line says so
   function gateOpened() {
     const toast = $('toast'); if (toast) { toast.textContent = 'The gate\'s barrier dissolves'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); }
-    if (stage === 2) { const q = $('qtext'); if (q) q.textContent = QUEST[2]; Sound.sfx('quest'); }
+    if (stage === 2) { const q = $('qtext'); if (q) q.textContent = I18n.tr(QUEST[2]); Sound.sfx('quest'); }
   }
   // Each access node picked up: the toast and the quest line show the count
-  function nodeTaken(n) { const q = $('qtext'); if (q && stage === 8) q.textContent = QUEST[8] + ' (' + n + '/3)'; const toast = $('toast'); if (toast) { toast.textContent = 'Access node ' + n + ' / 3'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1800); } }
+  function nodeTaken(n) { const q = $('qtext'); if (q && stage === 8) q.textContent = I18n.tr(QUEST[8]) + ' (' + n + '/3)'; const toast = $('toast'); if (toast) { toast.textContent = I18n.tr('Access node ') + n + ' / 3'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1800); } }
   // The objective the map points at: the gate, then the tower
   function objective() {
     if (stage === 2) return Combat.alleyCleared() ? { x: 0, z: World.Z0 + 4, label: 'the gate' } : { x: 0, z: -14, label: 'the husks' };

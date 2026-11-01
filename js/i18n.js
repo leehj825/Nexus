@@ -27,11 +27,32 @@ const I18n = (() => {
       'WASD 또는 스틱으로 이동 · 드래그로 카메라 회전 · 휠이나 핀치로 확대 · R 달리기 토글, Shift 반대 · 방향키 회전 · P 일시정지',
     'Drag to rotate · wheel or pinch to zoom · two fingers or right-drag to pan · double-tap to reset': '드래그로 회전 · 휠이나 핀치로 확대 · 두 손가락이나 우클릭 드래그로 이동 · 두 번 탭해 초기화',
     'How battle works': '전투 방법', 'Ready': '준비',
+    'Jin': '진', 'Ruen': '루엔', 'Kyle': '카일', 'Yuna': '유나', 'The CEO': 'CEO', ' m to ': ' m · 목표: ',
+    '◆ Speak with the crew': '◆ 동료와 대화하기',
+    '◆ Rest by the fire and feel for the resonance': '◆ 모닥불가에서 쉬며 공명을 느끼기',
+    '◆ Go through the gate into the Neon Market': '◆ 문을 지나 네온 시장으로 들어가기',
+    '◆ Follow the orb up the avenue': '◆ 대로를 따라 오브를 따라가기',
+    '◆ Reach the foot of the tower': '◆ 탑 기슭에 도착하기',
+    '◆ Follow the pull to the Industrial Hub gate': '◆ 산업 허브 문으로 향하는 끌림을 따라가기',
+    '◆ Cross the Hub to the Foundry': '◆ 허브를 가로질러 파운드리로 가기',
+    "◆ Reach the Foundry's shutter": '◆ 파운드리 셔터에 도착하기',
+    '◆ Find the three access nodes': '◆ 접근 노드 세 개 찾기',
+    "◆ Return to the Foundry's shutter": '◆ 파운드리 셔터로 돌아가기',
+    '◆ Enter the Foundry': '◆ 파운드리에 들어가기',
+    '◆ Defeat the Loader Mech': '◆ 로더 메카 쓰러뜨리기',
+    '◆ Take the Data Core': '◆ 데이터 코어 손에 넣기',
+    '◆ Ride the freight lift to the Corporate Spire': '◆ 화물 승강기를 타고 기업 첨탑으로 올라가기',
+    '◆ Cross the Spire lobby to the server atrium': '◆ 첨탑 로비를 지나 서버 아트리움으로 가기',
+    '◆ Climb to the summit': '◆ 정상까지 오르기',
+    '◆ Face the CEO at the summit': '◆ 정상에서 CEO와 맞서기',
+    '◆ Defeat the CEO': '◆ CEO 쓰러뜨리기',
+    '◆ The city is free. The road goes on.': '◆ 도시는 자유로워졌다. 길은 계속된다.',
     'Thank you for playing.': '플레이해 주셔서 감사합니다.', 'The city is free, and the road goes on.': '도시는 자유로워졌고, 길은 계속됩니다.',
   };
   let lang = 'en';
   try { lang = localStorage.getItem('nexus.lang') === 'ko' ? 'ko' : 'en'; } catch (e) { /* no storage: English */ }
-  const tr = s => (lang === 'ko' && KO[s]) || s;
+  // The story dictionary (js/i18n_story.js) is read after the interface entries
+  const tr = s => (lang !== 'ko' ? s : KO[s] || (typeof I18nStory !== 'undefined' && I18nStory[s]) || s);
   const orig = new WeakMap();                                   // text node -> the English text it was given
   // Switches every matching text node, title and aria-label on the page (safe to call again)
   function apply() {

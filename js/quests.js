@@ -41,7 +41,7 @@ const Quests = (() => {
   const st = {};                                                                                // id -> { s: 'active' | 'done', n }
   const status = id => (st[id] && st[id].s) || 'new';
 
-  const toast = text => { const t = document.getElementById('toast'); if (t) { t.textContent = text; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600); } };
+  const toast = text => { const t = document.getElementById('toast'); if (t) { t.textContent = I18n.tr(text); t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600); } };
   const zoneAt = z => z < World.SPIRE_Z - 2 ? 'spire' : z < World.HUB_Z - 2 ? 'hub' : 'market';
   // The job a giver has on offer: their first job not yet done whose follow-up condition is met
   const offerFor = tag => DEFS.find(q => q.giver === tag && status(q.id) !== 'done' && (!q.after || status(q.after) === 'done'));
@@ -52,9 +52,9 @@ const Quests = (() => {
     const r = d.reward; if (r.cr) Items.add(r.cr);
     for (const k of Object.keys(r.items || {})) Items.give(k, r.items[k]);
     const bits = []; if (r.cr) bits.push(r.cr + ' credits'); for (const k of Object.keys(r.items || {})) bits.push(r.items[k] + ' × ' + Tuning.items[k].name);
-    toast('Job done: ' + d.title + ' · ' + bits.join(', ')); Sound.sfx('quest');
+    toast(I18n.tr('Job done: ') + I18n.tr(d.title) + ' · ' + bits.join(', ')); Sound.sfx('quest');
   }
-  function accept(d) { st[d.id] = { s: 'active', n: 0 }; toast('New job: ' + d.title); Sound.sfx('quest'); }
+  function accept(d) { st[d.id] = { s: 'active', n: 0 }; toast('New job: ' + I18n.tr(d.title)); Sound.sfx('quest'); }
   function finish(d) { if (d.kind === 'scrap') Camp.spend(d.n); st[d.id] = { s: 'done', n: d.n || 0 }; give(d); Save.save(); }
   const L = (text, mood) => ({ text, mood: mood || 'talk' });
 
@@ -80,7 +80,7 @@ const Quests = (() => {
   function defeated(n, z) {
     const zn = zoneAt(z), done = [];
     for (const d of DEFS) if (d.kind === 'sweep' && d.zone === zn && status(d.id) === 'active' && st[d.id].n < d.n) { st[d.id].n = Math.min(d.n, st[d.id].n + n); if (st[d.id].n >= d.n) done.push(d); }
-    for (const d of done) toast('Job ready to hand in: ' + d.title + ' · return to ' + d.who);
+    for (const d of done) toast('Job ready to hand in: ' + I18n.tr(d.title) + ' · return to ' + I18n.tr(d.who));
   }
   // For the crew screen: every job that has been taken, with where it stands
   function list() {
@@ -90,7 +90,7 @@ const Quests = (() => {
       else if (d.kind === 'scrap') prog = Math.min(Camp.parts, d.n) + ' / ' + d.n + ' scrap';
       else if (d.kind === 'sweep') prog = st[d.id].n + ' / ' + d.n + ' foes';
       else prog = 'Deliver to ' + d.toWho;
-      return { title: d.title, who: d.who, place: NAME_OF[d.zone], prog, done: s === 'done', ready: s === 'active' && ready(d), text: s === 'done' ? d.done : d.ask[0] };
+      return { title: I18n.tr(d.title), who: I18n.tr(d.who), place: I18n.tr(NAME_OF[d.zone]), prog: I18n.tr(prog), done: s === 'done', ready: s === 'active' && ready(d), text: s === 'done' ? d.done : d.ask[0] };
     });
   }
   return {
