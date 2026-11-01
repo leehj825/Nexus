@@ -274,3 +274,8 @@ body.touch .hints { display: none; }
 .cc-perks button { flex: 1 1 130px; padding: 7px 8px; background: rgba(8, 8, 14, 0.88); border: 1px solid rgba(255, 210, 74, 0.5); border-radius: 5px; color: var(--ink); font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
 .cc-perks button:hover { border-color: var(--gold); }
 .cc-perks button span { display: block; margin-top: 2px; font-size: 11px; color: var(--dim); }
+/* Choices in the dialogue: buttons under the question */
+.dlg-choices { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.dlg-choices[hidden] { display: none; }
+.dlg-choices button { padding: 9px 12px; background: rgba(8, 8, 14, 0.9); border: 1px solid rgba(255, 210, 74, 0.5); border-radius: 5px; color: var(--ink); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.dlg-choices button:hover { border-color: var(--gold); }

@@ -46,6 +46,11 @@ const Cutscene = (() => {
     { shot: 'who', who: 'kyle', mood: 'firm', text: 'Then I\'m your anchor. Anything gets loud in your head, you grab my arm. Understood?' },
     { shot: 'who', who: 'ruen', mood: 'nod', note: 'A small, shaky smile.', text: '...Understood. Thank you, Kyle.' },
     { shot: 'who', who: 'yuna', mood: 'firm', fx: { glitch: 0.1, resonance: 0 }, text: 'Sentiment later. Corporate drones triangulate pulses like this. We move at first light, through the upper sectors, and we stay off the main grid.' },
+    { shot: 'who', who: 'jin', mood: 'think', text: 'So: do we follow it tonight, or wait for daylight and do this properly?',
+      choice: { options: [
+        { text: 'Follow it tonight', flag: 'orb', value: 'tonight', bond: ['you', 'ruen', 2] },
+        { text: 'Wait for daylight', flag: 'orb', value: 'daylight', bond: ['kyle', 'yuna', 2] },
+      ] } },
     { shot: 'who', who: 'jin', mood: 'firm', text: 'The orb is our compass. Ruen calls the direction, I take the vanguard, Kyle the rear. Yuna, eyes on the grid.' },
     { shot: 'gate', fx: { glitch: 0.15, resonance: 0.3 }, caption: 'Beyond the gate, the district\'s signs flicker in sequence, as if the city itself were pointing the way.' },
   ];
@@ -251,10 +256,18 @@ const Cutscene = (() => {
     { shot: 'point', look: [World.SUMMIT.x, 3, World.SUMMIT.z], ...CEO_WHO, mood: 'worry', text: 'Forty years of work.' },
     { shot: 'who', who: 'yuna', mood: 'firm', text: 'Forty years of other people\'s lives.' },
     { shot: 'point', look: [World.SUMMIT.x, 14, World.SUMMIT.z], fx: { glitch: 0, resonance: 0 }, caption: 'The Spire\'s hold on the city is broken. Far below, the signs stop spelling things that aren\'t ads.' },
+    { shot: 'who', who: 'yuna', mood: 'think', text: 'The Spire\'s systems are still running. Whatever we do with them, we do it now.',
+      choice: { options: [
+        { text: 'Shut the Spire down for good', flag: 'spire', value: 'shutdown', bond: ['yuna', 'kyle', 2] },
+        { text: 'Keep its systems for the city', flag: 'spire', value: 'keep', bond: ['yuna', 'ruen', 2] },
+      ] } },
   ];
+  // (the choice is the last beat of the Resolution, before the epilogue)
   const EPILOGUE = [
     { shot: 'wide', caption: 'Epilogue\nThe megacity is changed for ever: free of the Corporation\'s grip, but wild and unpredictable.' },
     { shot: 'who', who: 'kyle', mood: 'talk', text: 'So. What now?' },
+    { shot: 'who', who: 'yuna', mood: 'firm', when: { flag: 'spire', is: 'shutdown' }, text: 'The Spire is dark for good. Nobody else gets to run a city from a glass tower.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', when: { flag: 'spire', is: 'keep' }, text: 'We keep its systems, so someone has to run them. It won\'t be them, and we\'ll watch every line.' },
     { shot: 'who', who: 'yuna', mood: 'firm', text: 'Now we find out who else has a Core in their pocket, and what they plan to do with it.' },
     { shot: 'who', who: 'ruen', mood: 'nod', note: 'Listening, then smiling.', text: 'The whispering has stopped. For the first time since the alley, it\'s quiet.' },
     { shot: 'who', who: 'jin', mood: 'nod', text: 'Then we pack up the camp, and we walk.' },
@@ -310,14 +323,17 @@ const Cutscene = (() => {
     $('dlgName').style.color = who ? who.color : '';
     $('dlgNote').textContent = st.note || '';
     $('dlgNote').hidden = !st.note;
+    renderChoices(st.choice);
     $('dlg').classList.toggle('caption', !!st.caption);
     $('dlgText').textContent = ''; shown = 0;
   }
 
   // opts.anchor: 'camp' (at the fire: the crew are seated, Jin takes his spot) or 'here' (the crew gather round Jin where he stands);
   // opts.facing: the way they all face in a 'here' scene; opts.npc: someone being talked to (a chat: nobody is moved)
+  // Story flags set by the player's choices (saved with the game)
+  const flags = {};
   function begin(list, done, opts = {}) {
-    steps = list; i = 0; ending = 0; active = true; onDone = done || null; t = 0; npcRig = opts.npc ? opts.npc.rig : null;
+    steps = list.filter(s => !s.when || flags[s.when.flag] === s.when.is); i = 0; ending = 0; active = true; onDone = done || null; t = 0; npcRig = opts.npc ? opts.npc.rig : null;
     Player.setFrozen(true);
     const ps = Player.state();
     if (!opts.anchor || opts.anchor === 'camp') {
@@ -334,8 +350,17 @@ const Cutscene = (() => {
   function finish() {                                                            // leave the scene: glide the camera home, then hand control back
     acting(false); npcRig = null; Camp.release(); applyFx({ glitch: 0, resonance: 0, aim: false }); $('dlg').hidden = true; ending = 1.4; document.body.classList.remove('cutscene'); document.body.classList.add('cutscene-out');
   }
+  // A choice step: the chosen option sets its flag and bond, then the scene goes on
+  function choose(k) {
+    const st = steps[i]; if (!st || !st.choice || shown < typed().length) return;
+    const o = st.choice.options[k]; if (!o) return;
+    if (o.flag) flags[o.flag] = o.value;
+    if (o.bond) bondUp([o.bond]);
+    Save.save();
+    if (++i >= steps.length) finish(); else show();
+  }
   function advance() {
-    if (!active || ending) return;
+    if (!active || ending || (steps[i] && steps[i].choice)) return;
     const full = typed();
     if (shown < full.length) { shown = full.length; return; }
     if (++i >= steps.length) finish(); else show();
@@ -357,6 +382,17 @@ const Cutscene = (() => {
     if (Math.floor(shown / 3) !== before && shown < typed().length && steps[i] && !steps[i].caption) Sound.blip(steps[i].who || 'npc');          // a chirp every few letters, pitched by the speaker
     $('dlgText').textContent = typed().slice(0, Math.floor(shown)); acting(true);
     $('dlgNext').style.visibility = shown >= typed().length ? 'visible' : 'hidden';
+    if (steps[i] && steps[i].choice) { $('dlgChoices').hidden = shown < typed().length; $('dlgNext').style.visibility = 'hidden'; }
+  }
+  // The options of a choice step, shown once its question has been typed out
+  function renderChoices(c) {
+    const box = $('dlgChoices'); box.textContent = ''; box.hidden = true;
+    if (!c) return;
+    c.options.forEach((o, k) => {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = o.text;
+      b.addEventListener('click', e => { e.stopPropagation(); choose(k); });
+      box.appendChild(b);
+    });
   }
 
   // The camera: glide toward the current shot (or, on the way out, toward the exploration camera)
@@ -378,7 +414,7 @@ const Cutscene = (() => {
   }
   const setStage = n => { stage = n; if (n === 1) restBase = Camp.restCount(); setQuest(n); Save.touch(); Save.save(); };
   // After a load: the story stage is set without the chime or the toast
-  function restore(n) { stage = n; if (n === 1) restBase = Camp.restCount(); const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; }
+  function restore(n, f) { stage = n; for (const k in flags) delete flags[k]; Object.assign(flags, f || {}); if (n === 1) restBase = Camp.restCount(); const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; }
   // The alley's husks are beaten and the gate opens: the quest line says so
   function gateOpened() {
     const toast = $('toast'); if (toast) { toast.textContent = 'The gate\'s barrier dissolves'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); }
@@ -501,5 +537,5 @@ const Cutscene = (() => {
     if (!active && !campOpen && !Combat.active() && !Combat.engaging()) checkTriggers();
   }
 
-  return { init, update, updateUI, applyCamera, active: () => active, start, started: () => started, stage: () => stage, objective, nodeTaken, gateOpened, restore, debugStage: n => setStage(n) };
+  return { init, update, updateUI, applyCamera, active: () => active, start, started: () => started, stage: () => stage, flags: () => ({ ...flags }), objective, nodeTaken, gateOpened, restore, debugStage: n => setStage(n) };
 })();
