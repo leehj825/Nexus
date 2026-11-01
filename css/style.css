@@ -288,3 +288,6 @@ body.touch .hints { display: none; }
 .j-tabs button { padding: 7px 12px; background: rgba(8, 8, 14, 0.88); border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 5px; color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
 .j-tabs button.on { border-color: var(--gold); color: var(--gold); }
 .j-none { opacity: 0.5; }
+
+/* Settings opens above the title screen too (it can be opened from the title) */
+#settings { z-index: 40; }
