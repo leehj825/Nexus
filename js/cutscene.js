@@ -323,6 +323,8 @@ const Cutscene = (() => {
     $('dlgName').style.color = who ? who.color : '';
     $('dlgNote').textContent = st.note || '';
     $('dlgNote').hidden = !st.note;
+    const pt = st.who && !st.name && !st.caption && WHO[st.who] ? Portraits.svg(st.who, st.mood) : '';
+    $('dlgPortrait').innerHTML = pt; $('dlgPortrait').hidden = !pt;
     renderChoices(st.choice);
     $('dlg').classList.toggle('caption', !!st.caption);
     $('dlgText').textContent = ''; shown = 0;
