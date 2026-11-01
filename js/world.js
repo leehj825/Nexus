@@ -548,7 +548,7 @@ const World = (() => {
         const SP = [['enforcer', 'drone', 'drone'], ['enforcer', 'enforcer', 'seraph'], ['drone', 'drone', 'seraph'], ['enforcer', 'seraph']], roster = r >= HROWS ? SP[Math.floor(rnd() * SP.length)] : null;       // the Spire's guards are Enforcers and drones
         const n = roster ? roster.length : 2 + (rnd() < 0.5 ? 1 : 0), rigs = [];
         for (let i = 0; i < n; i++) {
-          const rig = Chars.create(roster ? roster[i] : i === n - 1 && r >= 2 && (r < MROWS || i > 0) ? 'brute' : 'husk'), a = i / n * Math.PI * 2 + 0.6;   // the deeper patrols are led by a Brute
+          const rig = Chars.create(roster ? roster[i] : newFoe(r, i, n, rnd)), a = i / n * Math.PI * 2 + 0.6;   // the deeper patrols are led by a Brute
           rig.root.position.set(px + Math.cos(a) * 1.5, 0, pz + Math.sin(a) * 1.5); rig.root.rotation.y = rnd() * 6.28; g.add(rig.root); rigs.push(rig);
         }
         ch.pack = Combat.register({ id: 'w' + ch.key, x: px, z: pz, rigs, tier: tierFor(r), aggro: true, radius: 8, text: r >= HROWS ? 'Corporate security! Hold your ground.' : r >= MROWS ? 'The works are crawling with husks.' : 'Husks! A patrol blocks the street.', onClear: () => clearedPacks.add(ch.key) });
@@ -595,6 +595,12 @@ const World = (() => {
     ch.group.traverse(o => { if (o.isMesh && o.geometry !== unit && o.geometry !== cyl && !(o.material && o.material.map)) { /* shared materials stay cached */ } if (o.geometry && o.geometry !== unit && o.geometry !== cyl) o.geometry.dispose(); });
     if (ch.inst) ch.inst.dispose(); if (ch.inst2) for (const m of ch.inst2) m.dispose();
     chunks.delete(ch.key);
+  }
+
+  // Which foe a patrol member is: mostly husks (a Brute leads the deeper patrols), with a few siphons and crawlers from the Market on
+  function newFoe(r, i, n, rnd) {
+    if (r >= 1 && rnd() < 0.22) return rnd() < 0.5 ? 'siphon' : 'crawler';
+    return i === n - 1 && r >= 2 && (r < MROWS || i > 0) ? 'brute' : 'husk';
   }
 
   // ---------- district weather: rain in the Market, embers over the Hub, cold data motes in the Spire. Each layer is a box of particles

@@ -31,6 +31,8 @@ const Combat = (() => {
   const BOSS = { name: 'Loader Mech', ...Tuning.foes.loader, color: '#ffd24a' };            // the Foundry's guardian: a sweep that hits everyone, crushes, and a shard volley once it is half broken
   const ENFORCER = { name: 'Enforcer', ...Tuning.foes.enforcer, color: '#9fd8ff' };       // raises a shield (half damage) until Stagger or Shockwave breaks it
   const DRONE = { name: 'Sentry Drone', ...Tuning.foes.drone, color: '#3ff0ff' };
+  const SIPHON = { name: 'Siphon', ...Tuning.foes.siphon, color: '#ff3fb4' };             // drains a crew member's gauge; Ruen's magic hurts it most
+  const CRAWLER = { name: 'Crawler', ...Tuning.foes.crawler, color: '#ff7a2a' };          // low and quick; its lash pins a crew member; Yuna's shots hurt it most
   const SERAPH = { name: 'Seraph Drone', ...Tuning.foes.seraph, color: '#ffe9a8' };        // heals and shields the others: break it first
   const CEO = { name: 'The CEO', ...Tuning.foes.ceo, color: '#fff0c0' };
   const BRUTE = { name: 'Husk Brute', ...Tuning.foes.brute, color: '#ff8a4a' };       // big and slow: no light attacks, only the telegraphed Crush, which hits hard
@@ -103,8 +105,8 @@ const Combat = (() => {
   function foesOf(g) {
     if (g.foes) return g.foes;
     g.foes = g.rigs.map((rig, i) => {
-      const BS = rig.name === 'loader', B = rig.name === 'brute' || BS, K = { loader: BOSS, brute: BRUTE, enforcer: ENFORCER, drone: DRONE, seraph: SERAPH, ceo: CEO }[rig.name] || HUSK, hp = Math.round(K.hp * (1 + Tuning.tier.hp * g.tier) * Tuning.scale.foeHp);
-      const f = { id: g.id + ':' + i, name: K.name, cr: K.cr !== undefined ? K.cr : Math.round(Tuning.credits.perFoe * (1 + Tuning.credits.tierGrowth * g.tier)), ai: K.ai || (BS ? 'boss' : 'husk'), xp: Math.round(K.xp * (1 + Tuning.tier.xp * g.tier) * Tuning.scale.xp), brute: B, boss: BS, turn: 0, phase2: false, color: K.color, rig, hp, hpMax: hp, dmgMul: (1 + Tuning.tier.dmg * g.tier) * Tuning.scale.foeDmg * (BS ? Tuning.scale.bossDmg : rig.name === 'ceo' ? Tuning.scale.ceoDmg : 1), rate: K.rate * (1 + Tuning.tier.rate * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
+      const BS = rig.name === 'loader', B = rig.name === 'brute' || BS, K = { loader: BOSS, brute: BRUTE, enforcer: ENFORCER, drone: DRONE, seraph: SERAPH, ceo: CEO, siphon: SIPHON, crawler: CRAWLER }[rig.name] || HUSK, hp = Math.round(K.hp * (1 + Tuning.tier.hp * g.tier) * Tuning.scale.foeHp);
+      const f = { id: g.id + ':' + i, name: K.name, cr: K.cr !== undefined ? K.cr : Math.round(Tuning.credits.perFoe * (1 + Tuning.credits.tierGrowth * g.tier)), ai: K.ai || (BS ? 'boss' : 'husk'), xp: Math.round(K.xp * (1 + Tuning.tier.xp * g.tier) * Tuning.scale.xp), brute: B, boss: BS, turn: 0, phase2: false, color: K.color, weakTo: K.weak || null, weakMul: K.weakMul || 1, rig, hp, hpMax: hp, dmgMul: (1 + Tuning.tier.dmg * g.tier) * Tuning.scale.foeDmg * (BS ? Tuning.scale.bossDmg : rig.name === 'ceo' ? Tuning.scale.ceoDmg : 1), rate: K.rate * (1 + Tuning.tier.rate * g.tier), atb: 0, alive: true, foe: true, wind: null, home: { x: rig.root.position.x, z: rig.root.position.z, ry: rig.root.rotation.y } };
       f.rate0 = f.rate; f.label = makeLabel(K.name, K.color, f); return f;
     });
     return g.foes;
@@ -223,9 +225,10 @@ const Combat = (() => {
     if (u.id === 'ruen' && cast && u.alive) { cast = null; log('Ruen is hit. The casting breaks.'); }
   }
   // Foe takes a hit from a crew member's command
-  function hitFoe(f, dmg) {
+  function hitFoe(f, dmg, from) {
     if (!f.alive) return;
     dmg = Math.max(1, Math.round(dmg / (DIFF[diff].hp * (chalOn() ? CHAL.hp : 1))));
+    if (from && f.weakTo && from.id === f.weakTo) { dmg = Math.round(dmg * f.weakMul); popup(f, 'WEAKNESS', '#ff3fb4'); }
     if (f.guard > 0) dmg = Math.round(dmg * 0.5);
     if (f.shielded) { dmg = Math.round(dmg * Tuning.ceo.shieldSoak); if (Math.random() < 0.25) log(f.name + '\'s shield soaks the blow.'); }
     damage(f, dmg);
@@ -266,7 +269,7 @@ const Combat = (() => {
     if (clip) Chars.play(u.rig, clip, false, FAST);
     later(at, () => {
       const f = liveTarget(t); if (!f) return;
-      Sound.sfx(clip === 'mgBolt' ? 'bolt' : 'blast'); shot(u, f, u.color); hitFoe(f, dmg); log(u.name + ' hits ' + f.name + ' for ' + dmg + '.');
+      Sound.sfx(clip === 'mgBolt' ? 'bolt' : 'blast'); shot(u, f, u.color); hitFoe(f, dmg, u); log(u.name + ' hits ' + f.name + ' for ' + dmg + '.');
     });
     busy(at + 0.4);
     endTurn(u, opts.delay);
@@ -292,8 +295,8 @@ const Combat = (() => {
       if (!r.struck && r.t >= hitAt) {
         r.struck = true; if (r.slash !== undefined) Sound.sfx('slash', { pitch: r.slash }); else Sound.sfx('swing', { pitch: u.id === 'kyle' ? -300 : 200 });
         if (!r.target.alive) r.target = selected() || r.target;
-        if (r.target.alive) { hitFoe(r.target, r.dmg); log(u.name + ' hits ' + r.target.name + ' for ' + r.dmg + '.'); }
-        if (r.others) for (const f of foesAlive()) if (f !== r.target) { hitFoe(f, r.others); FX.hit(f.rig.root.position.clone().setY(1.2), 0xffe9a8, false); }
+        if (r.target.alive) { hitFoe(r.target, r.dmg, u); log(u.name + ' hits ' + r.target.name + ' for ' + r.dmg + '.'); }
+        if (r.others) for (const f of foesAlive()) if (f !== r.target) { hitFoe(f, r.others, u); FX.hit(f.rig.root.position.clone().setY(1.2), 0xffe9a8, false); }
       }
       if (r.t >= Math.min(Chars.clipLength(r.clip), r.clip === 'brawlSwipe' ? 1.75 : 1.4) / SWING) { r.phase = 'back'; u.rig.clip = null; }
     } else if (go(r.home)) { u.rush = null; u.rig.root.rotation.y = Math.PI + stage.th; }
@@ -340,7 +343,7 @@ const Combat = (() => {
     Chars.play(u.rig, 'brawlSwipe', false, SWING); busy(hitT('brawlSwipe', SWING) + 0.6);
     later(hitT('brawlSwipe', SWING), () => {
       Sound.sfx('nova'); shake(0.3); FX.nova(u.rig.root.position, 0xffd27a);
-      for (const f of foesAlive()) { f.guard = 0; hitFoe(f, pdmg(u, 22)); f.atb = Math.max(0, f.atb - 0.35); clearWind(f); }
+      for (const f of foesAlive()) { f.guard = 0; hitFoe(f, pdmg(u, 22), u); f.atb = Math.max(0, f.atb - 0.35); clearWind(f); }
     });
     log('Kyle\'s Shockwave rocks the foes.'); endTurn(u, Tuning.delay.shock);
   }
@@ -349,14 +352,14 @@ const Combat = (() => {
     Chars.play(u.rig, 'mgBolt2', false, FAST); busy(hitT('mgBolt2', FAST) + 0.4);
     later(hitT('mgBolt2', FAST), () => {
       const f = liveTarget(t); if (!f) return;
-      Sound.sfx('blast'); shot(u, f, u.color); hitFoe(f, pdmg(u, 12));
+      Sound.sfx('blast'); shot(u, f, u.color); hitFoe(f, pdmg(u, 12), u);
       f.weak = Tuning.weakTime; f.guard = 0; f.atb = Math.max(0, f.atb - STAGGER * 0.6); clearWind(f); popup(f, 'WEAK', '#c9a0ff'); log(f.name + ' is hit in a weak spot and will hit softer.');
     });
     endTurn(u, Tuning.delay.weak);
   }
   function barrage(u) {
     Chars.play(u.rig, 'mgBolt2', false, FAST); busy(hitT('mgBolt2', FAST) + 0.9);
-    for (let i = 0; i < 5; i++) later(hitT('mgBolt2', FAST) + i * 0.12, () => { const fs = foesAlive(); if (!fs.length) return; const t = fs[Math.floor(Math.random() * fs.length)]; Sound.sfx('blast'); shot(u, t, u.color); hitFoe(t, pdmg(u, 10)); });
+    for (let i = 0; i < 5; i++) later(hitT('mgBolt2', FAST) + i * 0.12, () => { const fs = foesAlive(); if (!fs.length) return; const t = fs[Math.floor(Math.random() * fs.length)]; Sound.sfx('blast'); shot(u, t, u.color); hitFoe(t, pdmg(u, 10), u); });
     log('Yuna\'s Barrage!'); endTurn(u, Tuning.delay.barrage);
   }
   function rising(u) { strike(u, 36, 'brawlSwipe', { delay: Tuning.delay.edge, slash: 150 }); }
@@ -372,7 +375,7 @@ const Combat = (() => {
   function snipe(u) {
     const t = selected(); if (!t) return;
     Chars.play(u.rig, 'mgBolt2', false, FAST); busy(hitT('mgBolt2', FAST) + 0.4);
-    later(hitT('mgBolt2', FAST), () => { const f = liveTarget(t); if (!f) return; Sound.sfx('blast'); shot(u, f, u.color); hitFoe(f, pdmg(u, 40)); });
+    later(hitT('mgBolt2', FAST), () => { const f = liveTarget(t); if (!f) return; Sound.sfx('blast'); shot(u, f, u.color); hitFoe(f, pdmg(u, 40), u); });
     log('Yuna takes a careful aim.'); endTurn(u, Tuning.delay.weak);
   }
   const SKILL_RUN = { arc, edge, mend, storm: u => startCast(u, 2), bulwark, shock: shockwave, weak: weakPoint, barrage, rising, surge, taunt, snipe };
@@ -383,20 +386,20 @@ const Combat = (() => {
     const t = selected(), y = partyOf('yuna'); if (!t) return; const lb = lbonus('you', 'yuna');
     Chars.play(u.rig, 'brawlPunch'); Chars.play(y.rig, 'mgBolt2', false, FAST); Sound.sfx('link'); const dmg = Math.round((pdmg(u, 30) + pdmg(y, 24)) * lb); busy(hitT('mgBolt2', FAST) + 0.5);
     later(hitT('brawlPunch'), () => { const f = liveTarget(t); if (f) shot(u, f, u.color); });
-    later(hitT('mgBolt2', FAST), () => { const f = liveTarget(t); if (!f) return; shot(y, f, y.color); shake(0.2); hitFoe(f, dmg); f.atb = Math.max(0, f.atb - STAGGER); clearWind(f); });
+    later(hitT('mgBolt2', FAST), () => { const f = liveTarget(t); if (!f) return; shot(y, f, y.color); shake(0.2); hitFoe(f, dmg, y); f.atb = Math.max(0, f.atb - STAGGER); clearWind(f); });
     y.atb = Math.max(0, y.atb - 0.5); log('Jin and Yuna\'s Crossfire!'); endTurn(u, Tuning.delay.link);
   }
   function aegis(u) {
     const k = partyOf('kyle'), lb = lbonus('ruen', 'kyle');
     Chars.play(u.rig, 'mgNova', false, FAST); Chars.play(k.rig, 'block'); Sound.sfx('link'); FX.shield(k.rig.root.position); busy(hitT('mgNova', FAST) + 0.7);
-    later(hitT('mgNova', FAST), () => { shake(0.35); for (const f of foesAlive()) { FX.nova(f.rig.root.position); breakShield(f); hitFoe(f, Math.round(pdmg(u, 26) * lb)); } });
+    later(hitT('mgNova', FAST), () => { shake(0.35); for (const f of foesAlive()) { FX.nova(f.rig.root.position); breakShield(f); hitFoe(f, Math.round(pdmg(u, 26) * lb), u); } });
     k.guard = GUARD_TIME; k.rig.idleClip = 'blockIdle'; k.atb = Math.max(0, k.atb - 0.5); log('Ruen\'s Aegis Burst, under Kyle\'s shield!'); endTurn(u, Tuning.delay.link);
   }
   function vow(u) {
     const t = selected(), j = partyOf('you'); if (!t) return; const lb = lbonus('kyle', 'you');
     Chars.play(u.rig, 'brawlSwipe', false, SWING); Chars.play(j.rig, 'brawlPunch'); Sound.sfx('link'); const dmg = Math.round((pdmg(u, 24) + pdmg(j, 18)) * lb); busy(hitT('brawlSwipe', SWING) + 0.6);
     later(hitT('brawlPunch'), () => { const f = liveTarget(t); if (f) shot(j, f, j.color); });
-    later(hitT('brawlSwipe', SWING), () => { const f = liveTarget(t); if (!f) return; shot(u, f, u.color); shake(0.2); hitFoe(f, dmg); });
+    later(hitT('brawlSwipe', SWING), () => { const f = liveTarget(t); if (!f) return; shot(u, f, u.color); shake(0.2); hitFoe(f, dmg, u); });
     for (const a of [u, j]) { a.brace = BRACE_TIME; a.rig.idleClip = 'blockIdle'; FX.shield(a.rig.root.position, 0xffffff); }
     j.atb = Math.max(0, j.atb - 0.5); log('Kyle and Jin\'s Iron Vow!'); endTurn(u, Tuning.delay.link);
   }
@@ -506,11 +509,36 @@ const Combat = (() => {
       if (f.turn % 2 === 0) sweep(); else { const t = pick(); if (t) startWind(f, t, Math.round(rand(...Tuning.ceo.crush3) * f.dmgMul)); }
     }
   }
+  // Siphon: drains a crew member's gauge and hurts them a little; the blow also heals any wounded husk nearby
+  function siphonAct(f) {
+    const a = alive(); if (!a.length) return;
+    const t = a[Math.floor(Math.random() * a.length)], k = Tuning.foes.siphon;
+    Chars.play(f.rig, 'brawlPunch'); busy(0.7);
+    foeLater(f, 'brawlPunch', 1, () => {
+      t.atb = Math.max(-1, t.atb - k.drain); popup(t, 'DRAIN', '#ff3fb4'); shot(f, t, f.color);
+      hitParty(t, Math.round(rand(...k.dmg) * f.dmgMul), f);
+      for (const o of foesAlive()) if (o !== f && o.hp < o.hpMax) o.hp = Math.min(o.hpMax, o.hp + Math.round(o.hpMax * k.heal));
+    });
+    log(f.name + ' drains ' + t.name + '\'s gauge.');
+  }
+  // Crawler: quick to strike, and its lash pins the crew member it hits for a moment (their gauge is held, as the CEO's lock does)
+  function crawlerAct(f) {
+    const t = pick(); if (!t) return;
+    const k = Tuning.foes.crawler, dmg = Math.round(rand(...k.lash) * f.dmgMul);
+    Chars.play(f.rig, 'brawlPunch'); busy(0.5);
+    foeLater(f, 'brawlPunch', 1, () => {
+      shot(f, t, f.color); hitParty(t, dmg, f);
+      if (t.alive) { t.locked = Math.max(t.locked || 0, k.lock); t.ready = false; menuFor = null; popup(t, 'PINNED', '#ff7a2a'); }
+    });
+    log(f.name + ' lunges at ' + t.name + '.');
+  }
   function foeAct(f) {
     f.atb = 0;
     if (f.ai === 'ceo') return ceoAct(f);
     if (f.ai === 'enforcer') return enforcerAct(f);
     if (f.ai === 'drone') return droneAct(f);
+    if (f.ai === 'siphon') return siphonAct(f);
+    if (f.ai === 'crawler') return crawlerAct(f);
     if (f.ai === 'seraph') return seraphAct(f);
     if (f.boss) return bossAct(f);
     if (f.brute || Math.random() < 0.35) {
@@ -733,7 +761,7 @@ const Combat = (() => {
         cast.t = Math.min(1, cast.t + CAST_RATE * (cast.power === 2 ? 0.65 : 1) * dt);
         if (cast.t >= 1) {
           const power = cast.power; Chars.play(ruenRig(), 'mgNova', false, FAST); busy(hitT('mgNova', FAST) + 0.7);
-          later(hitT('mgNova', FAST), () => { Sound.sfx('nova'); shake(0.4); for (const f of foesAlive()) { FX.nova(f.rig.root.position); breakShield(f); hitFoe(f, pdmg(ruenUnit(), power === 2 ? 60 : 30)); } });
+          later(hitT('mgNova', FAST), () => { Sound.sfx('nova'); shake(0.4); for (const f of foesAlive()) { FX.nova(f.rig.root.position); breakShield(f); hitFoe(f, pdmg(ruenUnit(), power === 2 ? 60 : 30), ruenUnit()); } });
           log(power === 2 ? 'Data Storm!' : 'Data Burst!');
           cast = null;
         }
