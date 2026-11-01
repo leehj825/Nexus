@@ -471,8 +471,11 @@ const Cutscene = (() => {
     begin(s.steps, () => { Growth.markTold(s.key); Save.save(); }, { anchor: 'here' });
     return true;
   }
+  // The first conversation starts by itself once the title screen is gone (it is played once, in this session or the last)
+  let introDone = false;
   function checkTriggers() {
     if (bondScene()) return;
+    if (stage === 0 && !introDone && document.getElementById('title').hidden) { introDone = true; begin(CAMPFIRE, () => setStage(1)); return; }
     const p = Player.state(), dT = Math.hypot(p.x - World.TOWER.x, p.z - World.TOWER.z);
     if (stage === 2 && p.z < World.Z0 - 6) begin(ARRIVAL, () => setStage(3), { anchor: 'here' });
     else if (stage === 3 && dT < 70) begin(TOWER_SIGHT, () => setStage(4), { anchor: 'here' });
