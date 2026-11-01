@@ -201,6 +201,14 @@ const Cutscene = (() => {
     }, { anchor: 'here' });
   }
   // The end card: the story is told; the world stays open
+  // New Game+: the crew keep their levels, perks, gear, items and bonds, and the challenge is on. The story, the city, the jobs and
+  // the camps start again from the beginning. Written as a save that holds only those parts, then the game is reloaded to the title.
+  function newGamePlus() {
+    if (!confirm('Start New Game+? You keep the crew\'s levels, perks, gear, bonds and credits. The story, the city and the jobs start again, and the foes are tougher.')) return;
+    Growth.setChallenge(true);
+    const ok = Save.writeOnly({ growth: Growth.getState(), camp: Object.assign(Camp.getState(), { last: 'fire' }), items: Items.getState() });
+    if (ok) location.reload();
+  }
   function showEnd() { const el = $('endcard'); if (el) el.hidden = false; Sound.sfx('win'); }
   const bondUp = list => { if (typeof Growth !== 'undefined') for (const [a, b, n] of list) Growth.addBond(a, b, n); };
 
@@ -522,6 +530,7 @@ const Cutscene = (() => {
 
   function init() {
     $('endKeep').addEventListener('click', () => { $('endcard').hidden = true; Save.save(); });
+    $('endNG').addEventListener('click', newGamePlus);
     $('endTitle').addEventListener('click', () => { Save.save(true); location.reload(); });
     $('talkBtn').addEventListener('click', start);
     $('dlg').addEventListener('click', e => { if (e.target.id === 'dlgSkip') skip(); else advance(); });
