@@ -882,7 +882,7 @@ const Combat = (() => {
   // The command buttons, with a description strip on top. Hovering or pressing a command shows what it does; letting go on the same
   // button uses it, and sliding off before letting go cancels. Keyboard activation (no pointer, so detail 0) uses it straight away.
   const TIP_HINT = 'Hover or press a command to read what it does. Let go on it to use it, or slide off to cancel.';
-  function showTip(c, text) { ui.tip.innerHTML = c ? `<b>${c.label}</b>${c.text ? ' ' + c.text : ''}` : (text || TIP_HINT); }
+  function showTip(c, text) { ui.tip.innerHTML = c ? `<b>${I18n.tr(c.label)}</b>${c.text ? ' ' + c.text : ''}` : (text || I18n.tr(TIP_HINT)); }
   function buildMenu(who, cmds) {
     ui.actions.innerHTML = '';
     ui.tip = document.createElement('div'); ui.tip.className = 'tip';
@@ -890,7 +890,7 @@ const Combat = (() => {
     showTip(null);
     for (const c of cmds) {
       const b = document.createElement('button');
-      b.type = 'button'; b.textContent = c.label; b._cmd = c;
+      b.type = 'button'; b.textContent = I18n.tr(c.label); b._cmd = c;
       b.classList.toggle('skill', !!c.skill); b.classList.toggle('link', !!c.link); b.classList.toggle('off', !!c.off);
       b._go = () => { if (who.ready && !c.off && !isBusy()) c.run(who); menuFor = null; showTip(null); };
       b.addEventListener('pointerenter', () => showTip(c));

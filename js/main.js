@@ -28,6 +28,7 @@
   Combat.init(scene, camera);
   CampUI.init();
   CrewUI.init();
+  I18n.apply();
   Journal.init();
   ShopUI.init();
   ModelCheck.init();
