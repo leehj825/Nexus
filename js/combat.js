@@ -156,7 +156,7 @@ const Combat = (() => {
       el.className = 'card';
       el.innerHTML = `<b style="color:${u.color}">${u.name}</b><div class="bar hp"><i></i></div><div class="bar atb"><i></i></div>` + (u.id === 'ruen' ? '<div class="bar cast"><i></i></div>' : '');
       $('party').appendChild(el);
-      u.card = { hp: el.querySelector('.hp i'), atb: el.querySelector('.atb i'), cast: el.querySelector('.cast i') };
+      u.card = { el, hp: el.querySelector('.hp i'), atb: el.querySelector('.atb i'), cast: el.querySelector('.cast i') };
     }
   }
 
@@ -867,6 +867,9 @@ const Combat = (() => {
       u.card.atb.parentNode.classList.toggle('full', u.ready); u.card.atb.parentNode.classList.toggle('locked', u.locked > 0);
       if (u.card.cast) u.card.cast.style.width = (cast ? cast.t * 100 : 0) + '%';
     }
+    // The health cards run left to right in the order the crew stand on screen, so each card sits under its character
+    const row = $('party'), sorted = party.map(u => ({ el: u.card.el, x: screenOf(u.rig.root.position, 2.0, camera).x })).sort((a, b) => a.x - b.x).map(o => o.el);
+    if (sorted.some((el, i) => el !== row.children[i])) for (const el of sorted) row.appendChild(el);
     for (const p of pops) {
       const s = screenOf(p.u.rig.root.position, 2.4 + p.t * 0.6, camera);
       p.el.style.transform = `translate(${s.x}px, ${s.y}px)`;
