@@ -41,7 +41,7 @@ const Quests = (() => {
   const st = {};                                                                                // id -> { s: 'active' | 'done', n }
   const status = id => (st[id] && st[id].s) || 'new';
 
-  const toast = text => { const t = document.getElementById('toast'); if (t) { t.textContent = I18n.tr(text); t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600); } };
+  const toast = text => { const t = document.getElementById('toast'); if (t) { t.textContent = I18n.line(text); t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2600); } };
   const zoneAt = z => z < World.SPIRE_Z - 2 ? 'spire' : z < World.HUB_Z - 2 ? 'hub' : 'market';
   // The job a giver has on offer: their first job not yet done whose follow-up condition is met
   const offerFor = tag => DEFS.find(q => q.giver === tag && status(q.id) !== 'done' && (!q.after || status(q.after) === 'done'));
@@ -90,7 +90,7 @@ const Quests = (() => {
       else if (d.kind === 'scrap') prog = Math.min(Camp.parts, d.n) + ' / ' + d.n + ' scrap';
       else if (d.kind === 'sweep') prog = st[d.id].n + ' / ' + d.n + ' foes';
       else prog = 'Deliver to ' + d.toWho;
-      return { title: I18n.tr(d.title), who: I18n.tr(d.who), place: I18n.tr(NAME_OF[d.zone]), prog: I18n.tr(prog), done: s === 'done', ready: s === 'active' && ready(d), text: s === 'done' ? d.done : d.ask[0] };
+      return { title: I18n.tr(d.title), who: I18n.tr(d.who), place: I18n.tr(NAME_OF[d.zone]), prog: I18n.line(prog), done: s === 'done', ready: s === 'active' && ready(d), text: s === 'done' ? d.done : d.ask[0] };
     });
   }
   return {

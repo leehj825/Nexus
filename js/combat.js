@@ -183,8 +183,8 @@ const Combat = (() => {
     for (let i = 0; i < a.length; i++) { r -= ws[i]; if (r <= 0) return a[i]; }
     return a[a.length - 1];
   };
-  function log(text) { ui.log.insertBefore(Object.assign(document.createElement('div'), { textContent: text }), ui.log.firstChild); while (ui.log.childElementCount > 3) ui.log.lastChild.remove(); }
-  function popup(u, text, color) { const el = document.createElement('div'); el.className = 'pop'; el.textContent = text; el.style.color = color; $('labels').appendChild(el); pops.push({ el, u, t: 0 }); }
+  function log(text) { text = I18n.line(text); ui.log.insertBefore(Object.assign(document.createElement('div'), { textContent: text }), ui.log.firstChild); while (ui.log.childElementCount > 3) ui.log.lastChild.remove(); }
+  function popup(u, text, color) { text = I18n.line(text); const el = document.createElement('div'); el.className = 'pop'; el.textContent = text; el.style.color = color; $('labels').appendChild(el); pops.push({ el, u, t: 0 }); }
 
   // A glowing bolt that flies from one unit to another with a trail; the damage lands at once, the hit sparks on arrival
   function shot(from, to, color) {
@@ -859,7 +859,7 @@ const Combat = (() => {
       L.warn.hidden = !(u.foe && u.wind);
       L.el.classList.toggle('guarded', !!(u.foe && (u.guard > 0 || u.shielded)));
       const chips = statusChips(u), key = chips.map(c => c.join(':')).join('|');
-      if (key !== L.tagKey) { L.tagKey = key; L.tags.innerHTML = chips.map(([t, cls]) => `<span class="${cls}">${t}</span>`).join(''); }
+      if (key !== L.tagKey) { L.tagKey = key; L.tags.innerHTML = chips.map(([t, cls]) => `<span class="${cls}">${I18n.line(t)}</span>`).join(''); }
     }
     for (const u of party) {
       u.card.hp.style.width = (clamp(u.hp / u.hpMax, 0, 1) * 100) + '%';
@@ -885,7 +885,7 @@ const Combat = (() => {
   // The command buttons, with a description strip on top. Hovering or pressing a command shows what it does; letting go on the same
   // button uses it, and sliding off before letting go cancels. Keyboard activation (no pointer, so detail 0) uses it straight away.
   const TIP_HINT = 'Hover or press a command to read what it does. Let go on it to use it, or slide off to cancel.';
-  function showTip(c, text) { ui.tip.innerHTML = c ? `<b>${I18n.tr(c.label)}</b>${c.text ? ' ' + c.text : ''}` : (text || I18n.tr(TIP_HINT)); }
+  function showTip(c, text) { ui.tip.innerHTML = c ? `<b>${I18n.line(c.label)}</b>${c.text ? ' ' + I18n.line(c.text) : ''}` : (text || I18n.tr(TIP_HINT)); }
   function buildMenu(who, cmds) {
     ui.actions.innerHTML = '';
     ui.tip = document.createElement('div'); ui.tip.className = 'tip';
@@ -893,7 +893,7 @@ const Combat = (() => {
     showTip(null);
     for (const c of cmds) {
       const b = document.createElement('button');
-      b.type = 'button'; b.textContent = I18n.tr(c.label); b._cmd = c;
+      b.type = 'button'; b.textContent = I18n.line(c.label); b._cmd = c;
       b.classList.toggle('skill', !!c.skill); b.classList.toggle('link', !!c.link); b.classList.toggle('off', !!c.off);
       b._go = () => { if (who.ready && !c.off && !isBusy()) c.run(who); menuFor = null; showTip(null); };
       b.addEventListener('pointerenter', () => showTip(c));

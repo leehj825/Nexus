@@ -101,7 +101,7 @@ const World = (() => {
     const v = rnd(); return v < 0.5 ? 'block' : v < 0.78 ? 'market' : 'yard';
   }
 
-  const toast = text => { const t = document.getElementById('toast'); if (t) { t.textContent = text; t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2400); } };
+  const toast = text => { const t = document.getElementById('toast'); if (t) { t.textContent = I18n.line(text); t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 2400); } };
   // The vault's walls, door, terminals, note and chests. The door and lamps and lids are shown as the saved state says
   function buildVault(ch, g, X, Z) {
     const wall = mat(0x1a1f2e, { roughness: 0.8 }), floor = mat(0x0e1220, { roughness: 0.9 });
