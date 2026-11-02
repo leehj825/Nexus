@@ -282,7 +282,8 @@ const Cutscene = (() => {
     { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], caption: 'The crew of four, battered but unbroken, shoulders their gear and walks into the glowing, glitching horizon, ready for whatever comes next.' },
   ];
   const moodOf = st => st.mood || 'talk';
-  const typed = () => steps && steps[i] ? I18n.tr(steps[i].text || steps[i].caption || steps[i].note || '') : '';
+  // What the box says: the spoken line, or the caption. A stage note (what a character does) shows in its own line, not as speech
+  const typed = () => steps && steps[i] ? I18n.tr(steps[i].text || steps[i].caption || '') : '';
 
   // A shot's target camera pose
   function shotFor(st) {
