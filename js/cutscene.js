@@ -547,7 +547,7 @@ const Cutscene = (() => {
   // Each frame: the interact button at the fire or beside someone, and the place triggers
   function updateUI(campOpen) {
     const it = !Combat.active() && !active && !campOpen ? interactable() : null;
-    $('talkBtn').hidden = !it; if (it) $('talkBtn').textContent = it.label;
+    $('talkBtn').hidden = !it; if (it) $('talkBtn').textContent = I18n.line(it.label);
     $('talkBtn').classList.toggle('solo', !!it && $('campBtn').hidden);
     if (!active && !campOpen && !Combat.active() && !Combat.engaging()) checkTriggers();
   }
