@@ -92,6 +92,11 @@ const Cutscene = (() => {
     { shot: 'who', who: 'yuna', mood: 'firm', text: 'Round sixty metres of glass and steel? No. We go through, quietly.' },
     { shot: 'who', who: 'ruen', mood: 'worry', fx: { glitch: 0.5, resonance: 0.6 }, note: 'Watching their lights stutter.', text: 'Look at their lenses. They aren\'t tracking anything. The glitch has gotten into them too.' },
     { shot: 'who', who: 'jin', mood: 'firm', fx: { glitch: 0, resonance: 0.2 }, text: 'Then they\'re as dangerous as the husks and twice as hard to hear coming. We move together and we don\'t stop in the open.' },
+    { shot: 'who', who: 'jin', mood: 'think', text: 'So: do we pay our way past those drones, or go in fast and make them come to us?',
+      choice: { options: [
+        { text: 'Pay the drones off with scrap', flag: 'checkpoint', value: 'paid', bond: ['yuna', 'you', 1] },
+        { text: 'Go in fast and loud', flag: 'checkpoint', value: 'forced', bond: ['kyle', 'you', 1] },
+      ] } },
     { shot: 'wide', caption: 'Beyond the gate the Hub burns orange under a ceiling of its own smoke. Somewhere in the glow, three chimneys breathe fire.' },
   ];
   const FOUNDRY_SIGHT = [
@@ -115,6 +120,8 @@ const Cutscene = (() => {
     { shot: 'point', look: [World.FOUNDRY.x, 5, World.FOUNDRY.z - 7], caption: 'Back at the shutter. Yuna presses the three nodes into the lock plate one after another.' },
     { shot: 'who', who: 'yuna', mood: 'alert', note: 'The plate flickers from red to amber.', text: 'Come on, sweet-talk, give me what I need... Handshake accepted. Stand back.' },
     { shot: 'who', who: 'kyle', mood: 'firm', note: 'Raising his shield as the door groans.', text: 'Whatever\'s holding that furnace is going to hear this. Ruen, behind me.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', when: { flag: 'checkpoint', is: 'paid' }, text: 'The drones bought us a quiet run. Nobody in the works knows we are here yet.' },
+    { shot: 'who', who: 'kyle', mood: 'firm', when: { flag: 'checkpoint', is: 'forced' }, text: 'They saw us at the gate. Whatever is in the works knows we are coming.' },
     { shot: 'point', look: [World.FOUNDRY.x, 4, World.FOUNDRY.z - 10], fx: { glitch: 0.3 }, caption: 'The shutter grinds upward. Heat rolls out across the plaza, and in the dark hall beyond something huge turns its head.' },
   ];
   const LOADER_SIGHT = [
@@ -237,6 +244,11 @@ const Cutscene = (() => {
     { shot: 'who', who: 'ruen', mood: 'worry', text: 'It isn\'t only the cores. They want me. The resonance, my intuition. I\'m the piece that tunes it.' },
     { shot: 'who', who: 'kyle', mood: 'firm', note: 'Stepping in front of her.', text: 'Then the first thing they\'ll find at the summit is me, standing in front of you.' },
     { shot: 'who', who: 'jin', mood: 'nod', fx: { resonance: 0.3 }, text: 'And me. And Yuna. All of us, or none. Rest at the camp if you need to, then we climb.' },
+    { shot: 'who', who: 'ruen', mood: 'think', text: 'The staff are still in the halls. What do we do with them?',
+      choice: { options: [
+        { text: 'Tell them to run while they can', flag: 'staff', value: 'evacuated', bond: ['ruen', 'yuna', 1] },
+        { text: 'Keep them inside, out of harm\'s way', flag: 'staff', value: 'kept', bond: ['ruen', 'kyle', 1] },
+      ] } },
   ];
   const SUMMIT_SIGHT = [
     { shot: 'point', look: [World.SUMMIT.x, 10, World.SUMMIT.z], fx: { resonance: 1, glitch: 0.5 }, caption: 'The Summit\nAt the top of the city the sky is torn open: a ring of gold light turning over a platform, and at its heart, one small figure in white.' },
@@ -279,6 +291,8 @@ const Cutscene = (() => {
     { shot: 'who', who: 'ruen', mood: 'worry', when: { flag: 'ending', is: 'apart' }, text: 'I don\'t want to be alone with the orb. But I think I need to be, for a bit.' },
     { shot: 'who', who: 'yuna', mood: 'firm', when: { flag: 'spire', is: 'shutdown' }, text: 'The Spire is dark for good. Nobody else gets to run a city from a glass tower.' },
     { shot: 'who', who: 'yuna', mood: 'firm', when: { flag: 'spire', is: 'keep' }, text: 'We keep its systems, so someone has to run them. It won\'t be them, and we\'ll watch every line.' },
+    { shot: 'who', who: 'yuna', mood: 'nod', when: { flag: 'staff', is: 'evacuated' }, text: 'The staff got out before the lift stopped. Some of them are already writing to us.' },
+    { shot: 'who', who: 'yuna', mood: 'nod', when: { flag: 'staff', is: 'kept' }, text: 'We kept the staff in the halls until the lights came back. They are still at their desks, and they are grateful.' },
     { shot: 'who', who: 'yuna', mood: 'firm', text: 'Now we find out who else has a Core in their pocket, and what they plan to do with it.' },
     { shot: 'who', who: 'ruen', mood: 'nod', note: 'Listening, then smiling.', text: 'The whispering has stopped. For the first time since the alley, it\'s quiet.' },
     { shot: 'who', who: 'jin', mood: 'nod', text: 'Then we pack up the camp, and we walk.' },
