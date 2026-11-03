@@ -274,12 +274,16 @@ const Cutscene = (() => {
   const EPILOGUE = [
     { shot: 'wide', caption: 'Epilogue\nThe megacity is changed for ever: free of the Corporation\'s grip, but wild and unpredictable.' },
     { shot: 'who', who: 'kyle', mood: 'talk', text: 'So. What now?' },
+    { shot: 'who', who: 'ruen', mood: 'nod', when: { flag: 'ending', is: 'together' }, text: 'Wherever we walk, I want the signs to say what they mean. And I want all of you there to read them.' },
+    { shot: 'who', who: 'kyle', mood: 'nod', when: { flag: 'ending', is: 'apart' }, text: 'Then we split up for a while. Ruen, come back to the fire when you\'re ready. We\'ll keep it lit.' },
+    { shot: 'who', who: 'ruen', mood: 'worry', when: { flag: 'ending', is: 'apart' }, text: 'I don\'t want to be alone with the orb. But I think I need to be, for a bit.' },
     { shot: 'who', who: 'yuna', mood: 'firm', when: { flag: 'spire', is: 'shutdown' }, text: 'The Spire is dark for good. Nobody else gets to run a city from a glass tower.' },
     { shot: 'who', who: 'yuna', mood: 'firm', when: { flag: 'spire', is: 'keep' }, text: 'We keep its systems, so someone has to run them. It won\'t be them, and we\'ll watch every line.' },
     { shot: 'who', who: 'yuna', mood: 'firm', text: 'Now we find out who else has a Core in their pocket, and what they plan to do with it.' },
     { shot: 'who', who: 'ruen', mood: 'nod', note: 'Listening, then smiling.', text: 'The whispering has stopped. For the first time since the alley, it\'s quiet.' },
     { shot: 'who', who: 'jin', mood: 'nod', text: 'Then we pack up the camp, and we walk.' },
-    { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], caption: 'The crew of four, battered but unbroken, shoulders their gear and walks into the glowing, glitching horizon, ready for whatever comes next.' },
+    { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], when: { flag: 'ending', is: 'together' }, caption: 'The crew of four, battered but unbroken, shoulders their gear and walks into the glowing, glitching horizon, together.' },
+    { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], when: { flag: 'ending', is: 'apart' }, caption: 'The crew of four, battered but unbroken, go their separate ways into the glowing horizon, and promise to find the fire again.' },
   ];
   const moodOf = st => st.mood || 'talk';
   // What the box says: the spoken line, or the caption. A stage note (what a character does) shows in its own line, not as speech
@@ -449,8 +453,50 @@ const Cutscene = (() => {
     return null;
   }
   // Place triggers: each plays once, when the crew first reaches the place at that stage
+  // Ruen's own story: three scenes, each after a bond with the crew and a point in the story (they play as the bond scenes do)
+  const RUEN_ARC = {
+    1: [
+      { shot: 'wide', caption: 'A quiet moment, away from the fire. Ruen sits on a crate with the orb in her lap, and the others are out of earshot.' },
+      { shot: 'who', who: 'kyle', mood: 'nod', note: 'Sitting down beside her, not too close.', text: 'You\'ve been quiet since the alley.' },
+      { shot: 'who', who: 'ruen', mood: 'worry', text: 'When the orb sings, I remember a room. White walls, and a voice counting. I was small. I think they made me listen to things nobody should hear.' },
+      { shot: 'who', who: 'kyle', mood: 'firm', text: 'Did they hurt you?' },
+      { shot: 'who', who: 'ruen', mood: 'think', text: 'They called it training. I called it the only time anyone looked at me.' },
+      { shot: 'who', who: 'kyle', mood: 'firm', text: 'Nobody puts you back in that room. Not while I\'m standing here.' },
+      { shot: 'who', who: 'ruen', mood: 'nod', note: 'A small, surprised smile.', text: 'You say that like it\'s easy.' },
+      { shot: 'who', who: 'kyle', mood: 'talk', text: 'It\'s the only thing I\'m good at.' },
+    ],
+    2: [
+      { shot: 'wide', caption: 'The server floors are quiet at night. Ruen finds Yuna at a terminal, the glow of the screen across both their faces.' },
+      { shot: 'who', who: 'ruen', mood: 'firm', text: 'You worked on the program that kept me in that room. Didn\'t you?' },
+      { shot: 'who', who: 'yuna', mood: 'think', note: 'A long pause. She does not look away.', text: 'I signed the review for it. Yes.' },
+      { shot: 'who', who: 'ruen', mood: 'worry', text: 'Why tell me? You could have let me find it in a log.' },
+      { shot: 'who', who: 'yuna', mood: 'firm', text: 'Because you would have found it, and I would rather you heard it from me.' },
+      { shot: 'who', who: 'ruen', mood: 'think', text: 'Then tell me one thing. Did you ever think it was wrong?' },
+      { shot: 'who', who: 'yuna', mood: 'worry', text: 'Every day. It\'s why I\'m standing here and not up there with them.' },
+      { shot: 'who', who: 'ruen', mood: 'nod', text: 'Then we\'re both here because we were wrong once.' },
+      { shot: 'who', who: 'yuna', mood: 'talk', text: 'Don\'t make it sound poetic.' },
+    ],
+    3: [
+      { shot: 'wide', caption: 'The lift is quiet. Ruen watches the light climb the shaft and does not look away from it.' },
+      { shot: 'who', who: 'ruen', mood: 'think', text: 'If the door opens, I\'m the only one who can hear the cores. Maybe I can tell them to stop.' },
+      { shot: 'who', who: 'kyle', mood: 'worry', text: 'And if they won\'t stop?' },
+      { shot: 'who', who: 'ruen', mood: 'firm', text: 'Then I hold on until you pull me back. You promised.' },
+      { shot: 'who', who: 'kyle', mood: 'nod', text: 'Every time. I\'ll pull you back every time.' },
+      { shot: 'who', who: 'ruen', mood: 'nod', note: 'The orb steadies in her hand.', text: 'Then I\'m not afraid of the door. I\'m only afraid of being alone in it.' },
+    ],
+  };
+  // The ending the crew reach: together if their bonds held (and Ruen's story was heard), apart if not. The epilogue has lines for each.
+  function setEnding() {
+    if (typeof Growth === 'undefined') return;
+    const bonds = Growth.bondLevel('ruen', 'kyle') + Growth.bondLevel('ruen', 'yuna') + Growth.bondLevel('you', 'ruen');
+    const arcs = [1, 2, 3].filter(k => Growth.told('ruen-arc-' + k)).length;
+    flags.ending = bonds + arcs >= 8 ? 'together' : 'apart';
+  }
   // Bond scenes: two of the crew talk after they have fought together enough to reach a bond level. Each plays once.
   const BOND_SCENES = [
+    { key: 'ruen-arc-1', a: 'ruen', b: 'kyle', lvl: 2, minStage: 2, steps: RUEN_ARC[1] },
+    { key: 'ruen-arc-2', a: 'ruen', b: 'yuna', lvl: 2, minStage: 8, steps: RUEN_ARC[2] },
+    { key: 'ruen-arc-3', a: 'ruen', b: 'kyle', lvl: 3, minStage: 13, steps: RUEN_ARC[3] },
     { key: 'jin-yuna-2', a: 'you', b: 'yuna', lvl: 2, steps: [
       { shot: 'who', who: 'yuna', mood: 'firm', text: 'You didn\'t hesitate back there. Not once.' },
       { shot: 'who', who: 'jin', mood: 'nod', text: 'Neither did you. Every shot landed right on time.' },
@@ -468,7 +514,7 @@ const Cutscene = (() => {
   // Plays the next bond scene that is due, if any. Returns true when one started.
   function bondScene() {
     if (typeof Growth === 'undefined') return false;
-    const s = BOND_SCENES.find(q => Growth.bondLevel(q.a, q.b) >= q.lvl && !Growth.told(q.key));
+    const s = BOND_SCENES.find(q => Growth.bondLevel(q.a, q.b) >= q.lvl && (!q.minStage || stage >= q.minStage) && !Growth.told(q.key));
     if (!s) return false;
     begin(s.steps, () => { Growth.markTold(s.key); Save.save(); }, { anchor: 'here' });
     return true;
@@ -493,7 +539,7 @@ const Cutscene = (() => {
     else if (stage === 14 && Math.hypot(p.x - World.ATRIUM.x, p.z - World.ATRIUM.z) < 26) begin(ATRIUM_SCENE, () => setStage(15), { anchor: 'here' });
     else if (stage === 15 && Math.hypot(p.x - World.SUMMIT.x, p.z - World.SUMMIT.z) < 62) begin(SUMMIT_SIGHT, () => setStage(16), { anchor: 'here' });
     else if (stage === 16 && Math.hypot(p.x - World.SUMMIT.x, p.z - World.SUMMIT.z) < 20) begin(CEO_CONFRONT, () => { World.armCeo(); setStage(17); }, { anchor: 'here' });
-    else if (stage === 17 && World.ceoDown()) begin(RESOLUTION, () => begin(EPILOGUE, () => { setStage(18); showEnd(); }, { anchor: 'here' }), { anchor: 'here' });
+    else if (stage === 17 && World.ceoDown()) begin(RESOLUTION, () => { setEnding(); begin(EPILOGUE, () => { setStage(18); showEnd(); }, { anchor: 'here' }); }, { anchor: 'here' });
   }
   const NPC_LINES = {
     vendor: ['Scrap is as good as credit here. Show me what you\'ve got.', 'Fresh circuits, honest prices. Mostly honest.', 'Nobody\'s buying tonight. The signs keep lying about what\'s open.'],
