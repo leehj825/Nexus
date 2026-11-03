@@ -41,7 +41,7 @@ const HUD = (() => {
       let ox = toX(ob.x), oy = toY(ob.z); const dx = ox - cx, dy = oy - cy, dd = Math.hypot(dx, dy), lim = MAP / 2 - 12;
       if (dd > lim) { ox = cx + dx / dd * lim; oy = cy + dy / dd * lim; }
       g.fillStyle = '#ffd24a'; g.beginPath(); g.moveTo(ox, oy - 7); g.lineTo(ox + 6, oy); g.lineTo(ox, oy + 7); g.lineTo(ox - 6, oy); g.closePath(); g.fill();
-      const qd = document.getElementById('qdist'); if (qd) qd.textContent = Math.round(Math.hypot(p.x - ob.x, p.z - ob.z)) + ' m to ' + ob.label;
+      const qd = document.getElementById('qdist'); if (qd) qd.textContent = Math.round(Math.hypot(p.x - ob.x, p.z - ob.z)) + I18n.tr(' m to ') + I18n.tr(ob.label);
     } else { const qd = document.getElementById('qdist'); if (qd && qd.textContent) qd.textContent = ''; }
     // Landmarks: the fire (orange), the gate (blue), the crew (small yellow squares)
     g.fillStyle = '#ff9a3a'; for (const s of Camp.siteList()) if (Camp.found().includes(s.id)) g.fillRect(toX(s.x) - 3, toY(s.z) - 3, 6, 6);        // the camps found so far

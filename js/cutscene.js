@@ -46,6 +46,11 @@ const Cutscene = (() => {
     { shot: 'who', who: 'kyle', mood: 'firm', text: 'Then I\'m your anchor. Anything gets loud in your head, you grab my arm. Understood?' },
     { shot: 'who', who: 'ruen', mood: 'nod', note: 'A small, shaky smile.', text: '...Understood. Thank you, Kyle.' },
     { shot: 'who', who: 'yuna', mood: 'firm', fx: { glitch: 0.1, resonance: 0 }, text: 'Sentiment later. Corporate drones triangulate pulses like this. We move at first light, through the upper sectors, and we stay off the main grid.' },
+    { shot: 'who', who: 'jin', mood: 'think', text: 'So: do we follow it tonight, or wait for daylight and do this properly?',
+      choice: { options: [
+        { text: 'Follow it tonight', flag: 'orb', value: 'tonight', bond: ['you', 'ruen', 2] },
+        { text: 'Wait for daylight', flag: 'orb', value: 'daylight', bond: ['kyle', 'yuna', 2] },
+      ] } },
     { shot: 'who', who: 'jin', mood: 'firm', text: 'The orb is our compass. Ruen calls the direction, I take the vanguard, Kyle the rear. Yuna, eyes on the grid.' },
     { shot: 'gate', fx: { glitch: 0.15, resonance: 0.3 }, caption: 'Beyond the gate, the district\'s signs flicker in sequence, as if the city itself were pointing the way.' },
   ];
@@ -87,6 +92,11 @@ const Cutscene = (() => {
     { shot: 'who', who: 'yuna', mood: 'firm', text: 'Round sixty metres of glass and steel? No. We go through, quietly.' },
     { shot: 'who', who: 'ruen', mood: 'worry', fx: { glitch: 0.5, resonance: 0.6 }, note: 'Watching their lights stutter.', text: 'Look at their lenses. They aren\'t tracking anything. The glitch has gotten into them too.' },
     { shot: 'who', who: 'jin', mood: 'firm', fx: { glitch: 0, resonance: 0.2 }, text: 'Then they\'re as dangerous as the husks and twice as hard to hear coming. We move together and we don\'t stop in the open.' },
+    { shot: 'who', who: 'jin', mood: 'think', text: 'So: do we pay our way past those drones, or go in fast and make them come to us?',
+      choice: { options: [
+        { text: 'Pay the drones off with scrap', flag: 'checkpoint', value: 'paid', bond: ['yuna', 'you', 1] },
+        { text: 'Go in fast and loud', flag: 'checkpoint', value: 'forced', bond: ['kyle', 'you', 1] },
+      ] } },
     { shot: 'wide', caption: 'Beyond the gate the Hub burns orange under a ceiling of its own smoke. Somewhere in the glow, three chimneys breathe fire.' },
   ];
   const FOUNDRY_SIGHT = [
@@ -110,6 +120,8 @@ const Cutscene = (() => {
     { shot: 'point', look: [World.FOUNDRY.x, 5, World.FOUNDRY.z - 7], caption: 'Back at the shutter. Yuna presses the three nodes into the lock plate one after another.' },
     { shot: 'who', who: 'yuna', mood: 'alert', note: 'The plate flickers from red to amber.', text: 'Come on, sweet-talk, give me what I need... Handshake accepted. Stand back.' },
     { shot: 'who', who: 'kyle', mood: 'firm', note: 'Raising his shield as the door groans.', text: 'Whatever\'s holding that furnace is going to hear this. Ruen, behind me.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', when: { flag: 'checkpoint', is: 'paid' }, text: 'The drones bought us a quiet run. Nobody in the works knows we are here yet.' },
+    { shot: 'who', who: 'kyle', mood: 'firm', when: { flag: 'checkpoint', is: 'forced' }, text: 'They saw us at the gate. Whatever is in the works knows we are coming.' },
     { shot: 'point', look: [World.FOUNDRY.x, 4, World.FOUNDRY.z - 10], fx: { glitch: 0.3 }, caption: 'The shutter grinds upward. Heat rolls out across the plaza, and in the dark hall beyond something huge turns its head.' },
   ];
   const LOADER_SIGHT = [
@@ -196,6 +208,14 @@ const Cutscene = (() => {
     }, { anchor: 'here' });
   }
   // The end card: the story is told; the world stays open
+  // New Game+: the crew keep their levels, perks, gear, items and bonds, and the challenge is on. The story, the city, the jobs and
+  // the camps start again from the beginning. Written as a save that holds only those parts, then the game is reloaded to the title.
+  function newGamePlus() {
+    if (!confirm('Start New Game+? You keep the crew\'s levels, perks, gear, bonds and credits. The story, the city and the jobs start again, and the foes are tougher.')) return;
+    Growth.setChallenge(true);
+    const ok = Save.writeOnly({ growth: Growth.getState(), camp: Object.assign(Camp.getState(), { last: 'fire' }), items: Items.getState() });
+    if (ok) location.reload();
+  }
   function showEnd() { const el = $('endcard'); if (el) el.hidden = false; Sound.sfx('win'); }
   const bondUp = list => { if (typeof Growth !== 'undefined') for (const [a, b, n] of list) Growth.addBond(a, b, n); };
 
@@ -224,6 +244,11 @@ const Cutscene = (() => {
     { shot: 'who', who: 'ruen', mood: 'worry', text: 'It isn\'t only the cores. They want me. The resonance, my intuition. I\'m the piece that tunes it.' },
     { shot: 'who', who: 'kyle', mood: 'firm', note: 'Stepping in front of her.', text: 'Then the first thing they\'ll find at the summit is me, standing in front of you.' },
     { shot: 'who', who: 'jin', mood: 'nod', fx: { resonance: 0.3 }, text: 'And me. And Yuna. All of us, or none. Rest at the camp if you need to, then we climb.' },
+    { shot: 'who', who: 'ruen', mood: 'think', text: 'The staff are still in the halls. What do we do with them?',
+      choice: { options: [
+        { text: 'Tell them to run while they can', flag: 'staff', value: 'evacuated', bond: ['ruen', 'yuna', 1] },
+        { text: 'Keep them inside, out of harm\'s way', flag: 'staff', value: 'kept', bond: ['ruen', 'kyle', 1] },
+      ] } },
   ];
   const SUMMIT_SIGHT = [
     { shot: 'point', look: [World.SUMMIT.x, 10, World.SUMMIT.z], fx: { resonance: 1, glitch: 0.5 }, caption: 'The Summit\nAt the top of the city the sky is torn open: a ring of gold light turning over a platform, and at its heart, one small figure in white.' },
@@ -251,17 +276,32 @@ const Cutscene = (() => {
     { shot: 'point', look: [World.SUMMIT.x, 3, World.SUMMIT.z], ...CEO_WHO, mood: 'worry', text: 'Forty years of work.' },
     { shot: 'who', who: 'yuna', mood: 'firm', text: 'Forty years of other people\'s lives.' },
     { shot: 'point', look: [World.SUMMIT.x, 14, World.SUMMIT.z], fx: { glitch: 0, resonance: 0 }, caption: 'The Spire\'s hold on the city is broken. Far below, the signs stop spelling things that aren\'t ads.' },
+    { shot: 'who', who: 'yuna', mood: 'think', text: 'The Spire\'s systems are still running. Whatever we do with them, we do it now.',
+      choice: { options: [
+        { text: 'Shut the Spire down for good', flag: 'spire', value: 'shutdown', bond: ['yuna', 'kyle', 2] },
+        { text: 'Keep its systems for the city', flag: 'spire', value: 'keep', bond: ['yuna', 'ruen', 2] },
+      ] } },
   ];
+  // (the choice is the last beat of the Resolution, before the epilogue)
   const EPILOGUE = [
     { shot: 'wide', caption: 'Epilogue\nThe megacity is changed for ever: free of the Corporation\'s grip, but wild and unpredictable.' },
     { shot: 'who', who: 'kyle', mood: 'talk', text: 'So. What now?' },
+    { shot: 'who', who: 'ruen', mood: 'nod', when: { flag: 'ending', is: 'together' }, text: 'Wherever we walk, I want the signs to say what they mean. And I want all of you there to read them.' },
+    { shot: 'who', who: 'kyle', mood: 'nod', when: { flag: 'ending', is: 'apart' }, text: 'Then we split up for a while. Ruen, come back to the fire when you\'re ready. We\'ll keep it lit.' },
+    { shot: 'who', who: 'ruen', mood: 'worry', when: { flag: 'ending', is: 'apart' }, text: 'I don\'t want to be alone with the orb. But I think I need to be, for a bit.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', when: { flag: 'spire', is: 'shutdown' }, text: 'The Spire is dark for good. Nobody else gets to run a city from a glass tower.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', when: { flag: 'spire', is: 'keep' }, text: 'We keep its systems, so someone has to run them. It won\'t be them, and we\'ll watch every line.' },
+    { shot: 'who', who: 'yuna', mood: 'nod', when: { flag: 'staff', is: 'evacuated' }, text: 'The staff got out before the lift stopped. Some of them are already writing to us.' },
+    { shot: 'who', who: 'yuna', mood: 'nod', when: { flag: 'staff', is: 'kept' }, text: 'We kept the staff in the halls until the lights came back. They are still at their desks, and they are grateful.' },
     { shot: 'who', who: 'yuna', mood: 'firm', text: 'Now we find out who else has a Core in their pocket, and what they plan to do with it.' },
     { shot: 'who', who: 'ruen', mood: 'nod', note: 'Listening, then smiling.', text: 'The whispering has stopped. For the first time since the alley, it\'s quiet.' },
     { shot: 'who', who: 'jin', mood: 'nod', text: 'Then we pack up the camp, and we walk.' },
-    { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], caption: 'The crew of four, battered but unbroken, shoulders their gear and walks into the glowing, glitching horizon, ready for whatever comes next.' },
+    { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], when: { flag: 'ending', is: 'together' }, caption: 'The crew of four, battered but unbroken, shoulders their gear and walks into the glowing, glitching horizon, together.' },
+    { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], when: { flag: 'ending', is: 'apart' }, caption: 'The crew of four, battered but unbroken, go their separate ways into the glowing horizon, and promise to find the fire again.' },
   ];
   const moodOf = st => st.mood || 'talk';
-  const typed = () => steps && steps[i] ? (steps[i].text || steps[i].caption || steps[i].note || '') : '';
+  // What the box says: the spoken line, or the caption. A stage note (what a character does) shows in its own line, not as speech
+  const typed = () => steps && steps[i] ? I18n.tr(steps[i].text || steps[i].caption || '') : '';
 
   // A shot's target camera pose
   function shotFor(st) {
@@ -306,18 +346,23 @@ const Cutscene = (() => {
     const st = steps[i], who = st.name ? { name: st.name, color: st.color } : st.who && WHO[st.who];
     applyFx(st.fx);
     $('dlgCount').textContent = (i + 1) + ' / ' + steps.length;
-    $('dlgName').textContent = who ? who.name : '';
+    $('dlgName').textContent = who ? I18n.tr(who.name) : '';
     $('dlgName').style.color = who ? who.color : '';
-    $('dlgNote').textContent = st.note || '';
+    $('dlgNote').textContent = I18n.tr(st.note || '');
     $('dlgNote').hidden = !st.note;
+    const pt = st.who && !st.name && !st.caption && WHO[st.who] ? Portraits.svg(st.who, st.mood) : '';
+    $('dlgPortrait').innerHTML = pt; $('dlgPortrait').hidden = !pt;
+    renderChoices(st.choice);
     $('dlg').classList.toggle('caption', !!st.caption);
     $('dlgText').textContent = ''; shown = 0;
   }
 
   // opts.anchor: 'camp' (at the fire: the crew are seated, Jin takes his spot) or 'here' (the crew gather round Jin where he stands);
   // opts.facing: the way they all face in a 'here' scene; opts.npc: someone being talked to (a chat: nobody is moved)
+  // Story flags set by the player's choices (saved with the game)
+  const flags = {};
   function begin(list, done, opts = {}) {
-    steps = list; i = 0; ending = 0; active = true; onDone = done || null; t = 0; npcRig = opts.npc ? opts.npc.rig : null;
+    steps = list.filter(s => !s.when || flags[s.when.flag] === s.when.is); i = 0; ending = 0; active = true; onDone = done || null; t = 0; npcRig = opts.npc ? opts.npc.rig : null;
     Player.setFrozen(true);
     const ps = Player.state();
     if (!opts.anchor || opts.anchor === 'camp') {
@@ -334,8 +379,17 @@ const Cutscene = (() => {
   function finish() {                                                            // leave the scene: glide the camera home, then hand control back
     acting(false); npcRig = null; Camp.release(); applyFx({ glitch: 0, resonance: 0, aim: false }); $('dlg').hidden = true; ending = 1.4; document.body.classList.remove('cutscene'); document.body.classList.add('cutscene-out');
   }
+  // A choice step: the chosen option sets its flag and bond, then the scene goes on
+  function choose(k) {
+    const st = steps[i]; if (!st || !st.choice || shown < typed().length) return;
+    const o = st.choice.options[k]; if (!o) return;
+    if (o.flag) flags[o.flag] = o.value;
+    if (o.bond) bondUp([o.bond]);
+    Save.save();
+    if (++i >= steps.length) finish(); else show();
+  }
   function advance() {
-    if (!active || ending) return;
+    if (!active || ending || (steps[i] && steps[i].choice)) return;
     const full = typed();
     if (shown < full.length) { shown = full.length; return; }
     if (++i >= steps.length) finish(); else show();
@@ -357,6 +411,18 @@ const Cutscene = (() => {
     if (Math.floor(shown / 3) !== before && shown < typed().length && steps[i] && !steps[i].caption) Sound.blip(steps[i].who || 'npc');          // a chirp every few letters, pitched by the speaker
     $('dlgText').textContent = typed().slice(0, Math.floor(shown)); acting(true);
     $('dlgNext').style.visibility = shown >= typed().length ? 'visible' : 'hidden';
+    if (steps[i] && steps[i].choice) { $('dlgChoices').hidden = shown < typed().length; $('dlgNext').style.visibility = 'hidden'; }
+  }
+  // The options of a choice step, shown once its question has been typed out
+  function renderChoices(c) {
+    const box = $('dlgChoices'); box.textContent = ''; box.hidden = true;
+    if (!c) return;
+    c.options.forEach((o, k) => {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = o.text;
+      b.addEventListener('click', e => { e.stopPropagation(); choose(k); });
+      b.textContent = I18n.tr(o.text);
+      box.appendChild(b);
+    });
   }
 
   // The camera: glide toward the current shot (or, on the way out, toward the exploration camera)
@@ -373,19 +439,19 @@ const Cutscene = (() => {
   let stage = 0, restBase = 0;                                  // restBase: the crew's rest count when the Resonance stage began; the Resonance waits on a rest after it
   const QUEST = ['\u25c6 Speak with the crew', '\u25c6 Rest by the fire and feel for the resonance', '\u25c6 Go through the gate into the Neon Market', '\u25c6 Follow the orb up the avenue', '\u25c6 Reach the foot of the tower', '\u25c6 Follow the pull to the Industrial Hub gate', '\u25c6 Cross the Hub to the Foundry', '\u25c6 Reach the Foundry\'s shutter', '\u25c6 Find the three access nodes', '\u25c6 Return to the Foundry\'s shutter', '\u25c6 Enter the Foundry', '\u25c6 Defeat the Loader Mech', '\u25c6 Take the Data Core', '\u25c6 Ride the freight lift to the Corporate Spire', '\u25c6 Cross the Spire lobby to the server atrium', '\u25c6 Climb to the summit', '\u25c6 Face the CEO at the summit', '\u25c6 Defeat the CEO', '\u25c6 The city is free. The road goes on.'];
   function setQuest(n) {
-    const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; if (n > 0) Sound.sfx('quest');
+    const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : I18n.tr(QUEST[n]); if (n > 0) Sound.sfx('quest');
     const toast = $('toast'); if (toast && n > 0) { toast.textContent = 'Quest updated'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2200); }
   }
   const setStage = n => { stage = n; if (n === 1) restBase = Camp.restCount(); setQuest(n); Save.touch(); Save.save(); };
   // After a load: the story stage is set without the chime or the toast
-  function restore(n) { stage = n; if (n === 1) restBase = Camp.restCount(); const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : QUEST[n]; }
+  function restore(n, f) { stage = n; for (const k in flags) delete flags[k]; Object.assign(flags, f || {}); if (n === 1) restBase = Camp.restCount(); const q = $('qtext'); if (q) q.textContent = n === 2 && !Combat.alleyCleared() ? '\u25c6 Break through the husks guarding the gate' : I18n.tr(QUEST[n]); }
   // The alley's husks are beaten and the gate opens: the quest line says so
   function gateOpened() {
     const toast = $('toast'); if (toast) { toast.textContent = 'The gate\'s barrier dissolves'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); }
-    if (stage === 2) { const q = $('qtext'); if (q) q.textContent = QUEST[2]; Sound.sfx('quest'); }
+    if (stage === 2) { const q = $('qtext'); if (q) q.textContent = I18n.tr(QUEST[2]); Sound.sfx('quest'); }
   }
   // Each access node picked up: the toast and the quest line show the count
-  function nodeTaken(n) { const q = $('qtext'); if (q && stage === 8) q.textContent = QUEST[8] + ' (' + n + '/3)'; const toast = $('toast'); if (toast) { toast.textContent = 'Access node ' + n + ' / 3'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1800); } }
+  function nodeTaken(n) { const q = $('qtext'); if (q && stage === 8) q.textContent = I18n.tr(QUEST[8]) + ' (' + n + '/3)'; const toast = $('toast'); if (toast) { toast.textContent = I18n.tr('Access node ') + n + ' / 3'; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 1800); } }
   // The objective the map points at: the gate, then the tower
   function objective() {
     if (stage === 2) return Combat.alleyCleared() ? { x: 0, z: World.Z0 + 4, label: 'the gate' } : { x: 0, z: -14, label: 'the husks' };
@@ -401,7 +467,132 @@ const Cutscene = (() => {
     return null;
   }
   // Place triggers: each plays once, when the crew first reaches the place at that stage
+  // Ruen's own story: three scenes, each after a bond with the crew and a point in the story (they play as the bond scenes do)
+  const RUEN_ARC = {
+    1: [
+      { shot: 'wide', caption: 'A quiet moment, away from the fire. Ruen sits on a crate with the orb in her lap, and the others are out of earshot.' },
+      { shot: 'who', who: 'kyle', mood: 'nod', note: 'Sitting down beside her, not too close.', text: 'You\'ve been quiet since the alley.' },
+      { shot: 'who', who: 'ruen', mood: 'worry', text: 'When the orb sings, I remember a room. White walls, and a voice counting. I was small. I think they made me listen to things nobody should hear.' },
+      { shot: 'who', who: 'kyle', mood: 'firm', text: 'Did they hurt you?' },
+      { shot: 'who', who: 'ruen', mood: 'think', text: 'They called it training. I called it the only time anyone looked at me.' },
+      { shot: 'who', who: 'kyle', mood: 'firm', text: 'Nobody puts you back in that room. Not while I\'m standing here.' },
+      { shot: 'who', who: 'ruen', mood: 'nod', note: 'A small, surprised smile.', text: 'You say that like it\'s easy.' },
+      { shot: 'who', who: 'kyle', mood: 'talk', text: 'It\'s the only thing I\'m good at.' },
+    ],
+    2: [
+      { shot: 'wide', caption: 'The server floors are quiet at night. Ruen finds Yuna at a terminal, the glow of the screen across both their faces.' },
+      { shot: 'who', who: 'ruen', mood: 'firm', text: 'You worked on the program that kept me in that room. Didn\'t you?' },
+      { shot: 'who', who: 'yuna', mood: 'think', note: 'A long pause. She does not look away.', text: 'I signed the review for it. Yes.' },
+      { shot: 'who', who: 'ruen', mood: 'worry', text: 'Why tell me? You could have let me find it in a log.' },
+      { shot: 'who', who: 'yuna', mood: 'firm', text: 'Because you would have found it, and I would rather you heard it from me.' },
+      { shot: 'who', who: 'ruen', mood: 'think', text: 'Then tell me one thing. Did you ever think it was wrong?' },
+      { shot: 'who', who: 'yuna', mood: 'worry', text: 'Every day. It\'s why I\'m standing here and not up there with them.' },
+      { shot: 'who', who: 'ruen', mood: 'nod', text: 'Then we\'re both here because we were wrong once.' },
+      { shot: 'who', who: 'yuna', mood: 'talk', text: 'Don\'t make it sound poetic.' },
+    ],
+    3: [
+      { shot: 'wide', caption: 'The lift is quiet. Ruen watches the light climb the shaft and does not look away from it.' },
+      { shot: 'who', who: 'ruen', mood: 'think', text: 'If the door opens, I\'m the only one who can hear the cores. Maybe I can tell them to stop.' },
+      { shot: 'who', who: 'kyle', mood: 'worry', text: 'And if they won\'t stop?' },
+      { shot: 'who', who: 'ruen', mood: 'firm', text: 'Then I hold on until you pull me back. You promised.' },
+      { shot: 'who', who: 'kyle', mood: 'nod', text: 'Every time. I\'ll pull you back every time.' },
+      { shot: 'who', who: 'ruen', mood: 'nod', note: 'The orb steadies in her hand.', text: 'Then I\'m not afraid of the door. I\'m only afraid of being alone in it.' },
+    ],
+  };
+  // After the ending: the city is back, and a new question opens. Plays once, at the fire, after the ending (the afterglow flag keeps it to once).
+  const AFTERGLOW = [
+    { shot: 'wide', caption: 'Afterglow\nThe city\'s lights come back one district at a time. Nobody needs to sleep at the fire tonight, but the crew do anyway.' },
+    { shot: 'who', who: 'ruen', mood: 'alert', note: 'Her orb flickers, then points away from the city.', text: 'There\'s another one. Not in the city. Beyond it. It\'s calling the same way the first one did.' },
+    { shot: 'who', who: 'kyle', mood: 'think', text: 'Beyond the sector wall? Nobody goes beyond the wall.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', text: 'The Corporation ran a survey past the wall before the shutdown. The logs were sealed. I never saw the bottom of them.' },
+    { shot: 'who', who: 'jin', mood: 'think', text: 'Then we find out what\'s out there. Same as always.' },
+    { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], caption: 'At the edge of the firelight, a figure in a grey coat has been watching the crew. They have a face the crew almost recognise. They lift a hand, and walk toward the wall.' },
+    { shot: 'who', who: 'ruen', mood: 'worry', text: 'Wait. Who are you?' },
+    { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], caption: 'The stranger does not answer. At the wall, the signs stop flickering and, for the first time, all spell the same word.\n\nTo be continued.' },
+  ];
+  // The other three crew members' own scenes, on the same terms as Ruen's: a bond level and a point in the story
+  const ARCS = {
+    'jin-arc-1': [
+      { shot: 'wide', caption: 'Late at the fire, Jin turns his blade over in his hands. Kyle sits down across from him and says nothing for a while.' },
+      { shot: 'who', who: 'kyle', mood: 'think', text: 'That blade doesn\'t look like something you bought.' },
+      { shot: 'who', who: 'jin', mood: 'wipe', text: 'It belonged to a friend. Mara. We were on the Corporate guard together, before she decided it was wrong.' },
+      { shot: 'who', who: 'kyle', mood: 'worry', text: 'What happened to her?' },
+      { shot: 'who', who: 'jin', mood: 'firm', text: 'They called her a glitch and sent her down with the husks. I kept the blade, because I never got to bury anything else of hers.' },
+      { shot: 'who', who: 'kyle', mood: 'nod', text: 'Then you carry her with you. That isn\'t a weakness.' },
+      { shot: 'who', who: 'jin', mood: 'nod', text: 'It\'s a reason. I\'ve got a few of those.' },
+    ],
+    'jin-arc-2': [
+      { shot: 'wide', caption: 'Ruen finds Jin on a loading dock, sitting with his back against a crate and looking out over the city.' },
+      { shot: 'who', who: 'ruen', mood: 'worry', text: 'You always take the front. Every fight, every door.' },
+      { shot: 'who', who: 'jin', mood: 'talk', text: 'Someone has to.' },
+      { shot: 'who', who: 'ruen', mood: 'firm', text: 'Does it have to be you? You don\'t have to be the one who gets hurt first.' },
+      { shot: 'who', who: 'jin', mood: 'think', text: 'If I\'m in front, nobody else gets hit first. That was the deal I made when I took this blade.' },
+      { shot: 'who', who: 'ruen', mood: 'nod', text: 'Then let me in front sometimes. I\'m not made of glass. Not anymore.' },
+      { shot: 'who', who: 'jin', mood: 'nod', text: 'Fair. You take the lead on the next one, and I\'ll watch your back.' },
+    ],
+    'kyle-arc-1': [
+      { shot: 'wide', caption: 'Yuna cleans a blaster by the fire. Kyle hands her a cup of something hot and sits down beside her.' },
+      { shot: 'who', who: 'kyle', mood: 'talk', text: 'You never asked me about the shield.' },
+      { shot: 'who', who: 'yuna', mood: 'think', text: 'I assumed it was a corporate issue. Heavy, and badly balanced.' },
+      { shot: 'who', who: 'kyle', mood: 'nod', text: 'I built it, out of a dock gate. I worked the docks for ten years before they automated them.' },
+      { shot: 'who', who: 'yuna', mood: 'firm', text: 'So you were made obsolete the same way I was made useful.' },
+      { shot: 'who', who: 'kyle', mood: 'talk', text: 'Something like that. Only this time I get to choose what I carry.' },
+      { shot: 'who', who: 'yuna', mood: 'nod', text: 'Then carry it well. You\'re better at it than most of the Corporation.' },
+    ],
+    'yuna-arc-2': [
+      { shot: 'wide', caption: 'Before the lift, Yuna checks the blasters once more. Kyle watches from the doorway.' },
+      { shot: 'who', who: 'kyle', mood: 'nod', text: 'You\'ve checked those three times.' },
+      { shot: 'who', who: 'yuna', mood: 'think', text: 'Four. I\'m not going to be the one who misses the lock.' },
+      { shot: 'who', who: 'kyle', mood: 'talk', text: 'You won\'t miss. I\'ve watched you not miss all week.' },
+      { shot: 'who', who: 'yuna', mood: 'worry', text: 'I used to design the locks. Now I\'m the one trying to open them. It isn\'t the same skill.' },
+      { shot: 'who', who: 'kyle', mood: 'firm', text: 'It\'s close enough. And you\'ve got us.' },
+      { shot: 'who', who: 'yuna', mood: 'nod', text: 'I know. That\'s the part I didn\'t plan for.' },
+    ],
+  };
+  // The ending the crew reach: together if their bonds held (and Ruen's story was heard), apart if not. The epilogue has lines for each.
+  function setEnding() {
+    if (typeof Growth === 'undefined') return;
+    const bonds = Growth.bondLevel('ruen', 'kyle') + Growth.bondLevel('ruen', 'yuna') + Growth.bondLevel('you', 'ruen');
+    const arcs = ['ruen-arc-1', 'ruen-arc-2', 'ruen-arc-3', 'jin-arc-1', 'kyle-arc-1', 'jin-arc-2', 'yuna-arc-2'].filter(k => Growth.told(k)).length;
+    flags.ending = bonds + arcs >= 8 ? 'together' : 'apart';
+  }
+  // Bond scenes: two of the crew talk after they have fought together enough to reach a bond level. Each plays once.
+  const BOND_SCENES = [
+    { key: 'ruen-arc-1', a: 'ruen', b: 'kyle', lvl: 2, minStage: 2, steps: RUEN_ARC[1] },
+    { key: 'ruen-arc-2', a: 'ruen', b: 'yuna', lvl: 2, minStage: 8, steps: RUEN_ARC[2] },
+    { key: 'ruen-arc-3', a: 'ruen', b: 'kyle', lvl: 3, minStage: 13, steps: RUEN_ARC[3] },
+    { key: 'jin-arc-1', a: 'you', b: 'kyle', lvl: 2, minStage: 3, steps: ARCS['jin-arc-1'] },
+    { key: 'kyle-arc-1', a: 'kyle', b: 'yuna', lvl: 2, minStage: 6, steps: ARCS['kyle-arc-1'] },
+    { key: 'jin-arc-2', a: 'you', b: 'ruen', lvl: 2, minStage: 10, steps: ARCS['jin-arc-2'] },
+    { key: 'yuna-arc-2', a: 'kyle', b: 'yuna', lvl: 3, minStage: 12, steps: ARCS['yuna-arc-2'] },
+    { key: 'jin-yuna-2', a: 'you', b: 'yuna', lvl: 2, steps: [
+      { shot: 'who', who: 'yuna', mood: 'firm', text: 'You didn\'t hesitate back there. Not once.' },
+      { shot: 'who', who: 'jin', mood: 'nod', text: 'Neither did you. Every shot landed right on time.' },
+      { shot: 'who', who: 'yuna', mood: 'talk', text: 'Don\'t get used to it. I still don\'t like you.' },
+      { shot: 'who', who: 'jin', mood: 'nod', text: 'Fair. Then I\'ll keep being annoying until you do.' }] },
+    { key: 'ruen-kyle-2', a: 'ruen', b: 'kyle', lvl: 2, steps: [
+      { shot: 'who', who: 'kyle', mood: 'nod', text: 'You were steady out there. Steadier than I was.' },
+      { shot: 'who', who: 'ruen', mood: 'worry', text: 'I felt the pull the whole time. Like something was listening.' },
+      { shot: 'who', who: 'kyle', mood: 'firm', text: 'Then listen to me instead. I\'ll be the one you hear.' }] },
+    { key: 'jin-kyle-3', a: 'you', b: 'kyle', lvl: 3, steps: [
+      { shot: 'who', who: 'kyle', mood: 'talk', text: 'You fight like you\'ve already decided to get back up.' },
+      { shot: 'who', who: 'jin', mood: 'firm', text: 'I have. Somebody has to hold the line when you\'re not in front.' },
+      { shot: 'who', who: 'kyle', mood: 'nod', text: 'Then we hold it together. Same as always.' }] },
+  ];
+  // Plays the next bond scene that is due, if any. Returns true when one started.
+  function bondScene() {
+    if (typeof Growth === 'undefined') return false;
+    const s = BOND_SCENES.find(q => Growth.bondLevel(q.a, q.b) >= q.lvl && (!q.minStage || stage >= q.minStage) && !Growth.told(q.key));
+    if (!s) return false;
+    begin(s.steps, () => { Growth.markTold(s.key); Save.save(); }, { anchor: 'here' });
+    return true;
+  }
+  // The first conversation starts by itself once the title screen is gone (it is played once, in this session or the last)
+  let introDone = false;
   function checkTriggers() {
+    if (bondScene()) return;
+    if (stage === 0 && !introDone && document.getElementById('title').hidden) { introDone = true; begin(CAMPFIRE, () => setStage(1)); return; }
+    if (stage === 18 && !flags.afterglow) { flags.afterglow = 'seen'; begin(AFTERGLOW, () => Save.save(), { anchor: 'camp' }); return; }
     const p = Player.state(), dT = Math.hypot(p.x - World.TOWER.x, p.z - World.TOWER.z);
     if (stage === 2 && p.z < World.Z0 - 6) begin(ARRIVAL, () => setStage(3), { anchor: 'here' });
     else if (stage === 3 && dT < 70) begin(TOWER_SIGHT, () => setStage(4), { anchor: 'here' });
@@ -417,7 +608,7 @@ const Cutscene = (() => {
     else if (stage === 14 && Math.hypot(p.x - World.ATRIUM.x, p.z - World.ATRIUM.z) < 26) begin(ATRIUM_SCENE, () => setStage(15), { anchor: 'here' });
     else if (stage === 15 && Math.hypot(p.x - World.SUMMIT.x, p.z - World.SUMMIT.z) < 62) begin(SUMMIT_SIGHT, () => setStage(16), { anchor: 'here' });
     else if (stage === 16 && Math.hypot(p.x - World.SUMMIT.x, p.z - World.SUMMIT.z) < 20) begin(CEO_CONFRONT, () => { World.armCeo(); setStage(17); }, { anchor: 'here' });
-    else if (stage === 17 && World.ceoDown()) begin(RESOLUTION, () => begin(EPILOGUE, () => { setStage(18); showEnd(); }, { anchor: 'here' }), { anchor: 'here' });
+    else if (stage === 17 && World.ceoDown()) begin(RESOLUTION, () => { setEnding(); begin(EPILOGUE, () => { setStage(18); showEnd(); }, { anchor: 'here' }); }, { anchor: 'here' });
   }
   const NPC_LINES = {
     vendor: ['Scrap is as good as credit here. Show me what you\'ve got.', 'Fresh circuits, honest prices. Mostly honest.', 'Nobody\'s buying tonight. The signs keep lying about what\'s open.'],
@@ -459,6 +650,7 @@ const Cutscene = (() => {
 
   function init() {
     $('endKeep').addEventListener('click', () => { $('endcard').hidden = true; Save.save(); });
+    $('endNG').addEventListener('click', newGamePlus);
     $('endTitle').addEventListener('click', () => { Save.save(true); location.reload(); });
     $('talkBtn').addEventListener('click', start);
     $('dlg').addEventListener('click', e => { if (e.target.id === 'dlgSkip') skip(); else advance(); });
@@ -471,10 +663,10 @@ const Cutscene = (() => {
   // Each frame: the interact button at the fire or beside someone, and the place triggers
   function updateUI(campOpen) {
     const it = !Combat.active() && !active && !campOpen ? interactable() : null;
-    $('talkBtn').hidden = !it; if (it) $('talkBtn').textContent = it.label;
+    $('talkBtn').hidden = !it; if (it) $('talkBtn').textContent = I18n.line(it.label);
     $('talkBtn').classList.toggle('solo', !!it && $('campBtn').hidden);
     if (!active && !campOpen && !Combat.active() && !Combat.engaging()) checkTriggers();
   }
 
-  return { init, update, updateUI, applyCamera, active: () => active, start, started: () => started, stage: () => stage, objective, nodeTaken, gateOpened, restore, debugStage: n => setStage(n) };
+  return { init, update, updateUI, applyCamera, active: () => active, start, started: () => started, stage: () => stage, flags: () => ({ ...flags }), objective, nodeTaken, gateOpened, restore, debugStage: n => setStage(n) };
 })();

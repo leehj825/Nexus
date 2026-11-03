@@ -218,7 +218,11 @@ const ModelCheck = (() => {
   function init() {
     $('btnSettings').addEventListener('click', () => { $('settings').hidden = false; });
     $('settingsClose').addEventListener('click', () => { $('settings').hidden = true; });
-    const sync = () => { $('setMusic').textContent = Sound.music ? 'On' : 'Off'; $('setSfx').textContent = Sound.fx ? 'On' : 'Off'; };
+    const sync = () => { $('setMusic').textContent = I18n.tr(Sound.music ? 'On' : 'Off'); $('setSfx').textContent = I18n.tr(Sound.fx ? 'On' : 'Off'); $('setLang').textContent = I18n.name(); };
+    $('setLang').addEventListener('click', () => { I18n.set(I18n.lang() === 'en' ? 'ko' : 'en'); sync(); syncD(); syncQ(); syncC(); syncB(); });
+    const syncB = () => { $('setSpeed').textContent = Combat.speed() === 0 ? '1×' : ['1×', '1.6×', '2.4×'][Combat.speed()]; $('setAuto').textContent = I18n.tr(Combat.auto() ? 'On' : 'Off'); };
+    $('setSpeed').addEventListener('click', () => { Combat.setSpeed(Combat.speed() + 1); syncB(); });
+    $('setAuto').addEventListener('click', () => { Combat.setAuto(!Combat.auto()); syncB(); });
     $('setMusic').addEventListener('click', () => { Sound.setMusic(!Sound.music); sync(); });
     $('setSfx').addEventListener('click', () => { Sound.setSfx(!Sound.fx); sync(); });
     const QN = { auto: 'Auto', high: 'High', low: 'Low' };
@@ -227,7 +231,9 @@ const ModelCheck = (() => {
     $('setDebug').addEventListener('click', () => { Perf.setDebug(!Perf.debug()); syncQ(); });
     const syncD = () => { $('setDiff').textContent = Combat.DIFF[Combat.difficulty()].name; };
     $('setDiff').addEventListener('click', () => { Combat.setDifficulty({ easy: 'normal', normal: 'hard', hard: 'easy' }[Combat.difficulty()]); syncD(); });
-    $('btnSettings').addEventListener('click', syncD); syncD();
+    const syncC = () => { $('setChallenge').textContent = Growth.challenge() ? 'On' : 'Off'; $('setChallengeRow').hidden = !(typeof Cutscene !== 'undefined' && Cutscene.stage() >= 18); };
+    $('setChallenge').addEventListener('click', () => { Growth.setChallenge(!Growth.challenge()); Save.save(); syncC(); });
+    $('btnSettings').addEventListener('click', () => { syncD(); syncC(); syncB(); }); syncD(); syncC(); syncB();
     $('setSave').addEventListener('click', () => { const ok = Save.save(); $('setSave').textContent = ok ? 'Saved' : 'Not now'; setTimeout(() => { $('setSave').textContent = 'Save now'; }, 1500); });
     $('btnSettings').addEventListener('click', () => { sync(); syncQ(); }); sync(); syncQ();
     $('openModelCheck').addEventListener('click', () => { $('settings').hidden = true; show(); });

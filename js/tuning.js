@@ -7,7 +7,7 @@ const Tuning = {
   "gear": {"weapon": 1.15, "armor": 1.12, "wcost": [5, 10, 17], "acost": [5, 11]},
   "bond": {"l2": 3, "l3": 8},
   "tier": {"hp": 0.995, "dmg": 0.615, "rate": 0.12, "xp": 0.392},
-  "foes": {"husk": {"hp": 60, "rate": 0.07, "xp": 14, "ai": "husk"}, "brute": {"hp": 110, "rate": 0.075, "xp": 38, "ai": "husk"}, "loader": {"hp": 1707, "rate": 0.22, "xp": 220, "ai": "boss"}, "enforcer": {"hp": 90, "rate": 0.085, "xp": 40, "ai": "enforcer"}, "drone": {"hp": 40, "rate": 0.135, "xp": 22, "ai": "drone"}, "seraph": {"hp": 70, "rate": 0.1, "xp": 40, "ai": "seraph"}, "ceo": {"hp": 2569, "rate": 0.164, "xp": 600, "ai": "ceo"}},
+  "foes": {"siphon": {"hp": 45, "rate": 0.11, "xp": 26, "ai": "siphon", "drain": 0.35, "heal": 0.08, "dmg": [7, 10], "weak": "ruen", "weakMul": 1.8}, "crawler": {"hp": 55, "rate": 0.16, "xp": 24, "ai": "crawler", "lash": [9, 13], "lock": 1.6, "weak": "yuna", "weakMul": 1.8}, "husk": {"hp": 60, "rate": 0.07, "xp": 14, "ai": "husk"}, "brute": {"hp": 110, "rate": 0.075, "xp": 38, "ai": "husk"}, "loader": {"hp": 1707, "rate": 0.22, "xp": 220, "ai": "boss"}, "enforcer": {"hp": 90, "rate": 0.085, "xp": 40, "ai": "enforcer"}, "drone": {"hp": 40, "rate": 0.135, "xp": 22, "ai": "drone"}, "seraph": {"hp": 70, "rate": 0.1, "xp": 40, "ai": "seraph"}, "ceo": {"hp": 2569, "rate": 0.164, "xp": 600, "ai": "ceo"}},
   "husk": {"crush": [30, 36], "lash": [11, 15]},
   "brute": {"crush": [32, 40]},
   "boss": {"sweep": [12, 16], "volley": [11, 15], "crush": [30, 38], "rate2": 1.35},

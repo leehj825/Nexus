@@ -28,6 +28,8 @@
   Combat.init(scene, camera);
   CampUI.init();
   CrewUI.init();
+  I18n.apply();
+  Journal.init();
   ShopUI.init();
   ModelCheck.init();
   Cutscene.init();
@@ -40,7 +42,7 @@
   Save.register('items', Items.getState, Items.setState);
   Save.register('quests', Quests.getState, Quests.setState);
   Save.register('growth', Growth.getState, d => { Growth.setState(d); Combat.refreshAll(false); });
-  Save.register('story', () => ({ stage: Cutscene.stage() }), d => Cutscene.restore(d.stage));
+  Save.register('story', () => ({ stage: Cutscene.stage(), flags: Cutscene.flags() }), d => Cutscene.restore(d.stage, d.flags));
   Save.register('player', Player.getState, d => { Player.setState(d); Camp.restoreCrew(Player.state()); });
   Title.init(() => {});
   window.nexus = { state: () => Player.state(), scene, camera, renderer };          // read-only hook for debugging and automated checks

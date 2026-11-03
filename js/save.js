@@ -14,8 +14,9 @@ const Save = (() => {
   const has = () => { const s = store.get(); if (!s) return false; try { return JSON.parse(s).v === VERSION; } catch (e) { return false; } };
   const calm = () => !Combat.active() && !Combat.engaging() && !Cutscene.active();
 
+  let frozen = false;                                            // set once a New Game+ save is written: the page is about to reload, so nothing may overwrite it
   function save(force) {
-    if (!force && !calm()) return false;
+    if (frozen || (!force && !calm())) return false;
     const data = { v: VERSION, at: Date.now() };
     for (const p of parts) data[p.name] = p.get();
     const ok = store.set(JSON.stringify(data)); if (ok) { dirty = false; lastOk = Date.now(); }
@@ -41,5 +42,7 @@ const Save = (() => {
   let started = false;
   // The summary the title screen shows: when, and how far the story has got
   function info() { const s = store.get(); if (!s) return null; try { const d = JSON.parse(s); return { at: d.at, stage: d.story ? d.story.stage : 0 }; } catch (e) { return null; } }
-  return { register, has, save, load, clear, touch, update, init, info, start: () => { started = true; }, lastSaved: () => lastOk };
+  // Writes a save made of only the given parts (the rest start fresh): used by New Game+
+  const writeOnly = parts => { const ok = store.set(JSON.stringify(Object.assign({ v: VERSION, at: Date.now() }, parts))); if (ok) frozen = true; return ok; };
+  return { register, has, save, load, clear, touch, update, init, info, writeOnly, start: () => { started = true; }, lastSaved: () => lastOk };
 })();

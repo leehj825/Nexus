@@ -2,6 +2,9 @@ plugins {
     id 'com.android.application'
 }
 
+// The upload key comes from the environment (set by the release workflow from repository secrets); local builds without it stay unsigned
+def keystorePath = System.getenv('KEYSTORE_PATH')
+
 android {
     namespace 'io.github.leehj825.nexus'
     compileSdk 34
@@ -10,7 +13,7 @@ android {
         applicationId 'io.github.leehj825.nexus'
         minSdk 26
         targetSdk 34
-        versionCode 1
+        versionCode ((System.getenv('VERSION_CODE') ?: '1') as int)     // the release workflow sets this from the run number
         versionName '0.1.0'
     }
 
@@ -18,7 +21,23 @@ android {
         buildConfig true
     }
 
+    signingConfigs {
+        release {
+            if (keystorePath) {
+                storeFile file(keystorePath)
+                storePassword System.getenv('KEYSTORE_PASSWORD')
+                keyAlias System.getenv('KEY_ALIAS')
+                keyPassword System.getenv('KEY_PASSWORD')
+            }
+        }
+    }
+
     buildTypes {
+        // Release: not debuggable, so no WebView inspection and no ?debug overlay (BuildConfig.DEBUG is false)
+        release {
+            debuggable false
+            signingConfig keystorePath ? signingConfigs.release : null
+        }
         debug {
             applicationIdSuffix '.debug'
             versionNameSuffix '-debug'

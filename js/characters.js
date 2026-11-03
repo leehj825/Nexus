@@ -123,6 +123,7 @@ const Chars = (() => {
   };
   function addBlade(c, m) {
     const blade = joint(c.j.wrR, 0, -0.08, 0.01); c.blade = blade; c.weapons = [blade]; c.bladeDir = new THREE.Vector3(...BLADE_FIGHT);
+    c.glowMats = [m.bladeEdge, m.bladeCore];                                                    // recoloured by weapon tier (setWeaponTier)
     add(blade, box(0.042, 0.27, 0.042), m.steelD, 0, -0.04, 0);                                                // the grip
     add(blade, box(0.04, 0.05, 0.05), m.steelD, 0, 0.1, 0);                                                    // the pommel
     add(blade, box(0.16, 0.03, 0.075), m.steelD, 0, -0.19, 0);                                                 // the guard
@@ -421,6 +422,18 @@ const Chars = (() => {
     return c;
   }
   const drone = () => dronish({ r: 0.5, body: 0xd8dee6, glow: 0x3ff0ff, lens: 0x3ff0ff, seed: 2.2, pods: true });
+  // A data leech: a small dark core with a magenta lens and four tendrils trailing under it
+  const siphon = () => {
+    const c = dronish({ r: 0.4, body: 0x2a1830, glow: 0xff3fb4, lens: 0xff3fb4, seed: 3.1, sides: 6, y: 1.3 });
+    for (let i = 0; i < 4; i++) { const a = i / 4 * Math.PI * 2; add(c.hover, box(0.04, 0.5, 0.04), lit(0xff3fb4, 1.8), Math.cos(a) * 0.3, -0.45, Math.sin(a) * 0.3); }
+    return c;
+  };
+  // A crawler: a low armoured shell on six legs, close to the street
+  const crawler = () => {
+    const c = dronish({ r: 0.55, body: 0x3a2a22, glow: 0xff7a2a, lens: 0xff7a2a, seed: 5.3, sides: 6, y: 0.45 });
+    for (const s of [-1, 1]) for (let i = -1; i <= 1; i++) add(c.hover, box(0.5, 0.06, 0.06), std(0x2a1d17), s * 0.5, -0.25, i * 0.35);
+    return c;
+  };
   const seraph = () => dronish({ r: 0.75, body: 0xf2f4f8, glow: 0xffe9a8, lens: 0xffe9a8, seed: 4.6, sides: 14, halo: true, y: 1.9 });
   // The singularity form's shards: a column of gold and pink fragments circling a bright core, hidden until the CEO morphs
   function addShards(c) {
@@ -510,7 +523,7 @@ const Chars = (() => {
       gun: std(0x77808c, { metalness: 0.35, roughness: 0.45 }), gunD: std(0x23282f, { metalness: 0.4, roughness: 0.4 }),
       gunTop: std(0xb4aaa6, { metalness: 0.3, roughness: 0.45 }), plasma: lit(0x3ff0ff, 1.7), glove: std(0x2b2629),
     };
-    c.weapons = [];
+    c.weapons = []; c.glowMats = [m.plasma];
     for (const k of ['L', 'R']) {
       const gun = joint(c.j['wr' + k], 0, -0.11, 0.045); gun.rotation.x = Math.PI / 2 - 0.1; c.weapons.push(gun);
       add(gun, box(0.06, 0.09, 0.07), m.gunD, 0, -0.045, -0.055);                                             // grip, in the fist
@@ -616,7 +629,7 @@ const Chars = (() => {
   }
 
   const orbAt = new THREE.Vector3();
-  const kinds = { ruen, kyle, yuna, player, stranger, husk, enforcer, drone, seraph, ceo };
+  const kinds = { ruen, kyle, yuna, player, stranger, husk, enforcer, drone, seraph, ceo, siphon, crawler };
   // The clips a figure walks, runs and idles with, and the idle it holds in battle. Nobody holds a weapon, so everyone
   // walks and runs with the plain unarmed locomotion. The crew drop into the magic stance when a fight starts (their
   // strikes are brawling punches and hooks, their skills are casts); the husks keep a loose unarmed idle.
@@ -719,5 +732,8 @@ const Chars = (() => {
     if (c.name === 'yuna' && c.tail) { c.tail.rotation.x = -Math.min(speed, 4) * 0.06; }
   }
 
-  return { create, update, play, clipLength, morph, setTalk, setLook, setOrbAim };
+  // Weapon tier glow: 0 is the starting cyan, then gold and magenta as the crew upgrade at camp
+  const TIER_GLOW = [0x3ff0ff, 0xffd24a, 0xff3fb4];
+  function setWeaponTier(c, tier) { for (const m of c.glowMats || []) m.emissive.set(TIER_GLOW[Math.min(tier, TIER_GLOW.length - 1)]); }
+  return { create, update, play, clipLength, morph, setTalk, setLook, setOrbAim, setWeaponTier };
 })();

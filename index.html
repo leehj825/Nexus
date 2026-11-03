@@ -24,6 +24,7 @@
   <div class="corner">
     <button id="btnRun" type="button" aria-label="Run" title="Running (R)">&raquo;</button>
     <button id="btnCrew" type="button" aria-label="Crew" title="Crew (I)">&#9786;</button>
+    <button id="btnJournal" type="button" aria-label="Journal" title="Journal (J)">&#9636;</button>
     <button id="btnMap" type="button" aria-label="Map" title="Map">&#9638;</button>
     <button id="btnPause" type="button" aria-label="Pause" title="Pause (P)">&#10074;&#10074;</button>
     <button id="btnSound" type="button" aria-label="Sound" title="Sound">&#9834;</button>
@@ -63,6 +64,7 @@
     </details>
     <div id="banner" class="banner" hidden></div>
     <div id="lvl" class="lvl" hidden></div>
+    <div id="foes" class="foes" hidden></div>
     <div id="party" class="party"></div>
   </div>
 </div>
@@ -91,6 +93,7 @@
     <button id="tContinue" type="button">Continue</button>
     <div id="tInfo" class="title-info"></div>
     <button id="tNew" type="button">Start</button>
+    <button id="tSettings" type="button">Settings</button>
   </div>
 </div>
 
@@ -103,6 +106,14 @@
   </div>
 </div>
 
+<div id="journal" class="camp" hidden>
+  <div class="camp-card crew-card" role="dialog" aria-label="Journal">
+    <header><h2>Journal</h2></header>
+    <nav class="j-tabs"><button type="button" data-tab="items">Items</button><button type="button" data-tab="foes">Foes</button><button type="button" data-tab="jobs">Jobs</button><button type="button" data-tab="story">Story</button></nav>
+    <div id="journalBody" class="crew-body"></div>
+    <button id="journalClose" class="camp-close" type="button">Close</button>
+  </div>
+</div>
 <div id="crew" class="camp" hidden>
   <div class="camp-card crew-card" role="dialog" aria-label="Crew">
     <header><h2>Crew</h2></header>
@@ -116,6 +127,7 @@
     <h1>NEXUS</h1>
     <p>The city is free, and the road goes on.<br>Thank you for playing.</p>
     <button id="endKeep" type="button">Keep exploring</button>
+    <button id="endNG" type="button">New Game+ (keep levels, perks and gear)</button>
     <button id="endTitle" type="button">Back to the title</button>
   </div>
 </div>
@@ -125,8 +137,10 @@
 <div id="dlg" class="dlg" hidden>
   <div class="dlg-box">
     <div class="dlg-head"><b id="dlgName"></b><span id="dlgCount"></span><button id="dlgSkip" type="button">Skip</button></div>
+    <div id="dlgPortrait" class="dlg-portrait" hidden></div>
     <div id="dlgNote" class="dlg-note" hidden></div>
     <div id="dlgText" class="dlg-text"></div>
+    <div id="dlgChoices" class="dlg-choices" hidden></div>
     <div id="dlgNext" class="dlg-next">&#9654; tap to continue</div>
   </div>
 </div>
@@ -139,7 +153,11 @@
       <li><div><b>Effects</b><span>Hits, spells, pickups and voices</span></div><button id="setSfx" type="button">On</button></li>
       <li><div><b>Quality</b><span id="setQualityNote">Auto lowers the detail if the game runs slowly</span></div><button id="setQuality" type="button">Auto</button></li>
       <li><div><b>Debug</b><span>Frame rate, draw calls, chunk borders, aggro radii, ATB gauges</span></div><button id="setDebug" type="button">Off</button></li>
+      <li><div><b>Language</b><span>English or 한국어 (the interface; the story dialogue is in English)</span></div><button id="setLang" type="button">English</button></li>
+      <li><div><b>Battle speed</b><span>How fast the fights run</span></div><button id="setSpeed" type="button">1×</button></li>
+      <li><div><b>Auto battle</b><span>The crew pick their first command on their own</span></div><button id="setAuto" type="button">Off</button></li>
       <li><div><b>Difficulty</b><span>How hard the foes hit and how much they can take</span></div><button id="setDiff" type="button">Normal</button></li>
+      <li id="setChallengeRow" hidden><div><b>Challenge mode</b><span>After the ending: tougher husks, harder hits and bigger rewards</span></div><button id="setChallenge" type="button">Off</button></li>
       <li><div><b>Save</b><span id="saveNote">The game saves on its own at camps, story points and every few seconds</span></div><button id="setSave" type="button">Save now</button></li>
       <li><div><b>Model Check</b><span>Watch every move and pose of every character</span></div><button id="openModelCheck" type="button">Open</button></li>
     </ul>
@@ -179,6 +197,8 @@
 <script src="vendor/postprocessing/RenderPass.js"></script>
 <script src="vendor/postprocessing/EffectComposer.js"></script>
 <script src="vendor/postprocessing/UnrealBloomPass.js"></script>
+<script src="js/i18n_story.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/tuning.js"></script>
 <script src="js/anims.js"></script>
 <script src="js/anims_magic.js"></script>
@@ -201,9 +221,11 @@
 <script src="js/hud.js"></script>
 <script src="js/combat.js"></script>
 <script src="js/campui.js"></script>
+<script src="js/portraits.js"></script>
 <script src="js/cutscene.js"></script>
 <script src="js/modelcheck.js"></script>
 <script src="js/crewui.js"></script>
+<script src="js/journal.js"></script>
 <script src="js/shopui.js"></script>
 <script src="js/quests.js"></script>
 <script src="js/title.js"></script>

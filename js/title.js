@@ -10,6 +10,8 @@ const Title = (() => {
     const go = () => { el.hidden = true; document.body.classList.remove('titled'); Save.start(); };
     $('tContinue').addEventListener('click', () => { if (Save.load()) onLoad(); go(); });
     $('tNew').addEventListener('click', () => { if (info && !confirm('Start over? The saved game will be erased.')) return; Save.clear(); go(); });
+    // Settings from the title: the same panel as in the game, opened through the game's own settings button
+    $('tSettings').addEventListener('click', () => $('btnSettings').click());
     document.body.classList.add('titled');
   }
   return { init };
