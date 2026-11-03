@@ -82,6 +82,15 @@ body.in-battle .hints, body.in-battle .prompt { display: none; }
 .actions.waiting button:not(.off) { opacity: 0.55; }
 .actions .tip { flex: 0 0 100%; min-height: 2.6em; margin-bottom: 2px; padding: 7px 10px; background: rgba(8, 8, 14, 0.92); border-left: 2px solid var(--gold); border-radius: 4px; font-size: 12px; line-height: 1.4; color: var(--ink); }
 .actions .tip b { color: var(--gold); font-weight: 600; }
+.foes { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; pointer-events: auto; touch-action: manipulation; }
+.foes[hidden] { display: none; }
+.fcard { width: 118px; padding: 6px 8px; background: rgba(8, 8, 14, 0.85); border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 6px; font-size: 12px; text-shadow: 0 1px 2px #000; cursor: pointer; user-select: none; -webkit-user-select: none; }
+.fcard b { display: block; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fcard .bar { height: 6px; margin-top: 3px; }
+.fcard .bar.hp i { background: #ff5a7a; }
+.fcard .bar.atb i { background: var(--gold); }
+.fcard.target { border-color: #ffd24a; box-shadow: 0 0 10px rgba(255, 210, 74, 0.5); }
+.fcard.dead { opacity: 0.3; pointer-events: none; }
 .party { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; pointer-events: none; }
 .card { width: 124px; padding: 7px 9px; background: var(--panel); border-radius: 6px; font-size: 12px; text-shadow: 0 1px 2px #000; }
 .card b { display: block; margin-bottom: 4px; }

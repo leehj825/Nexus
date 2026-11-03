@@ -843,8 +843,43 @@ const Combat = (() => {
   // The crew member whose command menu is open: the one picked by a tap while ready, else the first ready one (not while Ruen casts)
   const readyCrew = () => party.filter(u => u.alive && u.ready && !(u.id === 'ruen' && cast));
   const menuOwner = () => readyCrew().find(u => u.id === menuWho) || readyCrew()[0] || null;     // stays up while an attack plays: the commands wait, the descriptions do not
+  // The foe cards along the top: each foe's name, health and gauge. A tap picks a foe as the target, and the gold ring on the ground shows it
+  let foeKey = '';
+  function syncFoes(show) {
+    const row = $('foes'), key = show ? foes.map(f => f.id).join('|') : '';
+    if (key !== foeKey) {
+      foeKey = key; row.textContent = '';
+      foes.forEach((f, i) => {
+        const el = document.createElement('div'); el.className = 'fcard';
+        el.innerHTML = `<b style="color:${f.color}">${i + 1} · ${I18n.line(f.name)}</b><div class="bar hp"><i></i></div><div class="bar atb"><i></i></div>`;
+        el.addEventListener('pointerdown', e => { e.stopPropagation(); if (f.alive) target = f; });
+        row.appendChild(el); f.fcard = { el, hp: el.querySelector('.hp i'), atb: el.querySelector('.atb i') };
+      });
+    }
+    row.hidden = !show;
+    if (!show) return;
+    const cur = selected();
+    for (const f of foes) {
+      const c = f.fcard; if (!c) continue;
+      c.hp.style.width = (clamp(f.hp / f.hpMax, 0, 1) * 100) + '%';
+      c.atb.style.width = (clamp(f.atb, 0, 1) * 100) + '%';
+      c.el.classList.toggle('target', f === cur && f.alive);
+      c.el.classList.toggle('dead', !f.alive);
+    }
+  }
+  // The ring under the foe that is picked: a gold ring on the ground, pulsing, drawn with the foe so it leaves with it
+  function targetRing(f) {
+    if (!f.ring) {
+      f.ring = new THREE.Mesh(new THREE.RingGeometry(0.75, 0.92, 32), new THREE.MeshBasicMaterial({ color: 0xffd24a, transparent: true, opacity: 0.85, depthWrite: false, toneMapped: false }));
+      f.ring.rotation.x = -Math.PI / 2; f.ring.position.y = 0.05; f.rig.root.add(f.ring);
+    }
+    return f.ring;
+  }
   function updateUI(camera) {
     const show = phase !== 'explore', who = show ? menuOwner() : null;
+    syncFoes(show);
+    const cur = selected();
+    for (const f of foes) { const r = targetRing(f); r.visible = show && f.alive && f === cur; r.scale.setScalar(1 + 0.08 * Math.sin(clock * 6)); }
     document.body.classList.toggle('in-battle', show);
     for (const u of [...party, ...foes]) {
       const L = u.label, p = u.rig.root.position;
