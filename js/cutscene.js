@@ -510,11 +510,50 @@ const Cutscene = (() => {
     { shot: 'who', who: 'ruen', mood: 'worry', text: 'Wait. Who are you?' },
     { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], caption: 'The stranger does not answer. At the wall, the signs stop flickering and, for the first time, all spell the same word.\n\nTo be continued.' },
   ];
+  // The other three crew members' own scenes, on the same terms as Ruen's: a bond level and a point in the story
+  const ARCS = {
+    'jin-arc-1': [
+      { shot: 'wide', caption: 'Late at the fire, Jin turns his blade over in his hands. Kyle sits down across from him and says nothing for a while.' },
+      { shot: 'who', who: 'kyle', mood: 'think', text: 'That blade doesn\'t look like something you bought.' },
+      { shot: 'who', who: 'jin', mood: 'wipe', text: 'It belonged to a friend. Mara. We were on the Corporate guard together, before she decided it was wrong.' },
+      { shot: 'who', who: 'kyle', mood: 'worry', text: 'What happened to her?' },
+      { shot: 'who', who: 'jin', mood: 'firm', text: 'They called her a glitch and sent her down with the husks. I kept the blade, because I never got to bury anything else of hers.' },
+      { shot: 'who', who: 'kyle', mood: 'nod', text: 'Then you carry her with you. That isn\'t a weakness.' },
+      { shot: 'who', who: 'jin', mood: 'nod', text: 'It\'s a reason. I\'ve got a few of those.' },
+    ],
+    'jin-arc-2': [
+      { shot: 'wide', caption: 'Ruen finds Jin on a loading dock, sitting with his back against a crate and looking out over the city.' },
+      { shot: 'who', who: 'ruen', mood: 'worry', text: 'You always take the front. Every fight, every door.' },
+      { shot: 'who', who: 'jin', mood: 'talk', text: 'Someone has to.' },
+      { shot: 'who', who: 'ruen', mood: 'firm', text: 'Does it have to be you? You don\'t have to be the one who gets hurt first.' },
+      { shot: 'who', who: 'jin', mood: 'think', text: 'If I\'m in front, nobody else gets hit first. That was the deal I made when I took this blade.' },
+      { shot: 'who', who: 'ruen', mood: 'nod', text: 'Then let me in front sometimes. I\'m not made of glass. Not anymore.' },
+      { shot: 'who', who: 'jin', mood: 'nod', text: 'Fair. You take the lead on the next one, and I\'ll watch your back.' },
+    ],
+    'kyle-arc-1': [
+      { shot: 'wide', caption: 'Yuna cleans a blaster by the fire. Kyle hands her a cup of something hot and sits down beside her.' },
+      { shot: 'who', who: 'kyle', mood: 'talk', text: 'You never asked me about the shield.' },
+      { shot: 'who', who: 'yuna', mood: 'think', text: 'I assumed it was a corporate issue. Heavy, and badly balanced.' },
+      { shot: 'who', who: 'kyle', mood: 'nod', text: 'I built it, out of a dock gate. I worked the docks for ten years before they automated them.' },
+      { shot: 'who', who: 'yuna', mood: 'firm', text: 'So you were made obsolete the same way I was made useful.' },
+      { shot: 'who', who: 'kyle', mood: 'talk', text: 'Something like that. Only this time I get to choose what I carry.' },
+      { shot: 'who', who: 'yuna', mood: 'nod', text: 'Then carry it well. You\'re better at it than most of the Corporation.' },
+    ],
+    'yuna-arc-2': [
+      { shot: 'wide', caption: 'Before the lift, Yuna checks the blasters once more. Kyle watches from the doorway.' },
+      { shot: 'who', who: 'kyle', mood: 'nod', text: 'You\'ve checked those three times.' },
+      { shot: 'who', who: 'yuna', mood: 'think', text: 'Four. I\'m not going to be the one who misses the lock.' },
+      { shot: 'who', who: 'kyle', mood: 'talk', text: 'You won\'t miss. I\'ve watched you not miss all week.' },
+      { shot: 'who', who: 'yuna', mood: 'worry', text: 'I used to design the locks. Now I\'m the one trying to open them. It isn\'t the same skill.' },
+      { shot: 'who', who: 'kyle', mood: 'firm', text: 'It\'s close enough. And you\'ve got us.' },
+      { shot: 'who', who: 'yuna', mood: 'nod', text: 'I know. That\'s the part I didn\'t plan for.' },
+    ],
+  };
   // The ending the crew reach: together if their bonds held (and Ruen's story was heard), apart if not. The epilogue has lines for each.
   function setEnding() {
     if (typeof Growth === 'undefined') return;
     const bonds = Growth.bondLevel('ruen', 'kyle') + Growth.bondLevel('ruen', 'yuna') + Growth.bondLevel('you', 'ruen');
-    const arcs = [1, 2, 3].filter(k => Growth.told('ruen-arc-' + k)).length;
+    const arcs = ['ruen-arc-1', 'ruen-arc-2', 'ruen-arc-3', 'jin-arc-1', 'kyle-arc-1', 'jin-arc-2', 'yuna-arc-2'].filter(k => Growth.told(k)).length;
     flags.ending = bonds + arcs >= 8 ? 'together' : 'apart';
   }
   // Bond scenes: two of the crew talk after they have fought together enough to reach a bond level. Each plays once.
@@ -522,6 +561,10 @@ const Cutscene = (() => {
     { key: 'ruen-arc-1', a: 'ruen', b: 'kyle', lvl: 2, minStage: 2, steps: RUEN_ARC[1] },
     { key: 'ruen-arc-2', a: 'ruen', b: 'yuna', lvl: 2, minStage: 8, steps: RUEN_ARC[2] },
     { key: 'ruen-arc-3', a: 'ruen', b: 'kyle', lvl: 3, minStage: 13, steps: RUEN_ARC[3] },
+    { key: 'jin-arc-1', a: 'you', b: 'kyle', lvl: 2, minStage: 3, steps: ARCS['jin-arc-1'] },
+    { key: 'kyle-arc-1', a: 'kyle', b: 'yuna', lvl: 2, minStage: 6, steps: ARCS['kyle-arc-1'] },
+    { key: 'jin-arc-2', a: 'you', b: 'ruen', lvl: 2, minStage: 10, steps: ARCS['jin-arc-2'] },
+    { key: 'yuna-arc-2', a: 'kyle', b: 'yuna', lvl: 3, minStage: 12, steps: ARCS['yuna-arc-2'] },
     { key: 'jin-yuna-2', a: 'you', b: 'yuna', lvl: 2, steps: [
       { shot: 'who', who: 'yuna', mood: 'firm', text: 'You didn\'t hesitate back there. Not once.' },
       { shot: 'who', who: 'jin', mood: 'nod', text: 'Neither did you. Every shot landed right on time.' },
