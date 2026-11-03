@@ -957,7 +957,9 @@ const Combat = (() => {
     const s = screenOf(who.rig.root.position, 2.0, camera);
     ui.actions.style.visibility = s.behind ? 'hidden' : '';
     const w = ui.actions.offsetWidth, h = ui.actions.offsetHeight;                                  // measured after it is shown
-    const x = clamp(s.x, w / 2 + 12, innerWidth - w / 2 - 12), y = Math.max(8, s.y - 46 - h);
+    // The command menu stays clear of the foe cards along the top
+    const foesBottom = $('foes').hidden ? 0 : $('foes').getBoundingClientRect().bottom + 8;
+    const x = clamp(s.x, w / 2 + 12, innerWidth - w / 2 - 12), y = Math.max(foesBottom, s.y - 46 - h);
     ui.actions.style.transform = `translate(${x - w / 2}px, ${y}px)`;
   }
   function hoverMenu(e) {
