@@ -48,6 +48,8 @@ const I18n = (() => {
     '◆ Defeat the CEO': '◆ CEO 쓰러뜨리기',
     '◆ The city is free. The road goes on.': '◆ 도시는 자유로워졌다. 길은 계속된다.',
     'Thank you for playing.': '플레이해 주셔서 감사합니다.',
+    "Battle speed": "전투 속도", "How fast the fights run": "전투가 진행되는 속도", "Auto battle": "자동 전투",
+    "The crew pick their first command on their own": "동료가 첫 번째 명령을 스스로 고릅니다",
     "Resonance": "공명",
     "Replay": "다시 보기",
     "Trade": "거래",

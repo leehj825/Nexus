@@ -727,7 +727,15 @@ const Combat = (() => {
   }
 
   // ---------------- Per-frame ----------------
+  // Battle speed (a viewer's setting: 1, 1.6 or 2.4 times) and auto-battle (the crew pick their first command on their own)
+  const SPEEDS = [1, 1.6, 2.4];
+  let speedI = 0, autoOn = false, autoAt = 0;
+  try { speedI = Math.max(0, SPEEDS.indexOf(Number(localStorage.getItem('nexus.speed')))); autoOn = localStorage.getItem('nexus.auto') === 'on'; } catch (e) { /* no storage: the defaults */ }
+  const battleSpeed = () => SPEEDS[speedI];
+  function setSpeed(i) { speedI = ((i % SPEEDS.length) + SPEEDS.length) % SPEEDS.length; try { localStorage.setItem('nexus.speed', String(SPEEDS[speedI])); } catch (e) { /* not kept */ } }
+  function setAuto(on) { autoOn = !!on; autoAt = 0; try { localStorage.setItem('nexus.auto', autoOn ? 'on' : 'off'); } catch (e) { /* not kept */ } }
   function update(dt, camera) {
+    if (phase !== 'explore') dt *= battleSpeed();
     const slowK0 = slowT > 0 ? slowK : 1; slowT = Math.max(0, slowT - dt); dt *= slowK0;      // a finisher slows the moment for a beat
     clock += dt; phaseT += dt;
     shakeA *= Math.exp(-dt * 7); flashA = Math.max(0, flashA - dt * 1.6); const fl = document.getElementById('flash'); if (fl) fl.style.opacity = flashA.toFixed(3);
@@ -914,6 +922,12 @@ const Combat = (() => {
     if (key !== menuFor) { menuFor = key; buildMenu(who, cmds); }
     ui.actions.hidden = !who || phase !== 'battle';
     ui.actions.classList.toggle('waiting', isBusy());
+    // Auto-battle: a crew member who is ready picks their first command after a short pause
+    if (autoOn && who && !isBusy() && !itemMenu) {
+      const now = performance.now();
+      if (!autoAt) autoAt = now + 500;
+      else if (now >= autoAt) { autoAt = 0; const c = commandsFor(who).find(q => !q.off); if (c) { c.run(who); menuFor = null; } }
+    } else autoAt = 0;
     if (who && !ui.actions.hidden) placeMenu(who, camera);
   }
 
@@ -961,7 +975,7 @@ const Combat = (() => {
     else showTip(null, 'Cancelled. Nothing was used.');
   }
 
-  return { init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone, hp: party.map(u => [u.id, Math.round(u.hp)]) }), debugRun: (id, label) => { const u = partyOf(id), c = u && commandsFor(u).find(q => q.label === label); if (!c) return 'missing'; if (c.off) return 'off'; u.atb = 1; u.ready = true; c.run(u); return 'ok'; }, debugFoeHp: f => { for (const x of foes) x.hp = Math.round(x.hpMax * f); }, debugFoeAct: () => { for (const f of foes) if (f.alive && !f.wind) foeAct(f); }, debugItem: id => { const u = party[0]; const ok = itemOk(u, id); useItem(u, id); return ok; }, debugReady: () => { for (const u of party) if (u.alive) u.atb = 1; }, restAll, refreshAll, setDifficulty, difficulty: () => diff, DIFF, partyInfo: () => party.map(u => ({ id: u.id, name: u.name, hp: u.hp, hpMax: u.hpMax })), setState(d) {
+  return { setSpeed, speed: () => speedI, setAuto, auto: () => autoOn, init, update, applyCamera, active, start, canEngage, debugWin: () => { for (const f of foesAlive()) hitFoe(f, 9999); }, register, unregister, alleyCleared: () => alleyDone, getState: () => ({ alley: alleyDone, hp: party.map(u => [u.id, Math.round(u.hp)]) }), debugRun: (id, label) => { const u = partyOf(id), c = u && commandsFor(u).find(q => q.label === label); if (!c) return 'missing'; if (c.off) return 'off'; u.atb = 1; u.ready = true; c.run(u); return 'ok'; }, debugFoeHp: f => { for (const x of foes) x.hp = Math.round(x.hpMax * f); }, debugFoeAct: () => { for (const f of foes) if (f.alive && !f.wind) foeAct(f); }, debugItem: id => { const u = party[0]; const ok = itemOk(u, id); useItem(u, id); return ok; }, debugReady: () => { for (const u of party) if (u.alive) u.atb = 1; }, restAll, refreshAll, setDifficulty, difficulty: () => diff, DIFF, partyInfo: () => party.map(u => ({ id: u.id, name: u.name, hp: u.hp, hpMax: u.hpMax })), setState(d) {
     for (const [id, hp] of d.hp || []) { const u = party.find(q => q.id === id); if (u) { u.hp = hp; u.alive = hp > 0; } }
      if (d.alley && !alleyDone) { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); } }, debugClearAlley: () => { alleyDone = true; const g = groups.get('alley'); if (g) for (const r of g.rigs) scene.remove(r.root); unregister('alley'); }, engaging: () => phase !== 'explore', groupList: () => [...groups.values()], debugRig: id => (party.find(u => u.id === id) || {}).rig, debugInfo: () => ({ phase, units: [...party, ...foes].map(u => ({ n: u.name, foe: !!u.foe, hp: Math.round(u.hp), atb: u.atb, alive: u.alive })) }), encounterR: ENCOUNTER_R, phase: () => phase, stage: () => stage };
 })();
