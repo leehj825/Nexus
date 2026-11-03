@@ -372,4 +372,12 @@ const I18nStory = {
   "I don't want to be alone with the orb. But I think I need to be, for a bit.": "오브와 단둘이 있고 싶지는 않아. 하지만 잠깐은 그래야 할 것 같아.",
   "The crew of four, battered but unbroken, shoulders their gear and walks into the glowing, glitching horizon, together.": "지치고 상처 입었지만 꺾이지 않은 네 사람이 장비를 메고, 빛나고 글리치 나는 지평선을 향해 함께 걸어간다.",
   "The crew of four, battered but unbroken, go their separate ways into the glowing horizon, and promise to find the fire again.": "지치고 상처 입었지만 꺾이지 않은 네 사람이 저마다 다른 길로 빛나는 지평선 속으로 흩어진다. 다시 모닥불에서 만나기로 약속하고.",
+  "The city's lights come back one district at a time. Nobody needs to sleep at the fire tonight, but the crew do anyway.": "도시의 불빛이 구역마다 하나씩 돌아온다. 오늘 밤은 모닥불가에서 잠들 필요가 없지만, 동료들은 그래도 그곳에 모인다.",
+  "There's another one. Not in the city. Beyond it. It's calling the same way the first one did.": "또 하나가 있어. 도시가 아니라 그 너머야. 처음 것과 같은 방향으로 부르고 있어.",
+  "Beyond the sector wall? Nobody goes beyond the wall.": "구역 벽 너머? 벽 너머로 가는 사람은 없어.",
+  "The Corporation ran a survey past the wall before the shutdown. The logs were sealed. I never saw the bottom of them.": "셧다운 전에 기업이 벽 너머를 조사했어. 기록은 봉인됐고, 나는 그 끝을 본 적이 없어.",
+  "Then we find out what's out there. Same as always.": "그럼 저 너머에 뭐가 있는지 알아내자. 늘 그랬던 것처럼.",
+  "At the edge of the firelight, a figure in a grey coat has been watching the crew. They have a face the crew almost recognise. They lift a hand, and walk toward the wall.": "모닥불 빛의 가장자리에서 회색 코트를 입은 사람이 동료들을 지켜보고 있었다. 동료들이 얼핏 알아볼 듯한 얼굴이다. 그가 손을 들고 벽을 향해 걸어간다.",
+  "Wait. Who are you?": "잠깐. 넌 누구야?",
+  "The stranger does not answer. At the wall, the signs stop flickering and, for the first time, all spell the same word.\n\nTo be continued.": "낯선 사람은 대답하지 않는다. 벽에 이르자 간판들이 깜빡임을 멈추고, 처음으로 모두 같은 단어를 띄운다.\n\n계속됩니다.",
 };

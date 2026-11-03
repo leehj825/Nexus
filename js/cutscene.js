@@ -485,6 +485,17 @@ const Cutscene = (() => {
       { shot: 'who', who: 'ruen', mood: 'nod', note: 'The orb steadies in her hand.', text: 'Then I\'m not afraid of the door. I\'m only afraid of being alone in it.' },
     ],
   };
+  // After the ending: the city is back, and a new question opens. Plays once, at the fire, after the ending (the afterglow flag keeps it to once).
+  const AFTERGLOW = [
+    { shot: 'wide', caption: 'Afterglow\nThe city\'s lights come back one district at a time. Nobody needs to sleep at the fire tonight, but the crew do anyway.' },
+    { shot: 'who', who: 'ruen', mood: 'alert', note: 'Her orb flickers, then points away from the city.', text: 'There\'s another one. Not in the city. Beyond it. It\'s calling the same way the first one did.' },
+    { shot: 'who', who: 'kyle', mood: 'think', text: 'Beyond the sector wall? Nobody goes beyond the wall.' },
+    { shot: 'who', who: 'yuna', mood: 'firm', text: 'The Corporation ran a survey past the wall before the shutdown. The logs were sealed. I never saw the bottom of them.' },
+    { shot: 'who', who: 'jin', mood: 'think', text: 'Then we find out what\'s out there. Same as always.' },
+    { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], caption: 'At the edge of the firelight, a figure in a grey coat has been watching the crew. They have a face the crew almost recognise. They lift a hand, and walk toward the wall.' },
+    { shot: 'who', who: 'ruen', mood: 'worry', text: 'Wait. Who are you?' },
+    { shot: 'point', look: [World.SUMMIT.x, 30, World.SUMMIT.z - 40], caption: 'The stranger does not answer. At the wall, the signs stop flickering and, for the first time, all spell the same word.\n\nTo be continued.' },
+  ];
   // The ending the crew reach: together if their bonds held (and Ruen's story was heard), apart if not. The epilogue has lines for each.
   function setEnding() {
     if (typeof Growth === 'undefined') return;
@@ -524,6 +535,7 @@ const Cutscene = (() => {
   function checkTriggers() {
     if (bondScene()) return;
     if (stage === 0 && !introDone && document.getElementById('title').hidden) { introDone = true; begin(CAMPFIRE, () => setStage(1)); return; }
+    if (stage === 18 && !flags.afterglow) { flags.afterglow = 'seen'; begin(AFTERGLOW, () => Save.save(), { anchor: 'camp' }); return; }
     const p = Player.state(), dT = Math.hypot(p.x - World.TOWER.x, p.z - World.TOWER.z);
     if (stage === 2 && p.z < World.Z0 - 6) begin(ARRIVAL, () => setStage(3), { anchor: 'here' });
     else if (stage === 3 && dT < 70) begin(TOWER_SIGHT, () => setStage(4), { anchor: 'here' });
