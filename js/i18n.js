@@ -48,6 +48,44 @@ const I18n = (() => {
     '◆ Defeat the CEO': '◆ CEO 쓰러뜨리기',
     '◆ The city is free. The road goes on.': '◆ 도시는 자유로워졌다. 길은 계속된다.',
     'Thank you for playing.': '플레이해 주셔서 감사합니다.',
+    "Tempered Katana": "단련된 카타나",
+    "Resonant Katana": "공명의 카타나",
+    "Spire-Cut Katana": "첨탑 절단 카타나",
+    "Reinforced Coat": "강화 코트",
+    "Plated Jacket": "판금 재킷",
+    "Data-Orb Core": "데이터 오브 코어",
+    "Orb Lattice": "오브 격자",
+    "Orb Singularity": "오브 특이점",
+    "Stitched Coat": "기운 코트",
+    "Hardlight Weave": "하드라이트 직물",
+    "Kinetic Gauntlet": "운동 건틀릿",
+    "Gauntlet Servos": "건틀릿 서보",
+    "Gauntlet Overdrive": "건틀릿 과부하",
+    "Plate Harness": "판금 하네스",
+    "Bulwark Plate": "방벽 판금",
+    "Tuned Blasters": "조율된 블라스터",
+    "Plasma Coils": "플라스마 코일",
+    "Dual Overclock": "듀얼 오버클럭",
+    "Stealth Weave": "은신 직물",
+    "Ghost Suit": "고스트 슈트",
+    "Vanguard": "선봉",
+    "Hacker": "해커",
+    "Protector": "수호자",
+    "Ranger": "저격수",
+    "Pick a perk for each new level in the crew screen (I).": "새 레벨마다 동료 화면(I)에서 특성을 고르세요.",
+    "Cleared": "승리",
+    "Defeat": "패배",
+    "Sector 9": "구역 9",
+    "Corporate Spire · Night": "기업 첨탑 · 밤",
+    "Industrial Hub · Night": "산업 허브 · 밤",
+    "Neon Market · Night": "네온 시장 · 밤",
+    "Resting at a camp heals the crew and saves the game. Scrap pays for weapon upgrades, which apply in battle.": "캠프에서 쉬면 동료가 회복되고 게임이 저장됩니다. 폐품은 무기 강화에 쓰이며, 강화는 전투에 바로 적용됩니다.",
+    "Items are used from the battle menu. Credits come from fights. Gear is crafted at camps from scrap.": "아이템은 전투 메뉴에서 사용합니다. 크레딧은 전투에서 얻습니다. 장비는 캠프에서 폐품으로 만듭니다.",
+    "Quest updated": "임무가 갱신되었습니다",
+    "Maxed": "최대",
+    "The crew rest. Everyone is back on their feet.": "동료들이 쉽니다. 모두 다시 일어섰습니다.",
+    "Weapon": "무기",
+    "Armour": "방어구",
     "Battle speed": "전투 속도", "How fast the fights run": "전투가 진행되는 속도", "Auto battle": "자동 전투",
     "The crew pick their first command on their own": "동료가 첫 번째 명령을 스스로 고릅니다",
     "Resonance": "공명",
@@ -196,7 +234,6 @@ const I18n = (() => {
   let lang = 'en';
   try { lang = localStorage.getItem('nexus.lang') === 'ko' ? 'ko' : 'en'; } catch (e) { /* no storage: English */ }
   // The story dictionary (js/i18n_story.js) is read after the interface entries
-  const tr = s => (lang !== 'ko' ? s : KO[s] || (typeof I18nStory !== 'undefined' && I18nStory[s]) || s);
   // Sentences with names and numbers in them: each pattern rebuilds the Korean from its translated parts (names, skills, numbers)
   const N = s => tr(s);
   const PATTERNS = [
@@ -248,35 +285,88 @@ const I18n = (() => {
     [/^Deliver to (.+)$/, m => `전달 대상: ${N(m[1])}`],
     [/^Choose a perk \((\d+) to pick\)$/, m => `특성 선택 (${m[1]}개 남음)`],
     [/^Unlocks at Lv (\d+)$/, m => `레벨 ${m[1]}에 해금`],
+    [/^Craft ◆ (\d+)$/, m => `제작 ◆ ${m[1]}`],
+    [/^(Weapon|Armour) · \+(\d+)% (damage|health)$/, m => `${N(m[1])} · +${m[2]}% ${m[3] === 'damage' ? '피해' : '체력'}`],
+    [/^Lv (\d+) · (.+)$/, m => `레벨 ${m[1]} · ${N(m[2])}`],
+    [/^Lv (\d+)$/, m => `레벨 ${m[1]}`],
+    [/^Lv (\d+) → (\d+) · New: (.+)$/, m => `레벨 ${m[1]} → ${m[2]} · 새 기술: ${N(m[3])}`],
+    [/^Lv (\d+) → (\d+)$/, m => `레벨 ${m[1]} → ${m[2]}`],
+    [/^\+(\d+) XP(?: · \+(\d+) credits)?$/, m => `+${m[1]} 경험치${m[2] ? ' · +' + m[2] + ' 크레딧' : ''}`],
     [/^(Talk|Trade) · (.+?)( \(!\)| \(✓\))?$/, m => `${m[1] === 'Talk' ? '대화' : '거래'} · ${N(m[2])}${m[3] || ''}`],
   ];
+  // Matching ignores line breaks and repeated spaces, so a sentence split over lines still matches
+  const norm = s => String(s).replace(/\s+/g, ' ').trim();
+  const KON = {}, STN = {};
+  for (const k of Object.keys(KO)) KON[norm(k)] = KO[k];
+  const story = () => { if (!Object.keys(STN).length && typeof I18nStory !== 'undefined') for (const k of Object.keys(I18nStory)) STN[norm(k)] = I18nStory[k]; return STN; };
+  const tr = s => {
+    if (lang !== 'ko') return s;
+    const k = norm(s);
+    return KON[k] || story()[k] || s;
+  };
   // The Korean for a whole line: the exact wording first, then the patterns above; anything else stays as it is
   const line = s => {
     if (lang !== 'ko') return s;
     const d = tr(s); if (d !== s) return d;
-    for (const [re, f] of PATTERNS) { const m = s.match(re); if (m) return f(m); }
+    const k = norm(s);
+    for (const [re, f] of PATTERNS) { const m = k.match(re); if (m) return f(m); }
     return s;
   };
-  const orig = new WeakMap();                                   // text node -> the English text it was given
-  // Switches every matching text node, title and aria-label on the page (safe to call again)
-  function apply() {
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    for (const n of nodes) {
-      if (!orig.has(n)) { const k = n.nodeValue.trim(); if (!KO[k]) continue; orig.set(n, k); }
-      const key = orig.get(n), lead = n.nodeValue.match(/^\s*/)[0], tail = n.nodeValue.match(/\s*$/)[0];
-      n.nodeValue = lead + tr(key) + tail;
+  // Text the game draws: each text node is remembered with the English it had, so switching back restores it
+  const english = new WeakMap(), written = new WeakMap(), tracked = new Set();
+  function fixNode(n) {
+    if (!n || !n.nodeValue || (n.parentNode && /^(SCRIPT|STYLE)$/.test(n.parentNode.nodeName))) return;
+    if (written.get(n) === n.nodeValue) return;                 // our own write
+    const v = n.nodeValue, key = norm(v);
+    if (!key || key.length > 400) return;
+    const out = line(key);
+    if (out === key && !english.has(n)) return;
+    if (!english.has(n)) english.set(n, v);
+    const lead = v.match(/^\s*/)[0], tail = v.match(/\s*$/)[0];
+    const next = lead + out + tail;
+    if (next === v) return;
+    n.nodeValue = next; written.set(n, next); tracked.add(n);
+  }
+  function walk(root) {
+    if (!root) return;
+    if (root.nodeType === 3) return fixNode(root);
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT), list = [];
+    while (w.nextNode()) list.push(w.currentNode);
+    for (const n of list) fixNode(n);
+  }
+  // Restores the English of every text node we changed (used when switching to English)
+  function restoreEnglish() {
+    for (const n of [...tracked]) {
+      if (!n.isConnected) { tracked.delete(n); continue; }
+      if (english.has(n)) n.nodeValue = english.get(n);
+      tracked.delete(n);
     }
+  }
+  const orig = new WeakMap();
+  let watching = false;
+  // Translates the page: now, and as the game draws new text (level-ups, toasts, menus)
+  function apply() {
+    if (lang === 'ko') walk(document.body); else restoreEnglish();
     for (const el of document.querySelectorAll('[title],[aria-label]')) {
       for (const a of ['title', 'aria-label']) {
         const cur = el.getAttribute(a); if (cur === null) continue;
         const key = el.dataset[a === 'title' ? 'enTitle' : 'enLabel'] || cur;
-        if (!el.dataset[a === 'title' ? 'enTitle' : 'enLabel'] && !KO[key]) continue;
+        if (!el.dataset[a === 'title' ? 'enTitle' : 'enLabel'] && !KON[norm(key)]) continue;
         el.dataset[a === 'title' ? 'enTitle' : 'enLabel'] = key;
-        el.setAttribute(a, tr(key));
+        el.setAttribute(a, lang === 'ko' ? tr(key) : key);
       }
     }
     document.documentElement.lang = lang;
+    if (!watching && typeof MutationObserver !== 'undefined') {
+      watching = true;
+      new MutationObserver(list => {
+        if (lang !== 'ko') return;
+        for (const m of list) {
+          if (m.type === 'characterData') fixNode(m.target);
+          else for (const n of m.addedNodes) walk(n);
+        }
+      }).observe(document.body, { childList: true, subtree: true, characterData: true });
+    }
   }
   function set(l) { lang = l === 'ko' ? 'ko' : 'en'; try { localStorage.setItem('nexus.lang', lang); } catch (e) { /* not kept */ } apply(); }
   return { apply, tr, line, set, lang: () => lang, name: () => (lang === 'ko' ? '한국어' : 'English') };
