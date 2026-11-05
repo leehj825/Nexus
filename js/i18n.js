@@ -48,6 +48,8 @@ const I18n = (() => {
     '◆ Defeat the CEO': '◆ CEO 쓰러뜨리기',
     '◆ The city is free. The road goes on.': '◆ 도시는 자유로워졌다. 길은 계속된다.',
     'Thank you for playing.': '플레이해 주셔서 감사합니다.',
+    "Levels, perks, gear and bonds": "레벨, 특성, 장비, 유대",
+    "Items, foes met, jobs and the story so far": "아이템, 만난 적, 임무, 지금까지의 이야기",
     "Tempered Katana": "단련된 카타나",
     "Resonant Katana": "공명의 카타나",
     "Spire-Cut Katana": "첨탑 절단 카타나",

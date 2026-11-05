@@ -25,6 +25,9 @@ body.locked #game { cursor: none; }
 
 /* Status: top left */
 .status { position: absolute; left: 22px; top: 18px; width: 260px; }
+/* Walking around: no health bar (it shows in battle, on the crew cards); the top bar keeps only Settings (the rest are on the keyboard and in Settings) */
+body:not(.in-battle) .status .bar.hp { display: none; }
+.corner button:not(#btnSettings) { display: none !important; }
 .bar { position: relative; height: 14px; background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 2px; overflow: hidden; }
 .bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; }
 .bar.hp i { background: linear-gradient(#f0554c, var(--hp)); }
