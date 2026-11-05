@@ -4,7 +4,13 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
+import android.widget.LinearLayout;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdSize;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.ads.MobileAds;
 import android.view.WindowManager;
 import android.webkit.ConsoleMessage;
 import android.webkit.WebChromeClient;
@@ -33,6 +39,11 @@ public class MainActivity extends Activity {
     private static final String HOST = "appassets.androidplatform.net";
     private static final String BASE = "https://" + HOST + "/";
     private static final String TAG = "Nexus";
+    // The banner ad unit. Debug builds use Google's test unit, so development never serves or clicks real ads.
+    private static final String BANNER_UNIT = "ca-app-pub-4400173019354346/3926241407";
+    private static final String TEST_BANNER_UNIT = "ca-app-pub-3940256099942544/6300978111";
+
+    private AdView banner;
 
     private static final Map<String, String> MIME = new HashMap<>();
     static {
@@ -56,8 +67,23 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
+        // The banner sits in its own strip at the top, centred; the game is the WebView below it, so the ad never covers the game
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(0xFF000000);
+
+        MobileAds.initialize(this, status -> { });
+        banner = new AdView(this);
+        banner.setAdUnitId(BuildConfig.DEBUG ? TEST_BANNER_UNIT : BANNER_UNIT);
+        banner.setAdSize(AdSize.BANNER);
+        LinearLayout.LayoutParams bannerParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        bannerParams.gravity = Gravity.CENTER_HORIZONTAL;
+        root.addView(banner, bannerParams);
+
         web = new WebView(this);
-        setContentView(web);
+        root.addView(web, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+        setContentView(root);
+        banner.loadAd(new AdRequest.Builder().build());
         WebView.setWebContentsDebuggingEnabled(BuildConfig.DEBUG);
 
         WebSettings s = web.getSettings();
@@ -117,6 +143,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         web.evaluateJavascript("window.nexusSuspend && window.nexusSuspend()", null);     // silence the music at once; the WebView alone leaves Web Audio playing
+        if (banner != null) banner.pause();
         web.onPause();                                         // stops the page's timers and rendering while the app is in the background
         super.onPause();
     }
@@ -130,12 +157,14 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (banner != null) banner.resume();
         web.onResume();
         web.evaluateJavascript("window.nexusResume && window.nexusResume()", null);
     }
 
     @Override
     protected void onDestroy() {
+        if (banner != null) banner.destroy();
         web.destroy();
         super.onDestroy();
     }
