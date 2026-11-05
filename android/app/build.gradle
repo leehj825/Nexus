@@ -21,6 +21,7 @@ android {
         buildConfig true
     }
 
+
     signingConfigs {
         release {
             if (keystorePath) {
@@ -65,3 +66,8 @@ tasks.register('copyWeb', Copy) {
     into layout.buildDirectory.dir('generated/www/www')
 }
 tasks.matching { it.name == 'preBuild' }.configureEach { dependsOn 'copyWeb' }
+
+dependencies {
+    // Google Mobile Ads (AdMob): the banner at the top of the screen
+    implementation 'com.google.android.gms:play-services-ads:23.6.0'
+}

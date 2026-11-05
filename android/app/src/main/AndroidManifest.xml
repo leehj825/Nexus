@@ -10,6 +10,11 @@
         android:theme="@style/Theme.Nexus"
         android:hardwareAccelerated="true">
 
+        <!-- AdMob app ID (the ads are shown in the banner at the top of the screen) -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-4400173019354346~7047228769" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
