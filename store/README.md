@@ -6,3 +6,7 @@
 - `screenshots/phone-landscape/`: phone screenshots, landscape (1920 × 1080).
 
 The screenshots are captured from the game itself, and the icon and feature graphic are drawn in code, so they can be re-made when the game changes.
+
+Store listing text: `store/listing.md` (short and full description).
+
+Screenshot sets: three per orientation for phone and for 7/10-inch tablets, in `store/screenshots/`.
