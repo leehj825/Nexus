@@ -219,6 +219,9 @@ const ModelCheck = (() => {
     $('btnSettings').addEventListener('click', () => { $('settings').hidden = false; });
     $('settingsClose').addEventListener('click', () => { $('settings').hidden = true; });
     const sync = () => { $('setMusic').textContent = I18n.tr(Sound.music ? 'On' : 'Off'); $('setSfx').textContent = I18n.tr(Sound.fx ? 'On' : 'Off'); $('setLang').textContent = I18n.name(); };
+    // The crew and journal screens: opened from Settings, since their top-bar buttons are hidden
+    $('setCrew').addEventListener('click', () => { $('settings').hidden = true; $('btnCrew').click(); });
+    $('setJournal').addEventListener('click', () => { $('settings').hidden = true; $('btnJournal').click(); });
     $('setLang').addEventListener('click', () => { I18n.set(I18n.lang() === 'en' ? 'ko' : 'en'); sync(); syncD(); syncQ(); syncC(); syncB(); });
     const syncB = () => { $('setSpeed').textContent = Combat.speed() === 0 ? '1×' : ['1×', '1.6×', '2.4×'][Combat.speed()]; $('setAuto').textContent = I18n.tr(Combat.auto() ? 'On' : 'Off'); };
     $('setSpeed').addEventListener('click', () => { Combat.setSpeed(Combat.speed() + 1); syncB(); });
