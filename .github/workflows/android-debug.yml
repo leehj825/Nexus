@@ -26,7 +26,7 @@ jobs:
       # The runner image already has the Android SDK (platform 34 and build tools); this installs Gradle itself, so no wrapper is committed
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.9'
+          gradle-version: '8.11.1'
 
       - name: Build the debug APK
         working-directory: android
