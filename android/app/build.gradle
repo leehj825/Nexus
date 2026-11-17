@@ -70,4 +70,6 @@ tasks.matching { it.name == 'preBuild' }.configureEach { dependsOn 'copyWeb' }
 dependencies {
     // Google Mobile Ads (AdMob): the banner at the top of the screen
     implementation 'com.google.android.gms:play-services-ads:23.6.0'
+    // Pinned: a library pulls in androidx.activity 1.0.0, which Google Play reports as outdated
+    implementation 'androidx.activity:activity:1.10.1'
 }
